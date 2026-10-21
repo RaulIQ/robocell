@@ -1,5 +1,2 @@
 [dependency-groups]
-dev = ["pytest-eo @ git+https://github.com/RaulIQ/pytest-eo@0.5.0"]
-
-[tool.eo]
-exclude = [".venv/"]
+dev = ["pytest-eo @ git+https://github.com/RaulIQ/pytest-eo@0.5.0", "pybind11-stubgen==3.0.0"]

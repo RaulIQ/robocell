@@ -1,6 +1,8 @@
 services:
   dev:
-    build: ./docker
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     image: robocell-dev
     network_mode: host
     ipc: host
@@ -11,6 +13,8 @@ services:
     volumes:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.claude:/root/.claude
+      - ~/.claude.json:/root/.claude.json
     devices:
       - /dev/dri:/dev/dri
     stdin_open: true

@@ -7,9 +7,13 @@ set -u
 payload=$(cat)
 root="${CLAUDE_PROJECT_DIR:-$PWD}"
 cd "$root" || exit 0
-python=".venv/bin/python"
-if [ ! -x "$python" ]; then
-  echo "pytest --eo gate skipped: no .venv here, run python3 -m venv .venv && .venv/bin/pip install --group dev" >&2
+python="python3"
+if [ -f /.dockerenv ]; then
+  runner=(python -m pytest)
+elif docker image inspect robocell-dev >/dev/null 2>&1; then
+  runner=(docker compose run --rm -T dev python -m pytest)
+else
+  echo "pytest --eo gate skipped: no robocell-dev image here, run docker compose build" >&2
   exit 1
 fi
 
@@ -31,7 +35,7 @@ if [ "$event" = "PostToolUse" ]; then
   esac
 fi
 
-report=$("$python" -m pytest --eo -q --tb=short 2>&1)
+report=$("${runner[@]}" --eo -q --tb=short 2>&1)
 if [ $? -eq 0 ]; then
   exit 0
 fi
