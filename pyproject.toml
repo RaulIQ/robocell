@@ -1,0 +1,5 @@
+[dependency-groups]
+dev = ["pytest-eo @ git+https://github.com/RaulIQ/pytest-eo@0.5.0"]
+
+[tool.eo]
+exclude = [".venv/"]
