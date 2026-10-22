@@ -4,6 +4,7 @@
   "service": "dev",
   "workspaceFolder": "/ws",
   "shutdownAction": "none",
+  "remoteUser": "ubuntu",
   "customizations": {
     "vscode": {
       "extensions": [
