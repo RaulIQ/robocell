@@ -1,4 +1,4 @@
-"""Hello world entry point of robocell."""
+"""Entry point of robocell."""
 
 import threading
 import time
