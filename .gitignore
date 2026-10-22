@@ -5,3 +5,4 @@ __pycache__/
 build/
 install/
 log/
+MUJOCO_LOG.TXT
