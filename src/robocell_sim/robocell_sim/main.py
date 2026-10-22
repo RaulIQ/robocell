@@ -11,6 +11,7 @@ import mujoco.viewer
 from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.differential import Differential
 from robocell_sim.implementations.limited import Limited
+from robocell_sim.implementations.paced import Paced
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.interfaces.command import Command
@@ -41,11 +42,13 @@ right = Simulated(data, "wheel_right_encoder", 4096)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("robocell")
 moment = 0.0
+physics = Paced(model, data)
+clock = 0.0
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
+    frame = time.time()
     while viewer.is_running():
-        step_start = time.time()
-
+        now = time.time()
         while not keys.empty():
             command = command.press(keys.get())
         if not pause.is_set():
@@ -55,7 +58,8 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                     model.actuator("wheel_right").id,
                 ]
             ] = drive.wheels(*command.velocity())
-            mujoco.mj_step(model, data)
+            clock += now - frame
+            physics.advance(clock)
             if data.time >= moment:
                 log.info(
                     "Encoders read %d ticks on the left and %d on the right",
@@ -63,9 +67,6 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                     right.ticks(),
                 )
                 moment += 0.5
+        frame = now
         viewer.sync()
-
-        # держать реальное время: шаг симуляции = model.opt.timestep
-        dt = model.opt.timestep - (time.time() - step_start)
-        if dt > 0:
-            time.sleep(dt)
+        time.sleep(max(0.0, model.opt.timestep - (time.time() - now)))
