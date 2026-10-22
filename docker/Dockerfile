@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-rviz2 ros-jazzy-robot-state-publisher ros-jazzy-xacro \
       ros-jazzy-cv-bridge ros-jazzy-rmw-cyclonedds-cpp \
       python3-pip python3-venv python3-opencv python3-numpy python3-colcon-common-extensions \
-      can-utils socat iproute2 \
+      can-utils socat iproute2 gh \
       libgl1 libegl1 libglfw3 libosmesa6 \
     && rm -rf /var/lib/apt/lists/*
 
