@@ -4,11 +4,15 @@ from typing import Protocol
 
 
 class Kinematics(Protocol):
-    """Map from a body velocity of a robot to the speeds of its wheels."""
+    """Link between the body velocity of a robot and the speeds of its wheels.
+
+    The linear speed points forward in m/s, the angular speed turns
+    counterclockwise around the vertical axis in rad/s, and the wheel
+    speeds are in rad/s.
+    """
 
     def wheels(self, linear: float, angular: float) -> tuple[float, float]:
-        """Left and right wheel speeds in rad/s for a body velocity.
+        """Left and right wheel speeds that produce a body velocity."""
 
-        The linear speed points forward in m/s and the angular speed turns
-        counterclockwise around the vertical axis in rad/s.
-        """
+    def velocity(self, left: float, right: float) -> tuple[float, float]:
+        """Linear and angular body velocity that the wheel speeds produce."""

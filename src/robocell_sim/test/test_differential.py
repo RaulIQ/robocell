@@ -70,3 +70,54 @@ def test_differential_turns_waffle_pi_at_the_commanded_yaw_rate() -> None:
         close_to(angular, angular * 0.1),
         "robot did not turn at the commanded yaw rate",
     )
+
+
+def test_differential_recovers_forward_speed_from_its_wheels() -> None:
+    """The body velocity undoes the wheel speeds in forward speed."""
+    drive = Differential(
+        secrets.SystemRandom().uniform(0.01, 0.1),
+        secrets.SystemRandom().uniform(0.1, 0.5),
+    )
+    linear = secrets.SystemRandom().uniform(-0.3, 0.3)
+    assert_that(
+        drive.velocity(
+            *drive.wheels(linear, secrets.SystemRandom().uniform(-2.0, 2.0))
+        )[0],
+        close_to(linear, 1e-9),
+        "forward speed did not survive the round trip through the wheels",
+    )
+
+
+def test_differential_recovers_yaw_rate_from_its_wheels() -> None:
+    """The body velocity undoes the wheel speeds in yaw rate."""
+    drive = Differential(
+        secrets.SystemRandom().uniform(0.01, 0.1),
+        secrets.SystemRandom().uniform(0.1, 0.5),
+    )
+    angular = secrets.SystemRandom().uniform(-2.0, 2.0)
+    assert_that(
+        drive.velocity(
+            *drive.wheels(secrets.SystemRandom().uniform(-0.3, 0.3), angular)
+        )[1],
+        close_to(angular, 1e-9),
+        "yaw rate did not survive the round trip through the wheels",
+    )
+
+
+def test_differential_reads_waffle_pi_yaw_rate_from_wheel_joints() -> None:
+    """The wheel joint speeds tell how fast the simulated robot turns."""
+    model = mujoco.MjModel.from_xml_path(
+        str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
+    )
+    data = mujoco.MjData(model)
+    data.actuator("wheel_left").ctrl = secrets.SystemRandom().uniform(1.0, 3.0)
+    data.actuator("wheel_right").ctrl = secrets.SystemRandom().uniform(4.0, 6.0)
+    mujoco.mj_step(model, data, nstep=1500)
+    assert_that(
+        Differential(0.033, 0.288).velocity(
+            data.joint("wheel_left_joint").qvel[0],
+            data.joint("wheel_right_joint").qvel[0],
+        )[1],
+        close_to(data.body("base_link").cvel[2], 0.05),
+        "wheel joints did not tell the yaw rate of the robot",
+    )
