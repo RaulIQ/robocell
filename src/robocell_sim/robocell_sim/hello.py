@@ -4,7 +4,9 @@ import sys
 
 import mujoco
 
-model = mujoco.MjModel.from_xml_path("...")
+model = mujoco.MjModel.from_xml_path(
+    "/ws/src/robocell_sim/models/panda/scene.xml"
+)
 data = mujoco.MjData(model)
 
 sys.stdout.write(f"nq = {model.nq}  nv = {model.nv}  nu = {model.nu}\n")
