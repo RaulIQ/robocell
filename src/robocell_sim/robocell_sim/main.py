@@ -1,5 +1,6 @@
 """Entry point of robocell."""
 
+import logging
 import queue
 import threading
 import time
@@ -10,6 +11,7 @@ import mujoco.viewer
 from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.differential import Differential
 from robocell_sim.implementations.limited import Limited
+from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.interfaces.command import Command
 
@@ -34,6 +36,11 @@ def key(keycode: int) -> None:
 
 drive = Limited(Differential(0.033, 0.288), 7.88)
 command: Command = Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0))
+left = Simulated(data, "wheel_left_encoder", 4096)
+right = Simulated(data, "wheel_right_encoder", 4096)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+log = logging.getLogger("robocell")
+moment = 0.0
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     while viewer.is_running():
@@ -49,6 +56,13 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                 ]
             ] = drive.wheels(*command.velocity())
             mujoco.mj_step(model, data)
+            if data.time >= moment:
+                log.info(
+                    "Encoders read %d ticks on the left and %d on the right",
+                    left.ticks(),
+                    right.ticks(),
+                )
+                moment += 0.5
         viewer.sync()
 
         # держать реальное время: шаг симуляции = model.opt.timestep

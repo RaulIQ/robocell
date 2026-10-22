@@ -18,3 +18,6 @@ Every press changes the speed by one step, up to the robot limits.
 | Left / Right   | turn one step to the left or right  |
 | Enter          | stop                                |
 | Space          | pause or resume the simulation      |
+
+Every half second of simulated time the console logs both wheel encoders
+in ticks, at 4096 ticks per wheel revolution, as the Dynamixel XM430 counts them.

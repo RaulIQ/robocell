@@ -65,4 +65,9 @@
     <velocity name="wheel_left" joint="wheel_left_joint" class="wheel"/>
     <velocity name="wheel_right" joint="wheel_right_joint" class="wheel"/>
   </actuator>
+
+  <sensor>
+    <jointpos name="wheel_left_encoder" joint="wheel_left_joint"/>
+    <jointpos name="wheel_right_encoder" joint="wheel_right_joint"/>
+  </sensor>
 </mujoco>
