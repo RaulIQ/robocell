@@ -24,3 +24,10 @@ class Differential(Kinematics):
             (linear - angular * self._track / 2) / self._radius,
             (linear + angular * self._track / 2) / self._radius,
         )
+
+    @override
+    def velocity(self, left: float, right: float) -> tuple[float, float]:
+        return (
+            self._radius * (left + right) / 2,
+            self._radius * (right - left) / self._track,
+        )
