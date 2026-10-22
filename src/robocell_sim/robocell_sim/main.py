@@ -1,6 +1,7 @@
 """Entry point of robocell."""
 
 import logging
+import multiprocessing
 import queue
 import threading
 import time
@@ -12,9 +13,12 @@ from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.differential import Differential
 from robocell_sim.implementations.limited import Limited
 from robocell_sim.implementations.paced import Paced
+from robocell_sim.implementations.reckoned import Reckoned
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
+from robocell_sim.implementations.window import Window
 from robocell_sim.interfaces.command import Command
+from robocell_sim.interfaces.odometry import Odometry
 
 model = mujoco.MjModel.from_xml_path(
     "/ws/src/robocell_sim/models/waffle_pi/scene.xml"
@@ -44,6 +48,12 @@ log = logging.getLogger("robocell")
 moment = 0.0
 physics = Paced(model, data)
 clock = 0.0
+odometry: Odometry = Reckoned(drive, 4096, (0.0, 0.0, 0.0), (0, 0))
+route = Window(multiprocessing.get_context("fork").Queue())
+multiprocessing.get_context("fork").Process(
+    target=route.show, daemon=True
+).start()
+sample = 0.0
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     frame = time.time()
@@ -60,6 +70,16 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
             ] = drive.wheels(*command.velocity())
             clock += now - frame
             physics.advance(clock)
+            odometry = odometry.read(left.ticks(), right.ticks())
+            if data.time >= sample:
+                route.mark(
+                    odometry.position(),
+                    (
+                        data.body("base_link").xpos[0],
+                        data.body("base_link").xpos[1],
+                    ),
+                )
+                sample += 0.1
             if data.time >= moment:
                 log.info(
                     "Encoders read %d ticks on the left and %d on the right",
