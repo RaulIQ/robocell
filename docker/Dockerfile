@@ -23,5 +23,6 @@ RUN pip install --no-cache-dir \
 COPY pyproject.toml /opt/robocell/pyproject.toml
 RUN pip install --no-cache-dir --group /opt/robocell/pyproject.toml:dev
 RUN echo /ws/typings > "$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')/robocell-typings.pth"
+RUN echo /ws/src/robocell_sim > "$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')/robocell-sim.pth"
 
 WORKDIR /ws

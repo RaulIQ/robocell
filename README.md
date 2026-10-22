@@ -2,11 +2,10 @@
 
 ## Run the simulation
 
-Start the TurtleBot3 Waffle Pi in the MuJoCo viewer from the package folder:
+Start the TurtleBot3 Waffle Pi in the MuJoCo viewer from any folder:
 
 ```console
-cd /ws/src/robocell_sim
-python -m robocell_sim.main
+python /ws/src/robocell_sim/robocell_sim/main.py
 ```
 
 Steer the robot with the keyboard while the viewer window has focus.
