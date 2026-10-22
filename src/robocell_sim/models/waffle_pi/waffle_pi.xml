@@ -1,0 +1,68 @@
+<mujoco model="turtlebot3 waffle pi">
+  <compiler angle="radian" meshdir="assets" autolimits="true"/>
+
+  <option integrator="implicitfast"/>
+
+  <default>
+    <default class="waffle_pi">
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+      </default>
+      <default class="collision">
+        <geom group="3"/>
+        <default class="caster">
+          <geom type="sphere" size="0.006" condim="1"/>
+        </default>
+      </default>
+      <default class="wheel">
+        <joint axis="0 1 0" damping="0.001" armature="0.005"/>
+        <velocity kv="1" forcerange="-3 3" ctrlrange="-7.88 7.88"/>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="light_black" rgba="0.4 0.4 0.4 1"/>
+    <material name="dark" rgba="0.3 0.3 0.3 1"/>
+    <mesh name="waffle_pi_base" file="waffle_pi_base.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="left_tire" file="left_tire.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="right_tire" file="right_tire.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="lds" file="lds.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
+  <worldbody>
+    <body name="base_link" pos="0 0 0.01" childclass="waffle_pi">
+      <freejoint name="base"/>
+      <inertial pos="0 0 0" mass="1.3729096"
+        fullinertia="8.7002718e-03 8.6195418e-03 1.4612727e-02 -4.7576583e-05 1.1160499e-04 -3.5422299e-06"/>
+      <geom class="visual" mesh="waffle_pi_base" pos="-0.064 0 0" material="light_black"/>
+      <geom class="collision" type="box" size="0.133 0.133 0.047" pos="-0.064 0 0.047"/>
+      <geom class="collision" type="box" size="0.0075 0.015 0.0135" pos="0.078 0 0.097"/>
+      <geom name="caster_back_left" class="caster" pos="-0.177 0.064 -0.004"/>
+      <geom name="caster_back_right" class="caster" pos="-0.177 -0.064 -0.004"/>
+      <camera name="camera_rgb" pos="0.076 0 0.093" xyaxes="0 -1 0 0 0 1" fovy="49"/>
+      <body name="wheel_left_link" pos="0 0.144 0.023">
+        <inertial pos="0 0 0" mass="0.02849894" diaginertia="1.1175580e-05 2.0712558e-05 1.1192413e-05"/>
+        <joint name="wheel_left_joint" class="wheel"/>
+        <geom class="visual" mesh="left_tire" material="dark"/>
+        <geom class="collision" type="cylinder" size="0.033 0.009" euler="1.5708 0 0"/>
+      </body>
+      <body name="wheel_right_link" pos="0 -0.144 0.023">
+        <inertial pos="0 0 0" mass="0.02849894" diaginertia="1.1175580e-05 2.0712558e-05 1.1192413e-05"/>
+        <joint name="wheel_right_joint" class="wheel"/>
+        <geom class="visual" mesh="right_tire" material="dark"/>
+        <geom class="collision" type="cylinder" size="0.033 0.009" euler="1.5708 0 0"/>
+      </body>
+      <body name="base_scan" pos="-0.064 0 0.122">
+        <inertial pos="0 0 0" mass="0.114" diaginertia="0.001 0.001 0.001"/>
+        <geom class="visual" mesh="lds" material="dark"/>
+        <geom class="collision" type="cylinder" size="0.055 0.01575" pos="0.015 0 -0.0065"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <velocity name="wheel_left" joint="wheel_left_joint" class="wheel"/>
+    <velocity name="wheel_right" joint="wheel_right_joint" class="wheel"/>
+  </actuator>
+</mujoco>
