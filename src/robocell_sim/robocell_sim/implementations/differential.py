@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import final, override
 
-from robocell_sim.kinematics import Kinematics
+from robocell_sim.interfaces.kinematics import Kinematics
 
 
 @final

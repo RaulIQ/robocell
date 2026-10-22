@@ -5,7 +5,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to
-from robocell_sim.differential import Differential
+from robocell_sim.implementations.differential import Differential
 
 
 def test_differential_slows_left_wheel_by_the_turn() -> None:
