@@ -9,6 +9,7 @@ import mujoco.viewer
 
 from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.differential import Differential
+from robocell_sim.implementations.limited import Limited
 from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.interfaces.command import Command
 
@@ -31,7 +32,7 @@ def key(keycode: int) -> None:
         pause.set()
 
 
-drive = Differential(0.033, 0.288)
+drive = Limited(Differential(0.033, 0.288), 7.88)
 command: Command = Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0))
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
