@@ -8,11 +8,13 @@ services:
     ipc: host
     environment:
       - DISPLAY=${DISPLAY}
+      - XAUTHORITY=/home/ubuntu/.Xauthority
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
     volumes:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${XAUTHORITY:?set XAUTHORITY on the host to the X11 cookie file}:/home/ubuntu/.Xauthority:ro
       - ~/.claude:/home/ubuntu/.claude
       - ~/.claude.json:/home/ubuntu/.claude.json
     devices:
