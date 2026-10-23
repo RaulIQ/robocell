@@ -10,3 +10,4 @@ class Overlay(Protocol):
 
     def paint(self, scene: mujoco.MjvScene) -> None:
         """Append the geoms to the scene while it has room for them."""
+        ...

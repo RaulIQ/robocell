@@ -14,3 +14,4 @@ class Intrinsics(Protocol):
         tuple[float, float, float],
     ]:
         """Camera matrix with focal lengths and principal point in pixels."""
+        ...

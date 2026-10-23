@@ -8,3 +8,4 @@ class Cloud(Protocol):
 
     def points(self) -> list[tuple[float, float]]:
         """Points on the floor in meters, in scan order."""
+        ...

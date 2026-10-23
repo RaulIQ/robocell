@@ -11,3 +11,4 @@ class Camera(Protocol):
 
     def shot(self) -> npt.NDArray[np.uint8]:
         """RGB image as rows of pixels, each with three bytes."""
+        ...

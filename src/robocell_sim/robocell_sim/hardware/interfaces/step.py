@@ -8,3 +8,4 @@ class Step(Protocol):
 
     def take(self) -> None:
         """Move the world forward by one physics step."""
+        ...

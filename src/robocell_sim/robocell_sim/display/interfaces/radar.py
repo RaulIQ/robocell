@@ -8,6 +8,8 @@ class Radar(Protocol):
 
     def mark(self, scan: tuple[float, ...]) -> None:
         """Send the ranges of a scan in meters to the radar."""
+        ...
 
     def show(self) -> None:
         """Draw the scans in a window until the window is closed."""
+        ...

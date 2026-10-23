@@ -8,3 +8,4 @@ class Chart(Protocol):
 
     def draw(self) -> None:
         """Add the newly arrived positions to the chart."""
+        ...

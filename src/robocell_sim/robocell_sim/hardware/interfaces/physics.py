@@ -8,3 +8,4 @@ class Physics(Protocol):
 
     def advance(self, moment: float) -> None:
         """Step the physics until its clock reaches the moment in seconds."""
+        ...

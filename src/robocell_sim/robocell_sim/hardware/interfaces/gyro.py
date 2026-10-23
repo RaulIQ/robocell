@@ -8,3 +8,4 @@ class Gyro(Protocol):
 
     def angle(self) -> float:
         """Radians turned counterclockwise since the start."""
+        ...
