@@ -30,3 +30,7 @@ class Simulated(Wheel):
             * self._resolution
             / (2 * math.pi)
         )
+
+    @override
+    def angle(self) -> float:
+        return self.ticks() * 2 * math.pi / self._resolution

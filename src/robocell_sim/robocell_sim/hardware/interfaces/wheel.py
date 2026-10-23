@@ -9,3 +9,7 @@ class Wheel(Protocol):
     def ticks(self) -> int:
         """Whole ticks turned since the start, negative when turned back."""
         ...
+
+    def angle(self) -> float:
+        """Angle of the whole ticks in radians, as a motor driver reports it."""
+        ...

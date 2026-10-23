@@ -71,3 +71,29 @@ def test_advertised_queues_the_forward_speed_and_the_yaw_rate() -> None:
         equal_to(velocity),
         "bridge did not queue the forward speed and the yaw rate",
     )
+
+
+def test_advertised_opens_the_joint_states_topic() -> None:
+    """The bridge advertises the wheel joints as sensor_msgs/JointState."""
+    context = Context()
+    context.init(domain_id=secrets.SystemRandom().randint(0, 101))
+    node = Node(f"advertised{secrets.token_hex(4)}", context=context)
+    Advertised(node).joints()
+    assert_that(
+        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        has_entry("/joint_states", ["sensor_msgs/msg/JointState"]),
+        "bridge did not advertise the joint states topic",
+    )
+
+
+def test_advertised_opens_the_transform_topic() -> None:
+    """The bridge advertises the frames as tf2_msgs/TFMessage on /tf."""
+    context = Context()
+    context.init(domain_id=secrets.SystemRandom().randint(0, 101))
+    node = Node(f"advertised{secrets.token_hex(4)}", context=context)
+    Advertised(node).frames()
+    assert_that(
+        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        has_entry("/tf", ["tf2_msgs/msg/TFMessage"]),
+        "bridge did not advertise the transform topic",
+    )

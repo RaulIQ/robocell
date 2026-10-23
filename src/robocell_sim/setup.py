@@ -26,7 +26,8 @@ setup(
             for folder in sorted(
                 {
                     path.parent
-                    for path in Path("models").rglob("*")
+                    for root in ("launch", "models", "rviz")
+                    for path in Path(root).rglob("*")
                     if path.is_file()
                 }
             )
