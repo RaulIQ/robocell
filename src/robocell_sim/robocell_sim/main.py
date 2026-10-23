@@ -12,8 +12,10 @@ import mujoco.viewer
 
 from robocell_sim.implementations.accumulated import Accumulated
 from robocell_sim.implementations.arrows import Arrows
+from robocell_sim.implementations.beams import Beams
 from robocell_sim.implementations.compared import Compared
 from robocell_sim.implementations.differential import Differential
+from robocell_sim.implementations.dots import Dots
 from robocell_sim.implementations.guarded import Guarded
 from robocell_sim.implementations.gyroscopic import Gyroscopic
 from robocell_sim.implementations.integrated import Integrated
@@ -23,6 +25,7 @@ from robocell_sim.implementations.physical import Physical
 from robocell_sim.implementations.pinhole import Pinhole
 from robocell_sim.implementations.polar import Polar
 from robocell_sim.implementations.raycast import Raycast
+from robocell_sim.implementations.scanned import Scanned
 from robocell_sim.implementations.screen import Screen
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
@@ -37,18 +40,20 @@ model = mujoco.MjModel.from_xml_path(
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
+beams = threading.Event()
 keys: queue.SimpleQueue[int] = queue.SimpleQueue()
 
 
 def key(keycode: int) -> None:
-    """Toggle the pause on space and queue every other key for the drive."""
-    if keycode != ord(" "):
+    """Toggle the pause on space and the lidar lines on 9, queue other keys."""
+    toggle = {ord(" "): pause, ord("9"): beams}.get(keycode)
+    if toggle is None:
         keys.put(keycode)
         return
-    if pause.is_set():
-        pause.clear()
+    if toggle.is_set():
+        toggle.clear()
     else:
-        pause.set()
+        toggle.set()
 
 
 drive = Limited(Differential(0.033, 0.288), 7.88)
@@ -98,6 +103,9 @@ scan = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
+    viewer.set_texts(
+        (None, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT.value, "9", "Lidar lines")
+    )
     frame = time.time()
     while viewer.is_running():
         now = time.time()
@@ -138,6 +146,15 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
             if data.time >= scan:
                 ranges = lidar.ranges()
                 radar.mark(ranges)
+                with viewer.lock():
+                    viewer.user_scn.ngeom = 0
+                    if beams.is_set():
+                        Beams(Scanned(data, "base_scan", ranges)).paint(
+                            viewer.user_scn
+                        )
+                    Dots(Scanned(data, "base_scan", ranges)).paint(
+                        viewer.user_scn
+                    )
                 scan += 0.2
             if data.time >= shot:
                 camera.record(data.qpos)
