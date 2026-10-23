@@ -5,6 +5,7 @@ from typing import final, override
 
 import glfw
 
+from robocell_sim.robot.implementations.remote import Remote
 from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.speed import Speed
 
@@ -30,6 +31,10 @@ class Arrows(Command):
             glfw.KEY_RIGHT: Arrows(self._linear, self._angular.down()),
             glfw.KEY_ENTER: Arrows(self._linear.stop(), self._angular.stop()),
         }.get(key, self)
+
+    @override
+    def steer(self, linear: float, angular: float) -> Command:
+        return Remote(self, linear, angular)
 
     @override
     def velocity(self) -> tuple[float, float]:

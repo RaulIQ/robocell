@@ -178,3 +178,26 @@ def test_guarded_keeps_the_robot_off_the_wall_ahead() -> None:
         greater_than(0.05),
         "robot did not halt short of the wall ahead",
     )
+
+
+def test_guarded_stops_a_steered_robot_before_an_echo_ahead() -> None:
+    """A steer from ROS 2 cannot drive the robot into an echo ahead."""
+    scan = [math.inf] * 360
+    scan[secrets.SystemRandom().randint(-20, 20)] = (
+        secrets.SystemRandom().uniform(0.12, 0.28)
+    )
+    assert_that(
+        Guarded(
+            Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0)),
+            tuple(scan),
+            0.3,
+            0.2,
+        )
+        .steer(
+            secrets.SystemRandom().uniform(0.01, 0.26),
+            secrets.SystemRandom().uniform(-1.8, 1.8),
+        )
+        .velocity()[0],
+        equal_to(0.0),
+        "a steer did not stop before an echo ahead",
+    )
