@@ -20,6 +20,8 @@ from robocell_sim.implementations.limited import Limited
 from robocell_sim.implementations.paced import Paced
 from robocell_sim.implementations.physical import Physical
 from robocell_sim.implementations.pinhole import Pinhole
+from robocell_sim.implementations.polar import Polar
+from robocell_sim.implementations.raycast import Raycast
 from robocell_sim.implementations.screen import Screen
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
@@ -86,6 +88,12 @@ log.info(
     ).matrix(),
 )
 shot = 0.0
+lidar = Raycast(model, data, "base_scan", (0.12, 3.5))
+radar = Polar(multiprocessing.get_context("fork").Queue(maxsize=2), 3.5)
+multiprocessing.get_context("fork").Process(
+    target=radar.show, daemon=True
+).start()
+scan = 0.0
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     frame = time.time()
@@ -125,6 +133,9 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                     slipping=slip.slipping(),
                 )
                 sample += 0.1
+            if data.time >= scan:
+                radar.mark(lidar.ranges())
+                scan += 0.2
             if data.time >= shot:
                 camera.record(data.qpos)
                 shot += 1 / 30
