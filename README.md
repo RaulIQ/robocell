@@ -22,6 +22,7 @@ Every press changes the speed by one step, up to the robot limits.
 | Left / Right   | turn one step to the left or right  |
 | Enter          | stop                                |
 | Space          | pause or resume the simulation      |
+| 9              | show or hide the lidar lines        |
 
 Every half second of simulated time the console logs both wheel encoders
 in ticks, at 4096 ticks per wheel revolution, as the Dynamixel XM430 counts them.
@@ -50,6 +51,9 @@ with ahead at the top. The lidar casts 360 level rays from the scanner, one
 per degree counterclockwise from ahead as in ROS, and keeps ranges between
 0.12 and 3.5 m; the low pallet stays under its scan plane, so only the camera
 sees it.
+
+The MuJoCo viewer marks every lidar echo with a yellow dot, repainted with
+each scan, and the 9 key adds red lines from the scanner to the dots.
 
 The robot refuses to drive into what the lidar sees. While any echo lies in a
 corridor 0.3 m ahead of the scanner and 0.2 m to each side, the forward speed
