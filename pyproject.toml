@@ -1,5 +1,5 @@
 [dependency-groups]
-dev = ["pytest-eo @ git+https://github.com/RaulIQ/pytest-eo@0.5.0", "pybind11-stubgen==3.0.0"]
+dev = ["pytest-eo @ git+https://github.com/RaulIQ/pytest-eo@0.5.0", "pybind11-stubgen==3.0.0", "defusedxml==0.7.1", "types-defusedxml==0.7.0.20260504"]
 
 [tool.eo]
 exclude = ["src/robocell_sim/setup.py"]

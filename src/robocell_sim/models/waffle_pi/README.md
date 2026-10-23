@@ -1,6 +1,6 @@
 # TurtleBot3 Waffle Pi Description (MJCF)
 
-This package holds a MuJoCo description of the
+This package holds a MuJoCo description and a URDF of the
 [TurtleBot3 Waffle Pi](https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/)
 by [ROBOTIS](https://www.robotis.com/).
 It is written by hand from `turtlebot3_waffle_pi.urdf` in
@@ -25,3 +25,12 @@ and it reuses the STL meshes of that package under the Apache 2.0 license in
 6. Added the `camera_rgb` camera at the URDF `camera_rgb_frame`, looking forward.
 7. Added `jointpos` sensors `wheel_left_encoder` and `wheel_right_encoder` on the wheel joints,
    in radians, to stand in for the encoders of the Dynamixel XM430 wheel servos.
+
+## URDF
+
+`waffle_pi.urdf` is `turtlebot3_waffle_pi.urdf` from the same commit,
+expanded by `xacro` with an empty `namespace`, with its mesh paths pointed at
+`package://robocell_sim/models/waffle_pi/assets/`,
+so that MuJoCo and RViz load the same STL files.
+`test/test_waffle_pi_urdf.py` checks that both descriptions name the same wheel joints
+and place the lidar, the camera and the IMU alike.

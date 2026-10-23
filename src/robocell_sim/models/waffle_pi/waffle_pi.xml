@@ -42,7 +42,7 @@
       <geom class="collision" type="box" size="0.0075 0.015 0.0135" pos="0.078 0 0.097"/>
       <geom name="caster_back_left" class="caster" pos="-0.177 0.064 -0.004"/>
       <geom name="caster_back_right" class="caster" pos="-0.177 -0.064 -0.004"/>
-      <site name="imu"/>
+      <site name="imu" pos="0 0 0.068"/>
       <camera name="camera_rgb" pos="0.076 0 0.093" xyaxes="0 -1 0 0 0 1" fovy="49"/>
       <body name="wheel_left_link" pos="0 0.144 0.023">
         <inertial pos="0 0 0" mass="0.02849894" diaginertia="1.1175580e-05 2.0712558e-05 1.1192413e-05"/>
