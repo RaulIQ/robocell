@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robocell_sim</name>
+  <version>0.0.0</version>
+  <description>MuJoCo simulation of a TurtleBot3 Waffle Pi with odometry, lidar, camera and a collision guard</description>
+  <maintainer email="raulalimbekov@gmail.com">RaulIQ</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-tk</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
