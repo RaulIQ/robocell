@@ -10,29 +10,29 @@ import time
 import mujoco
 import mujoco.viewer
 
-from robocell_sim.implementations.accumulated import Accumulated
-from robocell_sim.implementations.arrows import Arrows
-from robocell_sim.implementations.beams import Beams
-from robocell_sim.implementations.compared import Compared
-from robocell_sim.implementations.differential import Differential
-from robocell_sim.implementations.dots import Dots
-from robocell_sim.implementations.guarded import Guarded
-from robocell_sim.implementations.gyroscopic import Gyroscopic
-from robocell_sim.implementations.integrated import Integrated
-from robocell_sim.implementations.limited import Limited
-from robocell_sim.implementations.paced import Paced
-from robocell_sim.implementations.physical import Physical
-from robocell_sim.implementations.pinhole import Pinhole
-from robocell_sim.implementations.polar import Polar
-from robocell_sim.implementations.raycast import Raycast
-from robocell_sim.implementations.scanned import Scanned
-from robocell_sim.implementations.screen import Screen
-from robocell_sim.implementations.simulated import Simulated
-from robocell_sim.implementations.stepped import Stepped
-from robocell_sim.implementations.window import Window
-from robocell_sim.interfaces.command import Command
-from robocell_sim.interfaces.odometry import Odometry
-from robocell_sim.interfaces.slip import Slip
+from robocell_sim.display.implementations.beams import Beams
+from robocell_sim.display.implementations.dots import Dots
+from robocell_sim.display.implementations.polar import Polar
+from robocell_sim.display.implementations.scanned import Scanned
+from robocell_sim.display.implementations.screen import Screen
+from robocell_sim.display.implementations.window import Window
+from robocell_sim.hardware.implementations.accumulated import Accumulated
+from robocell_sim.hardware.implementations.integrated import Integrated
+from robocell_sim.hardware.implementations.paced import Paced
+from robocell_sim.hardware.implementations.physical import Physical
+from robocell_sim.hardware.implementations.pinhole import Pinhole
+from robocell_sim.hardware.implementations.raycast import Raycast
+from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.robot.implementations.arrows import Arrows
+from robocell_sim.robot.implementations.compared import Compared
+from robocell_sim.robot.implementations.differential import Differential
+from robocell_sim.robot.implementations.guarded import Guarded
+from robocell_sim.robot.implementations.gyroscopic import Gyroscopic
+from robocell_sim.robot.implementations.limited import Limited
+from robocell_sim.robot.implementations.stepped import Stepped
+from robocell_sim.robot.interfaces.command import Command
+from robocell_sim.robot.interfaces.odometry import Odometry
+from robocell_sim.robot.interfaces.slip import Slip
 
 model = mujoco.MjModel.from_xml_path(
     "/ws/src/robocell_sim/models/waffle_pi/workshop.xml"

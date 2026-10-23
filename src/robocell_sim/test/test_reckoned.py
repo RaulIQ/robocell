@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to, less_than
-from robocell_sim.implementations.differential import Differential
-from robocell_sim.implementations.reckoned import Reckoned
-from robocell_sim.implementations.simulated import Simulated
+from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.robot.implementations.differential import Differential
+from robocell_sim.robot.implementations.reckoned import Reckoned
 
 if TYPE_CHECKING:
-    from robocell_sim.interfaces.odometry import Odometry
+    from robocell_sim.robot.interfaces.odometry import Odometry
 
 
 def test_reckoned_drives_straight_by_the_rim_distance() -> None:

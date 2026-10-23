@@ -7,8 +7,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, equal_to, less_than
-from robocell_sim.implementations.dots import Dots
-from robocell_sim.implementations.scanned import Scanned
+from robocell_sim.display.implementations.dots import Dots
+from robocell_sim.display.implementations.scanned import Scanned
 
 
 def test_dots_mark_every_echo() -> None:

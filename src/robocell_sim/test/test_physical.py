@@ -5,7 +5,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to
-from robocell_sim.implementations.physical import Physical
+from robocell_sim.hardware.implementations.physical import Physical
 
 
 def test_physical_moves_the_clock_by_one_step_each_time() -> None:

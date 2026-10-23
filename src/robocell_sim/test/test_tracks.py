@@ -6,7 +6,7 @@ import secrets
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
 from matplotlib.figure import Figure
-from robocell_sim.implementations.tracks import Tracks
+from robocell_sim.display.implementations.tracks import Tracks
 
 
 def test_tracks_draw_the_true_route() -> None:

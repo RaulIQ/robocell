@@ -1,5 +1,19 @@
 # robocell
 
+## Layout
+
+The `robocell_sim` package splits into three worlds, each with its own
+`interfaces` and `implementations`:
+
+| Package    | Role                                         | Examples                              |
+| ---------- | -------------------------------------------- | ------------------------------------- |
+| `hardware` | stands in for the real TurtleBot3            | physics, IMU board, encoders, lidar   |
+| `robot`    | would run on a real TurtleBot3 under ROS 2   | kinematics, odometry, slip, safety    |
+| `display`  | stands in for RViz and a web console         | route, lidar and camera windows       |
+
+Nothing under `robot` imports MuJoCo, and a test keeps it that way.
+`main.py` wires objects from all three worlds together.
+
 ## Run the simulation
 
 Start the TurtleBot3 Waffle Pi in the MuJoCo viewer from any folder:

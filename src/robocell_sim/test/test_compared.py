@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING
 
 import mujoco
 from hamcrest import assert_that, equal_to
-from robocell_sim.implementations.compared import Compared
-from robocell_sim.implementations.differential import Differential
-from robocell_sim.implementations.integrated import Integrated
-from robocell_sim.implementations.paced import Paced
-from robocell_sim.implementations.physical import Physical
-from robocell_sim.implementations.simulated import Simulated
+from robocell_sim.hardware.implementations.integrated import Integrated
+from robocell_sim.hardware.implementations.paced import Paced
+from robocell_sim.hardware.implementations.physical import Physical
+from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.robot.implementations.compared import Compared
+from robocell_sim.robot.implementations.differential import Differential
 
 if TYPE_CHECKING:
-    from robocell_sim.interfaces.slip import Slip
+    from robocell_sim.robot.interfaces.slip import Slip
 
 
 def test_compared_trusts_a_turn_both_sensors_agree_on() -> None:
