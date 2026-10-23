@@ -8,9 +8,12 @@ class Command(Protocol):
 
     def press(self, key: int) -> "Command":
         """Command after one more press of a GLFW key code."""
+        ...
 
     def steer(self, linear: float, angular: float) -> "Command":
         """Command after the operator sets the velocity in m/s and rad/s."""
+        ...
 
     def velocity(self) -> tuple[float, float]:
         """Forward speed in m/s and counterclockwise yaw rate in rad/s."""
+        ...
