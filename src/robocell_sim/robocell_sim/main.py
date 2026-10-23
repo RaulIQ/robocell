@@ -1,6 +1,7 @@
 """Entry point of robocell."""
 
 import logging
+import math
 import multiprocessing
 import queue
 import threading
@@ -18,6 +19,8 @@ from robocell_sim.implementations.integrated import Integrated
 from robocell_sim.implementations.limited import Limited
 from robocell_sim.implementations.paced import Paced
 from robocell_sim.implementations.physical import Physical
+from robocell_sim.implementations.pinhole import Pinhole
+from robocell_sim.implementations.screen import Screen
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.implementations.window import Window
@@ -61,6 +64,22 @@ multiprocessing.get_context("fork").Process(
     target=route.show, daemon=True
 ).start()
 sample = 0.0
+camera = Screen(
+    multiprocessing.get_context("fork").Queue(maxsize=2),
+    model,
+    "camera_rgb",
+    (640, 480),
+)
+multiprocessing.get_context("fork").Process(
+    target=camera.show, daemon=True
+).start()
+log.info(
+    "Camera sees through the intrinsics %s",
+    Pinhole(
+        math.radians(model.cam_fovy[model.camera("camera_rgb").id]), 640, 480
+    ).matrix(),
+)
+shot = 0.0
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     frame = time.time()
@@ -100,6 +119,9 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                     slipping=slip.slipping(),
                 )
                 sample += 0.1
+            if data.time >= shot:
+                camera.record(data.qpos)
+                shot += 1 / 30
             if data.time >= moment:
                 log.info(
                     "Encoders read %d ticks on the left and %d on the right",
