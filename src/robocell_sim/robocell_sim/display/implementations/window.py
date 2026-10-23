@@ -40,6 +40,7 @@ class Window(Route):
         mpl.use("TkAgg")
         with plt.rc_context(
             {
+                "figure.raise_window": False,
                 "figure.facecolor": "#fcfcfb",
                 "axes.facecolor": "#fcfcfb",
                 "axes.edgecolor": "#c3c2b7",
