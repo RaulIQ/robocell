@@ -46,3 +46,7 @@ class Reckoned(Odometry):
     @override
     def position(self) -> tuple[float, float]:
         return (self._pose[0], self._pose[1])
+
+    @override
+    def heading(self) -> float:
+        return self._pose[2]

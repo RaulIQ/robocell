@@ -11,3 +11,6 @@ class Odometry(Protocol):
 
     def position(self) -> tuple[float, float]:
         """Position of the robot on the floor in meters."""
+
+    def heading(self) -> float:
+        """Heading of the robot in radians, counterclockwise from the x axis."""

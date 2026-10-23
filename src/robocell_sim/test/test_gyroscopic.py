@@ -110,3 +110,22 @@ def test_gyroscopic_follows_the_simulated_waffle_pi() -> None:
         less_than(0.01),
         "gyro odometry did not stay within a centimeter of the robot",
     )
+
+
+def test_gyroscopic_turns_its_heading_by_the_gyro() -> None:
+    """The heading grows by the angle the gyro turned since the start."""
+    start = secrets.SystemRandom().uniform(-math.pi, math.pi)
+    angle = secrets.SystemRandom().uniform(-50.0, 50.0)
+    assert_that(
+        Gyroscopic(
+            Differential(0.033, 0.288), 4096, (0.0, 0.0, start), (0, 0, 0.0)
+        )
+        .read(
+            secrets.SystemRandom().randint(-50000, 50000),
+            secrets.SystemRandom().randint(-50000, 50000),
+            angle,
+        )
+        .heading(),
+        close_to(start + angle, 1e-9),
+        "heading did not turn by the angle of the gyro",
+    )

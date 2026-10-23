@@ -74,3 +74,9 @@ corridor 0.3 m ahead of the scanner and 0.2 m to each side, the forward speed
 drops to zero, and an echo in the same corridor behind blocks reversing.
 Turning in place stays free, so you can steer away. The low pallet stays
 under the scan plane, so the robot can still bump into it.
+
+A fifth window piles the lidar scans up into two maps of the workshop, once a
+second: on the left by the true pose from MuJoCo, on the right by the pose the
+odometry reckons. While the odometry holds, both show the same plan; when the
+robot bumps into the pallet and the wheels spin in place, the right map smears
+the walls along the way the encoders think the robot went.
