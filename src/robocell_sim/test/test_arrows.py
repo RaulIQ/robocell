@@ -83,3 +83,21 @@ def test_arrows_ignore_letter_keys() -> None:
         equal_to(arrows.velocity()),
         "letter key did not leave the commanded velocity alone",
     )
+
+
+def test_arrows_drive_at_the_steered_velocity() -> None:
+    """A steer from ROS 2 overrides the velocity the arrows set."""
+    velocity = (
+        secrets.SystemRandom().uniform(-0.26, 0.26),
+        secrets.SystemRandom().uniform(-1.8, 1.8),
+    )
+    assert_that(
+        Arrows(
+            Stepped(0.05, 5, secrets.SystemRandom().randint(-5, 5)),
+            Stepped(0.3, 6, secrets.SystemRandom().randint(-6, 6)),
+        )
+        .steer(*velocity)
+        .velocity(),
+        equal_to(velocity),
+        "arrows did not drive at the steered velocity",
+    )

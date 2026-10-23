@@ -50,6 +50,7 @@ mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
 beams = threading.Event()
 keys: queue.SimpleQueue[int] = queue.SimpleQueue()
+twists: queue.SimpleQueue[tuple[float, float]] = queue.SimpleQueue()
 
 
 def key(keycode: int) -> None:
@@ -115,7 +116,9 @@ survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
 rclpy.init()
-bridge = Advertised(rclpy.create_node("sim"))
+node = rclpy.create_node("sim")
+bridge = Advertised(node)
+bridge.listen(twists)
 physics = Paced(
     Tracked(
         Clocked(
@@ -137,8 +140,11 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     frame = time.time()
     while viewer.is_running():
         now = time.time()
+        rclpy.spin_once(node, timeout_sec=0)
         while not keys.empty():
             command = command.press(keys.get())
+        while not twists.empty():
+            command = command.steer(*twists.get())
         if not pause.is_set():
             data.ctrl[
                 [

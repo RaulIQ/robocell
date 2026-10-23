@@ -32,6 +32,15 @@ class Guarded(Command):
         )
 
     @override
+    def steer(self, linear: float, angular: float) -> Command:
+        return Guarded(
+            self._origin.steer(linear, angular),
+            self._scan,
+            self._reach,
+            self._width,
+        )
+
+    @override
     def velocity(self) -> tuple[float, float]:
         linear, angular = self._origin.velocity()
         echoes = [
