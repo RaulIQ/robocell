@@ -6,7 +6,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to
-from robocell_sim.implementations.differential import Differential
+from robocell_sim.robot.implementations.differential import Differential
 
 from test.waffle import Waffle
 

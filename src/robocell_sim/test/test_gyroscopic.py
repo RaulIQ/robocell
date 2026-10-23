@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to, less_than
-from robocell_sim.implementations.accumulated import Accumulated
-from robocell_sim.implementations.differential import Differential
-from robocell_sim.implementations.gyroscopic import Gyroscopic
-from robocell_sim.implementations.integrated import Integrated
-from robocell_sim.implementations.paced import Paced
-from robocell_sim.implementations.physical import Physical
-from robocell_sim.implementations.simulated import Simulated
+from robocell_sim.hardware.implementations.accumulated import Accumulated
+from robocell_sim.hardware.implementations.integrated import Integrated
+from robocell_sim.hardware.implementations.paced import Paced
+from robocell_sim.hardware.implementations.physical import Physical
+from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.robot.implementations.differential import Differential
+from robocell_sim.robot.implementations.gyroscopic import Gyroscopic
 
 if TYPE_CHECKING:
-    from robocell_sim.interfaces.odometry import Odometry
+    from robocell_sim.robot.interfaces.odometry import Odometry
 
 
 def test_gyroscopic_drives_straight_by_the_rim_distance() -> None:

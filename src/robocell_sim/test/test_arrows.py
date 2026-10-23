@@ -4,8 +4,8 @@ import secrets
 
 import glfw
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.implementations.arrows import Arrows
-from robocell_sim.implementations.stepped import Stepped
+from robocell_sim.robot.implementations.arrows import Arrows
+from robocell_sim.robot.implementations.stepped import Stepped
 
 
 def test_arrows_speed_forward_on_up() -> None:

@@ -7,7 +7,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, equal_to
-from robocell_sim.implementations.screen import Screen
+from robocell_sim.display.implementations.screen import Screen
 
 
 def test_screen_queues_the_state_to_film() -> None:

@@ -7,8 +7,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.implementations.raycast import Raycast
-from robocell_sim.implementations.scanned import Scanned
+from robocell_sim.display.implementations.scanned import Scanned
+from robocell_sim.hardware.implementations.raycast import Raycast
 
 
 def test_scanned_places_the_first_echo_on_the_wall_ahead() -> None:
