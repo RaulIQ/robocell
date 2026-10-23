@@ -18,7 +18,7 @@ RUN python3 -m venv --system-site-packages /opt/venv \
 ENV PATH=/opt/venv/bin:$PATH
 
 RUN pip install --no-cache-dir \
-      "numpy<2" mujoco==3.16.0 matplotlib==3.10.8 pymodbus pyserial python-can canopen transitions py_trees
+      "numpy<2" mujoco==3.16.0 matplotlib==3.10.8 opencv-python==4.10.0.84 pymodbus pyserial python-can canopen transitions py_trees
 
 COPY pyproject.toml /opt/robocell/pyproject.toml
 RUN pip install --no-cache-dir --group /opt/robocell/pyproject.toml:dev

@@ -32,3 +32,10 @@ the encoders and the gyroscope say it turns. When the two rates differ by
 more than 0.3 rad/s, the wheels slip: the console logs a warning, the route
 window marks the spot on the dashed line with a red cross, and the console
 logs again once the wheels grip.
+
+A third window shows what the robot camera sees, 640 by 480 pixels thirty
+times a second. MuJoCo renders it in a process of its own from the joint
+positions the simulation sends, so a slow window drops frames instead of
+slowing the robot down. At start the console logs the camera matrix of this
+ideal pinhole camera, computed from its vertical field of view, with no
+lens distortion.
