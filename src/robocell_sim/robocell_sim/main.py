@@ -15,6 +15,7 @@ from robocell_sim.display.implementations.dots import Dots
 from robocell_sim.display.implementations.polar import Polar
 from robocell_sim.display.implementations.scanned import Scanned
 from robocell_sim.display.implementations.screen import Screen
+from robocell_sim.display.implementations.survey import Survey
 from robocell_sim.display.implementations.window import Window
 from robocell_sim.hardware.implementations.accumulated import Accumulated
 from robocell_sim.hardware.implementations.integrated import Integrated
@@ -29,6 +30,7 @@ from robocell_sim.robot.implementations.differential import Differential
 from robocell_sim.robot.implementations.guarded import Guarded
 from robocell_sim.robot.implementations.gyroscopic import Gyroscopic
 from robocell_sim.robot.implementations.limited import Limited
+from robocell_sim.robot.implementations.placed import Placed
 from robocell_sim.robot.implementations.stepped import Stepped
 from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.odometry import Odometry
@@ -100,6 +102,11 @@ multiprocessing.get_context("fork").Process(
     target=radar.show, daemon=True
 ).start()
 scan = 0.0
+atlas = Survey(multiprocessing.get_context("fork").Queue())
+multiprocessing.get_context("fork").Process(
+    target=atlas.show, daemon=True
+).start()
+survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
@@ -146,6 +153,27 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
             if data.time >= scan:
                 ranges = lidar.ranges()
                 radar.mark(ranges)
+                if data.time >= survey:
+                    atlas.mark(
+                        Placed(
+                            ranges,
+                            (
+                                data.body("base_link").xpos[0],
+                                data.body("base_link").xpos[1],
+                                math.atan2(
+                                    data.body("base_link").xmat[3],
+                                    data.body("base_link").xmat[0],
+                                ),
+                            ),
+                            -0.064,
+                        ).points(),
+                        Placed(
+                            ranges,
+                            (*odometry.position(), odometry.heading()),
+                            -0.064,
+                        ).points(),
+                    )
+                    survey += 1.0
                 with viewer.lock():
                     viewer.user_scn.ngeom = 0
                     if beams.is_set():

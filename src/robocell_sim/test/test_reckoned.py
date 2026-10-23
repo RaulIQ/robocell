@@ -97,3 +97,16 @@ def test_reckoned_follows_the_simulated_waffle_pi() -> None:
         less_than(0.01),
         "encoder odometry did not stay within a centimeter of the robot",
     )
+
+
+def test_reckoned_turns_its_heading_by_the_encoders() -> None:
+    """Opposite counts turn the heading by the angle the wheels imply."""
+    start = secrets.SystemRandom().uniform(-math.pi, math.pi)
+    count = secrets.SystemRandom().randint(1, 50000)
+    assert_that(
+        Reckoned(Differential(0.033, 0.288), 4096, (0.0, 0.0, start), (0, 0))
+        .read(-count, count, secrets.SystemRandom().uniform(-50.0, 50.0))
+        .heading(),
+        close_to(start + 0.033 * 2 * count * 2 * math.pi / 4096 / 0.288, 1e-9),
+        "heading did not turn by the angle of the encoders",
+    )
