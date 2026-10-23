@@ -7,8 +7,8 @@ from hamcrest import assert_that, equal_to
 from robocell_sim.implementations.window import Window
 
 
-def test_window_queues_both_positions() -> None:
-    """Marking a point sends the encoder and the true position together."""
+def test_window_queues_both_positions_and_the_slip() -> None:
+    """Marking a point sends both positions and the slip together."""
     queue = multiprocessing.get_context("fork").Queue()
     estimate = (
         secrets.SystemRandom().uniform(-5, 5),
@@ -18,9 +18,10 @@ def test_window_queues_both_positions() -> None:
         secrets.SystemRandom().uniform(-5, 5),
         secrets.SystemRandom().uniform(-5, 5),
     )
-    Window(queue).mark(estimate, truth)
+    slipping = secrets.choice((True, False))
+    Window(queue).mark(estimate, truth, slipping=slipping)
     assert_that(
         queue.get(timeout=5),
-        equal_to((estimate, truth)),
-        "window did not queue the encoder and true positions together",
+        equal_to((estimate, truth, slipping)),
+        "window did not queue both positions and the slip together",
     )

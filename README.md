@@ -26,3 +26,9 @@ where the wheel encoders and the gyroscope put it, the solid line is where
 MuJoCo actually has it, and the title tells how far apart they are in
 millimeters. The distance comes from the encoders and the turn from the
 gyroscope, whose yaw rate adds up on every physics step.
+
+Every tenth of a second of simulated time the robot also compares how fast
+the encoders and the gyroscope say it turns. When the two rates differ by
+more than 0.3 rad/s, the wheels slip: the console logs a warning, the route
+window marks the spot on the dashed line with a red cross, and the console
+logs again once the wheels grip.

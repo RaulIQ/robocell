@@ -16,19 +16,24 @@ from robocell_sim.interfaces.route import Route
 class Window(Route):
     """Tk window that redraws the encoder and the true track ten times a second.
 
-    The queue carries pairs of encoder and true positions from the
-    simulation to the window, which runs in a process of its own.
+    The queue carries the encoder and true positions together with the
+    slip of the wheels from the simulation to the window, which runs in a
+    process of its own.
     """
 
     _queue: multiprocessing.queues.Queue[
-        tuple[tuple[float, float], tuple[float, float]]
+        tuple[tuple[float, float], tuple[float, float], bool]
     ]
 
     @override
     def mark(
-        self, estimate: tuple[float, float], truth: tuple[float, float]
+        self,
+        estimate: tuple[float, float],
+        truth: tuple[float, float],
+        *,
+        slipping: bool,
     ) -> None:
-        self._queue.put((estimate, truth))
+        self._queue.put((estimate, truth, slipping))
 
     @override
     def show(self) -> None:
@@ -71,6 +76,14 @@ class Window(Route):
                         label="Encoders",
                     )[0],
                     axes.plot([], [], color="#2a78d6", label="MuJoCo")[0],
+                    axes.plot(
+                        [],
+                        [],
+                        color="#c4312f",
+                        linestyle="none",
+                        marker="x",
+                        label="Slip",
+                    )[0],
                 ),
             )
             axes.legend(loc="upper left")

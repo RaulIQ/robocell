@@ -11,6 +11,7 @@ import mujoco.viewer
 
 from robocell_sim.implementations.accumulated import Accumulated
 from robocell_sim.implementations.arrows import Arrows
+from robocell_sim.implementations.compared import Compared
 from robocell_sim.implementations.differential import Differential
 from robocell_sim.implementations.gyroscopic import Gyroscopic
 from robocell_sim.implementations.integrated import Integrated
@@ -22,6 +23,7 @@ from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.implementations.window import Window
 from robocell_sim.interfaces.command import Command
 from robocell_sim.interfaces.odometry import Odometry
+from robocell_sim.interfaces.slip import Slip
 
 model = mujoco.MjModel.from_xml_path(
     "/ws/src/robocell_sim/models/waffle_pi/scene.xml"
@@ -53,6 +55,7 @@ moment = 0.0
 physics = Paced(Integrated(Physical(model, data), data, "imu_gyro", 0), data)
 clock = 0.0
 odometry: Odometry = Gyroscopic(drive, 4096, (0.0, 0.0, 0.0), (0, 0, 0.0))
+slip: Slip = Compared(drive, 4096, 0.3, ((0, 0, 0.0, 0.0), (0, 0, 0.0, 0.0)))
 route = Window(multiprocessing.get_context("fork").Queue())
 multiprocessing.get_context("fork").Process(
     target=route.show, daemon=True
@@ -76,12 +79,25 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
             physics.advance(clock)
             odometry = odometry.read(left.ticks(), right.ticks(), gyro.angle())
             if data.time >= sample:
+                slipped = slip.slipping()
+                slip = slip.read(
+                    left.ticks(), right.ticks(), gyro.angle(), data.time
+                )
+                if slip.slipping() and not slipped:
+                    log.warning(
+                        "Wheels slip at %.1f s as the encoders and the gyro "
+                        "disagree on the turn",
+                        data.time,
+                    )
+                if slipped and not slip.slipping():
+                    log.info("Wheels grip again at %.1f s", data.time)
                 route.mark(
                     odometry.position(),
                     (
                         data.body("base_link").xpos[0],
                         data.body("base_link").xpos[1],
                     ),
+                    slipping=slip.slipping(),
                 )
                 sample += 0.1
             if data.time >= moment:
