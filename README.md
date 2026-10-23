@@ -1,5 +1,22 @@
 # robocell
 
+## What v0 does
+
+v0 drives a simulated TurtleBot3 Waffle Pi through a 6 by 6 m workshop in
+MuJoCo from the keyboard. Its odometry takes the distance from the wheel
+encoders and the turn from an integrated gyro, a 360-ray lidar ranges the
+room five times a second, a camera renders what the robot sees, and a guard
+stops the robot short of anything the lidar sees. Separate windows plot the
+route against the ground truth, the latest lidar scan, the camera image and
+two maps of the room, by the true pose and by odometry; the viewer marks
+every lidar echo, and the console warns when the wheels slip.
+
+![v0 driving a loop through the workshop](docs/v0.gif)
+
+A scripted loop at three times the real speed: the workshop with the lidar
+echoes, the robot camera, the lidar scan and the route by odometry against
+the MuJoCo ground truth.
+
 ## Layout
 
 The `robocell_sim` package splits into three worlds, each with its own
