@@ -10,6 +10,7 @@ import time
 
 import mujoco
 import mujoco.viewer
+import rclpy
 from ament_index_python.packages import get_package_share_directory
 
 from robocell_sim.display.implementations.beams import Beams
@@ -37,6 +38,9 @@ from robocell_sim.robot.implementations.stepped import Stepped
 from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.robot.interfaces.slip import Slip
+from robocell_sim.ros.implementations.advertised import Advertised
+from robocell_sim.ros.implementations.clocked import Clocked
+from robocell_sim.ros.implementations.tracked import Tracked
 
 model = mujoco.MjModel.from_xml_path(
     f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
@@ -68,7 +72,6 @@ gyro = Accumulated(data, 0)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("robocell")
 moment = 0.0
-physics = Paced(Integrated(Physical(model, data), data, "imu_gyro", 0), data)
 clock = 0.0
 odometry: Odometry = Gyroscopic(
     drive,
@@ -110,6 +113,22 @@ multiprocessing.get_context("fork").Process(
 ).start()
 survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
+
+rclpy.init()
+bridge = Advertised(rclpy.create_node("sim"))
+physics = Paced(
+    Tracked(
+        Clocked(
+            Integrated(Physical(model, data), data, "imu_gyro", 0),
+            data,
+            bridge.clock(),
+        ),
+        data,
+        "base_link",
+        bridge.truth(),
+    ),
+    data,
+)
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     viewer.set_texts(
@@ -199,3 +218,5 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
         frame = now
         viewer.sync()
         time.sleep(max(0.0, model.opt.timestep - (time.time() - now)))
+
+rclpy.shutdown()
