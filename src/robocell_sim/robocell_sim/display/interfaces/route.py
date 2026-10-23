@@ -14,6 +14,8 @@ class Route(Protocol):
         slipping: bool,
     ) -> None:
         """Add the encoder and true position in meters and the slip."""
+        ...
 
     def show(self) -> None:
         """Draw the route in a window until the window is closed."""
+        ...

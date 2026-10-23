@@ -12,6 +12,8 @@ class Atlas(Protocol):
         estimate: list[tuple[float, float]],
     ) -> None:
         """Add the points of one scan placed by both poses to the maps."""
+        ...
 
     def show(self) -> None:
         """Draw the maps in a window until the window is closed."""
+        ...

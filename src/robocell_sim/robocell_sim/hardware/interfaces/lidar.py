@@ -8,3 +8,4 @@ class Lidar(Protocol):
 
     def ranges(self) -> tuple[float, ...]:
         """Meters per degree counterclockwise from ahead, inf with no echo."""
+        ...

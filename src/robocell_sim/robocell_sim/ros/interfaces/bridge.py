@@ -11,9 +11,12 @@ class Bridge(Protocol):
 
     def clock(self) -> Topic:
         """Topic of the simulated time, which nodes with use_sim_time follow."""
+        ...
 
     def truth(self) -> Topic:
         """Topic of the true pose and velocity of the robot."""
+        ...
 
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
         """Queue every velocity command as forward speed and yaw rate."""
+        ...

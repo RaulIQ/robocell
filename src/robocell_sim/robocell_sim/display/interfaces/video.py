@@ -11,6 +11,8 @@ class Video(Protocol):
 
     def record(self, state: npt.NDArray[np.float64]) -> None:
         """Film the world at these joint positions of the simulation."""
+        ...
 
     def show(self) -> None:
         """Show the video in a window until the window is closed."""
+        ...

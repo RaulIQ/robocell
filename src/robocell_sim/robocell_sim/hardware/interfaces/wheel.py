@@ -8,3 +8,4 @@ class Wheel(Protocol):
 
     def ticks(self) -> int:
         """Whole ticks turned since the start, negative when turned back."""
+        ...

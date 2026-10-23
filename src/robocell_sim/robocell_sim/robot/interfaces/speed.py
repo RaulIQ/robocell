@@ -8,12 +8,16 @@ class Speed(Protocol):
 
     def up(self) -> "Speed":
         """Speed one step higher."""
+        ...
 
     def down(self) -> "Speed":
         """Speed one step lower."""
+        ...
 
     def stop(self) -> "Speed":
         """Speed at rest."""
+        ...
 
     def value(self) -> float:
         """Speed in its own units, such as m/s or rad/s."""
+        ...

@@ -13,6 +13,8 @@ class Kinematics(Protocol):
 
     def wheels(self, linear: float, angular: float) -> tuple[float, float]:
         """Left and right wheel speeds that produce a body velocity."""
+        ...
 
     def velocity(self, left: float, right: float) -> tuple[float, float]:
         """Linear and angular body velocity that the wheel speeds produce."""
+        ...

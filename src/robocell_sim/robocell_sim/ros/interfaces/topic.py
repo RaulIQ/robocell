@@ -8,3 +8,4 @@ class Topic(Protocol):
 
     def publish(self, message: object, /) -> None:
         """Send one message to every subscriber of the topic."""
+        ...

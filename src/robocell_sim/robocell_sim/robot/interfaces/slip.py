@@ -10,6 +10,8 @@ class Slip(Protocol):
         self, left: int, right: int, angle: float, moment: float
     ) -> "Slip":
         """Slip after the encoders, gyro and clock reach these totals."""
+        ...
 
     def slipping(self) -> bool:
         """Whether the wheels slipped between the last two readings."""
+        ...
