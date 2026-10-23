@@ -29,9 +29,10 @@ from robocell_sim.interfaces.odometry import Odometry
 from robocell_sim.interfaces.slip import Slip
 
 model = mujoco.MjModel.from_xml_path(
-    "/ws/src/robocell_sim/models/waffle_pi/scene.xml"
+    "/ws/src/robocell_sim/models/waffle_pi/workshop.xml"
 )
 data = mujoco.MjData(model)
+mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
 keys: queue.SimpleQueue[int] = queue.SimpleQueue()
 
@@ -57,7 +58,12 @@ log = logging.getLogger("robocell")
 moment = 0.0
 physics = Paced(Integrated(Physical(model, data), data, "imu_gyro", 0), data)
 clock = 0.0
-odometry: Odometry = Gyroscopic(drive, 4096, (0.0, 0.0, 0.0), (0, 0, 0.0))
+odometry: Odometry = Gyroscopic(
+    drive,
+    4096,
+    (data.qpos[0], data.qpos[1], 2 * math.atan2(data.qpos[6], data.qpos[3])),
+    (0, 0, 0.0),
+)
 slip: Slip = Compared(drive, 4096, 0.3, ((0, 0, 0.0, 0.0), (0, 0, 0.0, 0.0)))
 route = Window(multiprocessing.get_context("fork").Queue())
 multiprocessing.get_context("fork").Process(

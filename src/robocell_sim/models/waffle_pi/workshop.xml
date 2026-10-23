@@ -1,0 +1,38 @@
+<mujoco model="workshop">
+  <include file="waffle_pi.xml"/>
+  <include file="floor.xml"/>
+
+  <statistic center="0 0 0.5" extent="6"/>
+
+  <default>
+    <default class="wall">
+      <geom type="box" rgba="0.75 0.75 0.72 1"/>
+    </default>
+    <default class="cabinet">
+      <geom type="box" size="0.2 0.15 0.5" rgba="0.25 0.35 0.45 1"/>
+    </default>
+    <default class="column">
+      <geom type="cylinder" size="0.15 1.0" rgba="0.6 0.6 0.6 1"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <geom class="wall" name="wall_north" size="3.05 0.05 0.25" pos="0 3 0.25"/>
+    <geom class="wall" name="wall_south" size="3.05 0.05 0.25" pos="0 -3 0.25"/>
+    <geom class="wall" name="wall_east" size="0.05 3.05 0.25" pos="3 0 0.25"/>
+    <geom class="wall" name="wall_west" size="0.05 3.05 0.25" pos="-3 0 0.25"/>
+    <geom class="cabinet" name="cabinet_1" pos="2.8 -1.1 0.5" euler="0 0 1.5708"/>
+    <geom class="cabinet" name="cabinet_2" pos="2.8 0.4 0.5" euler="0 0 1.5708"/>
+    <geom class="cabinet" name="cabinet_3" pos="-2.0 2.8 0.5"/>
+    <geom class="cabinet" name="cabinet_4" pos="1.2 2.8 0.5"/>
+    <geom class="column" name="column_west" pos="-1.2 1.1 1.0"/>
+    <geom class="column" name="column_east" pos="1.7 1.1 1.0"/>
+    <geom class="column" name="column_middle" pos="-0.2 -0.4 1.0"/>
+    <geom name="dock" type="box" size="0.1 0.15 0.08" pos="-2.85 -2.5 0.08" rgba="0.9 0.75 0.1 1"/>
+    <geom name="pallet" type="box" size="0.6 0.4 0.05" pos="-2.3 -1.6 0.05" rgba="0.65 0.5 0.3 1"/>
+  </worldbody>
+
+  <keyframe>
+    <key name="start" qpos="-2.1 -2.5 0.01 0.7071068 0 0 0.7071068 0 0"/>
+  </keyframe>
+</mujoco>

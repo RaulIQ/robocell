@@ -8,6 +8,11 @@ Start the TurtleBot3 Waffle Pi in the MuJoCo viewer from any folder:
 python /ws/src/robocell_sim/robocell_sim/main.py
 ```
 
+The robot drives in a closed 6 by 6 m workshop centered at the origin, with
+four cabinets, three columns, a charging dock on the west wall and a low
+pallet that stays under the lidar scan plane. It starts beside the dock,
+facing north.
+
 Steer the robot with the keyboard while the viewer window has focus.
 Every press changes the speed by one step, up to the robot limits.
 
