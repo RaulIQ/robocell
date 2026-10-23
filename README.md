@@ -27,7 +27,7 @@ The `robocell_sim` package splits into four worlds, each with its own
 | `hardware` | stands in for the real TurtleBot3            | physics, IMU board, encoders, lidar   |
 | `robot`    | would run on a real TurtleBot3 under ROS 2   | kinematics, odometry, slip, safety    |
 | `display`  | stands in for RViz and a web console         | route, lidar and camera windows       |
-| `ros`      | carries the simulation to ROS 2              | clock, ground truth                   |
+| `ros`      | carries the simulation to ROS 2              | clock, ground truth, joints, TF       |
 
 Nothing under `robot` imports MuJoCo, and a test keeps it that way. Only `ros`
 imports ROS message types, so the other worlds test without them; ROS
@@ -130,3 +130,31 @@ of the robot, stamped with the simulated time.
 ros2 topic echo --once /clock
 ros2 topic echo --once /ground_truth/odom
 ```
+
+The `/joint_states` topic carries the wheel angles as `sensor_msgs/JointState`.
+It counts them from whole encoder ticks, the way the motor driver will report
+them over CAN, rather than from the exact MuJoCo joints. The `/tf` topic carries
+`odom → base_footprint` as `tf2_msgs/TFMessage`. The footprint lies on the floor
+under `base_link` and keeps only its heading, so `robot_state_publisher` alone
+lifts `base_link` 0.01 m above it, as the URDF says. This transform comes from
+the true pose in MuJoCo and is a temporary bridge, which the odometry of the
+robot will replace. Both topics stamp their headers with the simulated time, so
+a lidar scan and the pose it was taken from line up while the robot turns.
+
+```console
+ros2 topic echo --once /joint_states
+ros2 run tf2_ros tf2_echo odom base_scan
+```
+
+## Watch the robot in RViz
+
+One launch file starts the simulator, `robot_state_publisher` with the URDF from
+`models/waffle_pi` and RViz with a saved view, all on simulated time:
+
+```console
+ros2 launch robocell_sim workshop.launch.xml
+```
+
+RViz shows the Waffle Pi in the `odom` frame with its TF axes, and its wheels
+turn along with the wheels in MuJoCo. Steer it with the arrow keys in the
+viewer, or from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.

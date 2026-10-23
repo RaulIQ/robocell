@@ -5,7 +5,7 @@ import secrets
 from pathlib import Path
 
 import mujoco
-from hamcrest import assert_that, equal_to, less_than
+from hamcrest import assert_that, close_to, equal_to, less_than
 from robocell_sim.hardware.implementations.simulated import Simulated
 
 
@@ -63,4 +63,27 @@ def test_simulated_follows_the_right_wheel_while_driving() -> None:
             )
         ),
         "right encoder did not follow the right wheel",
+    )
+
+
+def test_simulated_turns_whole_ticks_into_radians() -> None:
+    """The angle of the wheel is its whole ticks over the resolution."""
+    model = mujoco.MjModel.from_xml_path(
+        str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
+    )
+    data = mujoco.MjData(model)
+    angle = secrets.SystemRandom().uniform(-50.0, 50.0)
+    resolution = secrets.SystemRandom().randint(1024, 8192)
+    data.joint("wheel_right_joint").qpos = angle
+    mujoco.mj_forward(model, data)
+    assert_that(
+        Simulated(data, "wheel_right_encoder", resolution).angle(),
+        close_to(
+            math.floor(angle * resolution / (2 * math.pi))
+            * 2
+            * math.pi
+            / resolution,
+            1e-9,
+        ),
+        "encoder did not turn whole ticks into radians",
     )

@@ -40,6 +40,8 @@ from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.advertised import Advertised
 from robocell_sim.ros.implementations.clocked import Clocked
+from robocell_sim.ros.implementations.grounded import Grounded
+from robocell_sim.ros.implementations.jointed import Jointed
 from robocell_sim.ros.implementations.tracked import Tracked
 
 model = mujoco.MjModel.from_xml_path(
@@ -120,15 +122,25 @@ node = rclpy.create_node("sim")
 bridge = Advertised(node)
 bridge.listen(twists)
 physics = Paced(
-    Tracked(
-        Clocked(
-            Integrated(Physical(model, data), data, "imu_gyro", 0),
+    Jointed(
+        Grounded(
+            Tracked(
+                Clocked(
+                    Integrated(Physical(model, data), data, "imu_gyro", 0),
+                    data,
+                    bridge.clock(),
+                ),
+                data,
+                "base_link",
+                bridge.truth(),
+            ),
             data,
-            bridge.clock(),
+            "base_link",
+            bridge.frames(),
         ),
         data,
-        "base_link",
-        bridge.truth(),
+        {"wheel_left_joint": left, "wheel_right_joint": right},
+        bridge.joints(),
     ),
     data,
 )
