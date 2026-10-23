@@ -19,7 +19,7 @@ the MuJoCo ground truth.
 
 ## Layout
 
-The `robocell_sim` package splits into three worlds, each with its own
+The `robocell_sim` package splits into four worlds, each with its own
 `interfaces` and `implementations`:
 
 | Package    | Role                                         | Examples                              |
@@ -27,9 +27,13 @@ The `robocell_sim` package splits into three worlds, each with its own
 | `hardware` | stands in for the real TurtleBot3            | physics, IMU board, encoders, lidar   |
 | `robot`    | would run on a real TurtleBot3 under ROS 2   | kinematics, odometry, slip, safety    |
 | `display`  | stands in for RViz and a web console         | route, lidar and camera windows       |
+| `ros`      | carries the simulation to ROS 2              | clock, ground truth                   |
 
-Nothing under `robot` imports MuJoCo, and a test keeps it that way.
-`main.py` wires objects from all three worlds together.
+Nothing under `robot` imports MuJoCo, and a test keeps it that way. Only `ros`
+imports ROS message types, so the other worlds test without them; ROS
+generates its message modules without types, so `ros` alone suppresses those
+type checks, line by line for mypy and by folder for Pylance.
+`main.py` wires objects from all four worlds together.
 
 ## Run the simulation
 
@@ -114,3 +118,15 @@ second: on the left by the true pose from MuJoCo, on the right by the pose the
 odometry reckons. While the odometry holds, both show the same plan; when the
 robot bumps into the pallet and the wheels spin in place, the right map smears
 the walls along the way the encoders think the robot went.
+
+After every physics step the simulator publishes to ROS 2 from a node named
+`sim`. The `/clock` topic carries the simulated time as `rosgraph_msgs/Clock`,
+so nodes with `use_sim_time` follow the simulation and stop while it pauses.
+The `/ground_truth/odom` topic carries where MuJoCo truly has `base_link` as
+`nav_msgs/Odometry`: the pose in the `world` frame and the twist in the frame
+of the robot, stamped with the simulated time.
+
+```console
+ros2 topic echo --once /clock
+ros2 topic echo --once /ground_truth/odom
+```
