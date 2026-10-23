@@ -1,0 +1,9 @@
+<mujoco model="walls">
+  <include file="waffle_pi.xml"/>
+  <include file="floor.xml"/>
+
+  <worldbody>
+    <geom name="wall_front" type="box" size="0.05 2 0.3" pos="1.0 0 0.3"/>
+    <geom name="wall_left" type="box" size="2 0.05 0.3" pos="0 1.5 0.3"/>
+  </worldbody>
+</mujoco>

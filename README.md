@@ -44,3 +44,9 @@ positions the simulation sends, so a slow window drops frames instead of
 slowing the robot down. At start the console logs the camera matrix of this
 ideal pinhole camera, computed from its vertical field of view, with no
 lens distortion.
+
+A fourth window draws the lidar scan five times a second on a polar chart,
+with ahead at the top. The lidar casts 360 level rays from the scanner, one
+per degree counterclockwise from ahead as in ROS, and keeps ranges between
+0.12 and 3.5 m; the low pallet stays under its scan plane, so only the camera
+sees it.
