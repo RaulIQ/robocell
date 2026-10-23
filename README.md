@@ -22,5 +22,7 @@ Every half second of simulated time the console logs both wheel encoders
 in ticks, at 4096 ticks per wheel revolution, as the Dynamixel XM430 counts them.
 
 A second window draws the route of the robot as it drives: the dashed line is
-where the wheel encoders put it, the solid line is where MuJoCo actually has it,
-and the title tells how far apart they are in millimeters.
+where the wheel encoders and the gyroscope put it, the solid line is where
+MuJoCo actually has it, and the title tells how far apart they are in
+millimeters. The distance comes from the encoders and the turn from the
+gyroscope, whose yaw rate adds up on every physics step.

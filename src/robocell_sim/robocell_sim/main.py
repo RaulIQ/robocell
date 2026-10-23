@@ -9,11 +9,14 @@ import time
 import mujoco
 import mujoco.viewer
 
+from robocell_sim.implementations.accumulated import Accumulated
 from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.differential import Differential
+from robocell_sim.implementations.gyroscopic import Gyroscopic
+from robocell_sim.implementations.integrated import Integrated
 from robocell_sim.implementations.limited import Limited
 from robocell_sim.implementations.paced import Paced
-from robocell_sim.implementations.reckoned import Reckoned
+from robocell_sim.implementations.physical import Physical
 from robocell_sim.implementations.simulated import Simulated
 from robocell_sim.implementations.stepped import Stepped
 from robocell_sim.implementations.window import Window
@@ -43,12 +46,13 @@ drive = Limited(Differential(0.033, 0.288), 7.88)
 command: Command = Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0))
 left = Simulated(data, "wheel_left_encoder", 4096)
 right = Simulated(data, "wheel_right_encoder", 4096)
+gyro = Accumulated(data, 0)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("robocell")
 moment = 0.0
-physics = Paced(model, data)
+physics = Paced(Integrated(Physical(model, data), data, "imu_gyro", 0), data)
 clock = 0.0
-odometry: Odometry = Reckoned(drive, 4096, (0.0, 0.0, 0.0), (0, 0))
+odometry: Odometry = Gyroscopic(drive, 4096, (0.0, 0.0, 0.0), (0, 0, 0.0))
 route = Window(multiprocessing.get_context("fork").Queue())
 multiprocessing.get_context("fork").Process(
     target=route.show, daemon=True
@@ -70,7 +74,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
             ] = drive.wheels(*command.velocity())
             clock += now - frame
             physics.advance(clock)
-            odometry = odometry.read(left.ticks(), right.ticks())
+            odometry = odometry.read(left.ticks(), right.ticks(), gyro.angle())
             if data.time >= sample:
                 route.mark(
                     odometry.position(),

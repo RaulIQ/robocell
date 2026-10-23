@@ -16,7 +16,8 @@ class Reckoned(Odometry):
     The kinematics turn wheel angles into a distance and a turn, the
     resolution is the number of encoder ticks in one wheel revolution, the
     pose holds x and y in meters and the heading in radians, and the ticks
-    hold the left and right counts of the last reading.
+    hold the left and right counts of the last reading. The gyro angle is
+    left unread, so the turn comes from the encoders alone.
     """
 
     _kinematics: Kinematics
@@ -25,7 +26,7 @@ class Reckoned(Odometry):
     _ticks: tuple[int, int]
 
     @override
-    def read(self, left: int, right: int) -> Odometry:
+    def read(self, left: int, right: int, angle: float) -> Odometry:
         distance, turn = self._kinematics.velocity(
             (left - self._ticks[0]) * 2 * math.pi / self._resolution,
             (right - self._ticks[1]) * 2 * math.pi / self._resolution,

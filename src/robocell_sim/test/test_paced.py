@@ -6,6 +6,7 @@ from pathlib import Path
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
 from robocell_sim.implementations.paced import Paced
+from robocell_sim.implementations.physical import Physical
 
 
 def test_paced_reaches_the_moment_within_one_step() -> None:
@@ -15,7 +16,7 @@ def test_paced_reaches_the_moment_within_one_step() -> None:
     )
     data = mujoco.MjData(model)
     moment = secrets.SystemRandom().uniform(0.01, 2.0)
-    Paced(model, data).advance(moment)
+    Paced(Physical(model, data), data).advance(moment)
     assert_that(
         data.time - moment,
         close_to(model.opt.timestep / 2, model.opt.timestep / 2),
@@ -31,7 +32,7 @@ def test_paced_keeps_pace_over_many_frames() -> None:
     data = mujoco.MjData(model)
     frame = secrets.SystemRandom().uniform(0.0021, 0.0059)
     for count in range(1, 301):
-        Paced(model, data).advance(frame * count)
+        Paced(Physical(model, data), data).advance(frame * count)
     assert_that(
         data.time - frame * 300,
         close_to(model.opt.timestep / 2, model.opt.timestep / 2),
@@ -47,7 +48,9 @@ def test_paced_leaves_a_passed_moment_alone() -> None:
     data = mujoco.MjData(model)
     mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(10, 99))
     time = data.time
-    Paced(model, data).advance(secrets.SystemRandom().uniform(0.0, time))
+    Paced(Physical(model, data), data).advance(
+        secrets.SystemRandom().uniform(0.0, time)
+    )
     assert_that(
         data.time,
         equal_to(time),
