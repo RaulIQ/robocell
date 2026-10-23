@@ -50,3 +50,9 @@ with ahead at the top. The lidar casts 360 level rays from the scanner, one
 per degree counterclockwise from ahead as in ROS, and keeps ranges between
 0.12 and 3.5 m; the low pallet stays under its scan plane, so only the camera
 sees it.
+
+The robot refuses to drive into what the lidar sees. While any echo lies in a
+corridor 0.3 m ahead of the scanner and 0.2 m to each side, the forward speed
+drops to zero, and an echo in the same corridor behind blocks reversing.
+Turning in place stays free, so you can steer away. The low pallet stays
+under the scan plane, so the robot can still bump into it.

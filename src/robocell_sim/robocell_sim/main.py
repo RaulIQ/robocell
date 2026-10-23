@@ -14,6 +14,7 @@ from robocell_sim.implementations.accumulated import Accumulated
 from robocell_sim.implementations.arrows import Arrows
 from robocell_sim.implementations.compared import Compared
 from robocell_sim.implementations.differential import Differential
+from robocell_sim.implementations.guarded import Guarded
 from robocell_sim.implementations.gyroscopic import Gyroscopic
 from robocell_sim.implementations.integrated import Integrated
 from robocell_sim.implementations.limited import Limited
@@ -94,6 +95,7 @@ multiprocessing.get_context("fork").Process(
     target=radar.show, daemon=True
 ).start()
 scan = 0.0
+ranges = tuple(math.inf for _ in range(360))
 
 with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     frame = time.time()
@@ -107,7 +109,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                     model.actuator("wheel_left").id,
                     model.actuator("wheel_right").id,
                 ]
-            ] = drive.wheels(*command.velocity())
+            ] = drive.wheels(*Guarded(command, ranges, 0.3, 0.2).velocity())
             clock += now - frame
             physics.advance(clock)
             odometry = odometry.read(left.ticks(), right.ticks(), gyro.angle())
@@ -134,7 +136,8 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
                 )
                 sample += 0.1
             if data.time >= scan:
-                radar.mark(lidar.ranges())
+                ranges = lidar.ranges()
+                radar.mark(ranges)
                 scan += 0.2
             if data.time >= shot:
                 camera.record(data.qpos)
