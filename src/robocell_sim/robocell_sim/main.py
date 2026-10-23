@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Entry point of robocell."""
 
 import logging
@@ -9,6 +10,7 @@ import time
 
 import mujoco
 import mujoco.viewer
+from ament_index_python.packages import get_package_share_directory
 
 from robocell_sim.display.implementations.beams import Beams
 from robocell_sim.display.implementations.dots import Dots
@@ -37,7 +39,7 @@ from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.robot.interfaces.slip import Slip
 
 model = mujoco.MjModel.from_xml_path(
-    "/ws/src/robocell_sim/models/waffle_pi/workshop.xml"
+    f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
 )
 data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)

@@ -33,10 +33,27 @@ Nothing under `robot` imports MuJoCo, and a test keeps it that way.
 
 ## Run the simulation
 
-Start the TurtleBot3 Waffle Pi in the MuJoCo viewer from any folder:
+`robocell_sim` is an `ament_python` package. Build it with colcon from the
+workspace root, then start the TurtleBot3 Waffle Pi in the MuJoCo viewer:
 
 ```console
-python /ws/src/robocell_sim/robocell_sim/main.py
+cd /ws
+python -m colcon build --symlink-install
+source install/setup.bash
+ros2 run robocell_sim main.py
+```
+
+Run colcon through `python -m` so it uses the virtual environment that holds
+MuJoCo; the plain `colcon` command runs the system Python, which does not.
+With `--symlink-install`, edits to the code and the models take effect without
+a rebuild; only changes to `setup.py`, `setup.cfg` or `package.xml` need one.
+
+Run the tests the same way, or with the strict style gate from the root:
+
+```console
+python -m colcon test --packages-select robocell_sim
+python -m colcon test-result --verbose
+python -m pytest --eo
 ```
 
 The robot drives in a closed 6 by 6 m workshop centered at the origin, with
