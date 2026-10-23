@@ -4,10 +4,10 @@ from typing import Protocol
 
 
 class Odometry(Protocol):
-    """Pose of a robot reckoned from the counts of its wheel encoders."""
+    """Pose of a robot reckoned from its wheel encoders and its gyro."""
 
-    def read(self, left: int, right: int) -> "Odometry":
-        """Odometry after the encoders reach these total counts."""
+    def read(self, left: int, right: int, angle: float) -> "Odometry":
+        """Odometry after the encoders and the gyro reach these totals."""
 
     def position(self) -> tuple[float, float]:
         """Position of the robot on the floor in meters."""
