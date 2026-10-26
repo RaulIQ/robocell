@@ -126,10 +126,11 @@ physics = Paced(
     Periodic(
         Periodic(
             Periodic(
-                Clocked(
+                Periodic(
                     Integrated(Physical(model, data), data, "imu_gyro", 0),
                     data,
-                    bridge.clock(),
+                    1 / 100,
+                    Clocked(data, bridge.clock()),
                 ),
                 data,
                 1 / 50,
