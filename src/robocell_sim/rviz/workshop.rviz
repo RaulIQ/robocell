@@ -43,6 +43,29 @@ Visualization Manager:
       Size (m): 0.03
       Color Transformer: FlatColor
       Color: 0; 255; 0
+    - Class: rviz_default_plugins/Image
+      Name: Camera
+      Enabled: true
+      Topic:
+        Value: /camera/image_raw
+        Reliability Policy: Best Effort
+    - Class: rviz_default_plugins/Camera
+      Name: Camera Overlay
+      Enabled: true
+      Topic:
+        Value: /camera/image_raw
+        Reliability Policy: Best Effort
+      Image Rendering: background and overlay
+      Overlay Alpha: 0.5
+      Zoom Factor: 1
+      Visibility:
+        Value: true
+        Grid: false
+        RobotModel: true
+        TF: true
+        Ground Truth: false
+        Lidar: true
+        Camera: false
   Tools:
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select

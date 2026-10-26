@@ -6,7 +6,8 @@ from typing import final, override
 
 from geometry_msgs.msg import Twist  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.node import Node
-from sensor_msgs.msg import JointState, LaserScan  # type: ignore[import-untyped]  # ROS generates message modules without types
+from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import CameraInfo, Image, JointState, LaserScan  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.ros.interfaces.harness import Harness
 from robocell_sim.ros.interfaces.topic import Topic
@@ -31,6 +32,18 @@ class Wired(Harness):
     @override
     def scan(self) -> Topic:
         return self._node.create_publisher(LaserScan, "/scan", 10)
+
+    @override
+    def picture(self) -> Topic:
+        return self._node.create_publisher(
+            Image, "/camera/image_raw", qos_profile_sensor_data
+        )
+
+    @override
+    def calibration(self) -> Topic:
+        return self._node.create_publisher(
+            CameraInfo, "/camera/camera_info", 10
+        )
 
     @override
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
