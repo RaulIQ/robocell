@@ -149,12 +149,14 @@ ros2 run tf2_ros tf2_echo odom base_scan
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
-`models/waffle_pi` and RViz with a saved view, all on simulated time:
+`models/waffle_pi`, a static transform that fixes `odom` in the MuJoCo `world`
+and RViz with a saved view, all on simulated time:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml
 ```
 
-RViz shows the Waffle Pi in the `odom` frame with its TF axes, and its wheels
-turn along with the wheels in MuJoCo. Steer it with the arrow keys in the
+RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
+turn along with the wheels in MuJoCo. A red arrow marks the true pose from
+`/ground_truth/odom`. Steer it with the arrow keys in the
 viewer, or from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
