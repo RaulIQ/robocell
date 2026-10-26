@@ -125,15 +125,15 @@ bridge.listen(twists)
 physics = Paced(
     Periodic(
         Periodic(
-            Tracked(
+            Periodic(
                 Clocked(
                     Integrated(Physical(model, data), data, "imu_gyro", 0),
                     data,
                     bridge.clock(),
                 ),
                 data,
-                "base_link",
-                bridge.truth(),
+                1 / 50,
+                Tracked(data, "base_link", bridge.truth()),
             ),
             data,
             1 / 50,
