@@ -34,6 +34,15 @@ Visualization Manager:
       Shape:
         Value: Arrow
         Color: 255; 25; 0
+    - Class: rviz_default_plugins/LaserScan
+      Name: Lidar
+      Enabled: true
+      Topic:
+        Value: /scan
+      Style: Flat Squares
+      Size (m): 0.03
+      Color Transformer: FlatColor
+      Color: 0; 255; 0
   Tools:
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select

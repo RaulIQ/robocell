@@ -168,5 +168,5 @@ ros2 launch robocell_sim workshop.launch.xml
 
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
 turn along with the wheels in MuJoCo. A red arrow marks the true pose from
-`/ground_truth/odom`. Steer it with the arrow keys in the
+`/ground_truth/odom`, and green squares mark the lidar echoes from `/scan`. Steer it with the arrow keys in the
 viewer, or from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
