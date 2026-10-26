@@ -1,4 +1,4 @@
-"""Tests for the step that publishes the wheel joints by their encoders."""
+"""Tests for the report that publishes the wheel joints by their encoders."""
 
 import math
 import secrets
@@ -7,7 +7,6 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.physical import Physical
 from robocell_sim.hardware.implementations.simulated import Simulated
 from robocell_sim.ros.implementations.jointed import Jointed
 
@@ -23,14 +22,13 @@ def test_jointed_names_the_wheel_joints_of_the_urdf() -> None:
     data = mujoco.MjData(model)
     messages: list[Any] = []
     Jointed(
-        Physical(model, data),
         data,
         {
             "wheel_left_joint": Simulated(data, "wheel_left_encoder", 4096),
             "wheel_right_joint": Simulated(data, "wheel_right_encoder", 4096),
         },
         Kept(messages),
-    ).take()
+    ).publish()
     assert_that(
         list(messages[-1].name),
         equal_to(["wheel_left_joint", "wheel_right_joint"]),
@@ -52,7 +50,6 @@ def test_jointed_publishes_the_angles_the_encoders_read() -> None:
     resolution = secrets.SystemRandom().randint(64, 512)
     messages: list[Any] = []
     Jointed(
-        Physical(model, data),
         data,
         {
             "wheel_left_joint": Simulated(
@@ -63,7 +60,7 @@ def test_jointed_publishes_the_angles_the_encoders_read() -> None:
             ),
         },
         Kept(messages),
-    ).take()
+    ).publish()
     assert_that(
         math.dist(
             messages[-1].position,
@@ -78,19 +75,18 @@ def test_jointed_publishes_the_angles_the_encoders_read() -> None:
 
 
 def test_jointed_stamps_the_joints_with_the_simulated_time() -> None:
-    """The joint state carries the time of the simulation after the step."""
+    """The joint state carries the time of the simulation it publishes."""
     model = mujoco.MjModel.from_xml_path(
         str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
     )
     data = mujoco.MjData(model)
     messages: list[Any] = []
-    for _ in range(secrets.SystemRandom().randint(2, 900)):
-        Jointed(
-            Physical(model, data),
-            data,
-            {"wheel_left_joint": Simulated(data, "wheel_left_encoder", 4096)},
-            Kept(messages),
-        ).take()
+    mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(2, 900))
+    Jointed(
+        data,
+        {"wheel_left_joint": Simulated(data, "wheel_left_encoder", 4096)},
+        Kept(messages),
+    ).publish()
     assert_that(
         messages[-1].header.stamp.sec
         + messages[-1].header.stamp.nanosec * 1e-9,

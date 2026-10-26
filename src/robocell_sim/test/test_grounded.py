@@ -1,4 +1,4 @@
-"""Tests for the step that publishes the footprint of the robot to TF."""
+"""Tests for the report that publishes the footprint of the robot to TF."""
 
 import math
 import secrets
@@ -7,7 +7,6 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.physical import Physical
 from robocell_sim.ros.implementations.grounded import Grounded
 
 from test.kept import Kept
@@ -21,7 +20,7 @@ def test_grounded_links_the_footprint_to_odom() -> None:
     )
     data = mujoco.MjData(model)
     messages: list[Any] = []
-    Grounded(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Grounded(data, "base_link", Kept(messages)).publish()
     assert_that(
         (
             messages[-1].transforms[0].header.frame_id,
@@ -44,7 +43,7 @@ def test_grounded_puts_the_footprint_on_the_floor_under_the_body() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Grounded(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Grounded(data, "base_link", Kept(messages)).publish()
     assert_that(
         math.dist(
             (
@@ -75,7 +74,7 @@ def test_grounded_turns_the_footprint_to_the_heading_of_the_body() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Grounded(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Grounded(data, "base_link", Kept(messages)).publish()
     heading = math.atan2(
         data.body("base_link").xmat[3], data.body("base_link").xmat[0]
     )
@@ -95,16 +94,14 @@ def test_grounded_turns_the_footprint_to_the_heading_of_the_body() -> None:
 
 
 def test_grounded_stamps_the_transform_with_the_simulated_time() -> None:
-    """The transform carries the time of the simulation after the step."""
+    """The transform carries the time of the simulation it publishes."""
     model = mujoco.MjModel.from_xml_path(
         str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
     )
     data = mujoco.MjData(model)
     messages: list[Any] = []
-    for _ in range(secrets.SystemRandom().randint(2, 900)):
-        Grounded(
-            Physical(model, data), data, "base_link", Kept(messages)
-        ).take()
+    mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(2, 900))
+    Grounded(data, "base_link", Kept(messages)).publish()
     assert_that(
         messages[-1].transforms[0].header.stamp.sec
         + messages[-1].transforms[0].header.stamp.nanosec * 1e-9,
