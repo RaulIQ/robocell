@@ -43,7 +43,9 @@ from robocell_sim.ros.implementations.clocked import Clocked
 from robocell_sim.ros.implementations.grounded import Grounded
 from robocell_sim.ros.implementations.jointed import Jointed
 from robocell_sim.ros.implementations.periodic import Periodic
+from robocell_sim.ros.implementations.ranged import Ranged
 from robocell_sim.ros.implementations.tracked import Tracked
+from robocell_sim.ros.implementations.wired import Wired
 
 model = mujoco.MjModel.from_xml_path(
     f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
@@ -105,7 +107,8 @@ log.info(
     ).matrix(),
 )
 shot = 0.0
-lidar = Raycast(model, data, "base_scan", (0.12, 3.5))
+reach = (0.12, 3.5)
+lidar = Raycast(model, data, "base_scan", reach)
 radar = Polar(multiprocessing.get_context("fork").Queue(maxsize=2), 3.5)
 multiprocessing.get_context("fork").Process(
     target=radar.show, daemon=True
@@ -121,32 +124,38 @@ ranges = tuple(math.inf for _ in range(360))
 rclpy.init()
 node = rclpy.create_node("sim")
 bridge = Advertised(node)
-bridge.listen(twists)
+harness = Wired(node)
+harness.listen(twists)
 physics = Paced(
     Periodic(
         Periodic(
             Periodic(
                 Periodic(
-                    Integrated(Physical(model, data), data, "imu_gyro", 0),
+                    Periodic(
+                        Integrated(Physical(model, data), data, "imu_gyro", 0),
+                        data,
+                        1 / 100,
+                        Clocked(data, bridge.clock()),
+                    ),
                     data,
-                    1 / 100,
-                    Clocked(data, bridge.clock()),
+                    1 / 50,
+                    Tracked(data, "base_link", bridge.truth()),
                 ),
                 data,
                 1 / 50,
-                Tracked(data, "base_link", bridge.truth()),
+                Grounded(data, "base_link", bridge.frames()),
             ),
             data,
             1 / 50,
-            Grounded(data, "base_link", bridge.frames()),
+            Jointed(
+                data,
+                {"wheel_left_joint": left, "wheel_right_joint": right},
+                harness.joints(),
+            ),
         ),
         data,
-        1 / 50,
-        Jointed(
-            data,
-            {"wheel_left_joint": left, "wheel_right_joint": right},
-            bridge.joints(),
-        ),
+        0.2,
+        Ranged(data, lidar, reach, harness.scan()),
     ),
     data,
 )

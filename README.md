@@ -27,7 +27,7 @@ The `robocell_sim` package splits into four worlds, each with its own
 | `hardware` | stands in for the real TurtleBot3            | physics, IMU board, encoders, lidar   |
 | `robot`    | would run on a real TurtleBot3 under ROS 2   | kinematics, odometry, slip, safety    |
 | `display`  | stands in for RViz and a web console         | route, lidar and camera windows       |
-| `ros`      | carries the simulation to ROS 2              | clock, ground truth, joints, TF       |
+| `ros`      | carries the simulation to ROS 2              | clock, ground truth, joints, TF, scan |
 
 Nothing under `robot` imports MuJoCo, and a test keeps it that way. Only `ros`
 imports ROS message types, so the other worlds test without them; ROS
@@ -119,8 +119,9 @@ odometry reckons. While the odometry holds, both show the same plan; when the
 robot bumps into the pallet and the wheels spin in place, the right map smears
 the walls along the way the encoders think the robot went.
 
-After every physics step the simulator publishes to ROS 2 from a node named
-`sim`. The `/clock` topic carries the simulated time as `rosgraph_msgs/Clock`,
+The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
+rate in simulated time: `/clock` at 100 Hz, `/scan` at 5 Hz and the rest at
+50 Hz. The `/clock` topic carries the simulated time as `rosgraph_msgs/Clock`,
 so nodes with `use_sim_time` follow the simulation and stop while it pauses.
 The `/ground_truth/odom` topic carries where MuJoCo truly has `base_link` as
 `nav_msgs/Odometry`: the pose in the `world` frame and the twist in the frame
@@ -146,6 +147,15 @@ ros2 topic echo --once /joint_states
 ros2 run tf2_ros tf2_echo odom base_scan
 ```
 
+The `/scan` topic carries the 360 lidar rays as `sensor_msgs/LaserScan` in the
+`base_scan` frame, counterclockwise from ahead one degree apart, from 0.12 to
+3.5 m, with `inf` where no echo comes back, as the LDS of the real TurtleBot3
+reports them.
+
+```console
+ros2 topic echo --once /scan
+```
+
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
@@ -158,5 +168,5 @@ ros2 launch robocell_sim workshop.launch.xml
 
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
 turn along with the wheels in MuJoCo. A red arrow marks the true pose from
-`/ground_truth/odom`. Steer it with the arrow keys in the
+`/ground_truth/odom`, and green squares mark the lidar echoes from `/scan`. Steer it with the arrow keys in the
 viewer, or from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
