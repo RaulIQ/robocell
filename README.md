@@ -29,6 +29,12 @@ true pose, the lidar echoes and the camera picture with the scene drawn over
 it. Every stand-in for real hardware is listed under
 [Temporary bridges](#temporary-bridges) with what replaces it.
 
+![v0.5 in RViz next to the MuJoCo viewer](docs/v0.5.gif)
+
+RViz on the left and the MuJoCo viewer on the right, both following one drive
+through the workshop: the camera picture and the same picture with the scene
+drawn over it, the lidar echoes in green and the true pose as a red arrow.
+
 ## Layout
 
 The `robocell_sim` package splits into four worlds, each with its own
