@@ -42,6 +42,7 @@ from robocell_sim.ros.implementations.advertised import Advertised
 from robocell_sim.ros.implementations.clocked import Clocked
 from robocell_sim.ros.implementations.grounded import Grounded
 from robocell_sim.ros.implementations.jointed import Jointed
+from robocell_sim.ros.implementations.periodic import Periodic
 from robocell_sim.ros.implementations.tracked import Tracked
 
 model = mujoco.MjModel.from_xml_path(
@@ -122,25 +123,30 @@ node = rclpy.create_node("sim")
 bridge = Advertised(node)
 bridge.listen(twists)
 physics = Paced(
-    Jointed(
-        Grounded(
-            Tracked(
-                Clocked(
+    Periodic(
+        Periodic(
+            Periodic(
+                Periodic(
                     Integrated(Physical(model, data), data, "imu_gyro", 0),
                     data,
-                    bridge.clock(),
+                    1 / 100,
+                    Clocked(data, bridge.clock()),
                 ),
                 data,
-                "base_link",
-                bridge.truth(),
+                1 / 50,
+                Tracked(data, "base_link", bridge.truth()),
             ),
             data,
-            "base_link",
-            bridge.frames(),
+            1 / 50,
+            Grounded(data, "base_link", bridge.frames()),
         ),
         data,
-        {"wheel_left_joint": left, "wheel_right_joint": right},
-        bridge.joints(),
+        1 / 50,
+        Jointed(
+            data,
+            {"wheel_left_joint": left, "wheel_right_joint": right},
+            bridge.joints(),
+        ),
     ),
     data,
 )

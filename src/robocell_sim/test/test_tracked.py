@@ -1,4 +1,4 @@
-"""Tests for the step that publishes the true pose of a body."""
+"""Tests for the report that publishes the true pose of a body."""
 
 import math
 import secrets
@@ -7,7 +7,6 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.physical import Physical
 from robocell_sim.robot.implementations.differential import Differential
 from robocell_sim.ros.implementations.tracked import Tracked
 
@@ -27,7 +26,7 @@ def test_tracked_publishes_the_true_position_of_the_body() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Tracked(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Tracked(data, "base_link", Kept(messages)).publish()
     assert_that(
         math.dist(
             (
@@ -54,7 +53,7 @@ def test_tracked_publishes_the_true_orientation_of_the_body() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Tracked(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Tracked(data, "base_link", Kept(messages)).publish()
     assert_that(
         math.dist(
             (
@@ -82,7 +81,7 @@ def test_tracked_publishes_the_forward_speed_in_the_body_frame() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Tracked(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Tracked(data, "base_link", Kept(messages)).publish()
     assert_that(
         messages[-1].twist.twist.linear.x,
         close_to(linear, linear * 0.1),
@@ -104,7 +103,7 @@ def test_tracked_publishes_the_yaw_rate_of_the_body() -> None:
         secrets.SystemRandom().uniform(-math.pi, math.pi),
     ).state()
     messages: list[Any] = []
-    Tracked(Physical(model, data), data, "base_link", Kept(messages)).take()
+    Tracked(data, "base_link", Kept(messages)).publish()
     assert_that(
         messages[-1].twist.twist.angular.z,
         close_to(angular, angular * 0.1),
@@ -113,15 +112,15 @@ def test_tracked_publishes_the_yaw_rate_of_the_body() -> None:
 
 
 def test_tracked_stamps_the_pose_with_the_time_of_the_simulation() -> None:
-    """The header carries the simulated time after the step."""
+    """The header carries the simulated time it publishes."""
     model = mujoco.MjModel.from_xml_path(
         str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
     )
     data = mujoco.MjData(model)
     messages: list[Any] = []
     count = secrets.SystemRandom().randint(2, 900)
-    for _ in range(count):
-        Tracked(Physical(model, data), data, "base_link", Kept(messages)).take()
+    mujoco.mj_step(model, data, nstep=count)
+    Tracked(data, "base_link", Kept(messages)).publish()
     assert_that(
         messages[-1].header.stamp.sec
         + messages[-1].header.stamp.nanosec * 1e-9,
@@ -138,7 +137,7 @@ def test_tracked_names_the_body_as_the_child_frame() -> None:
     data = mujoco.MjData(model)
     messages: list[Any] = []
     body = secrets.choice(("base_link", "wheel_left_link", "wheel_right_link"))
-    Tracked(Physical(model, data), data, body, Kept(messages)).take()
+    Tracked(data, body, Kept(messages)).publish()
     assert_that(
         messages[-1].child_frame_id,
         equal_to(body),
