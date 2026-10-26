@@ -17,6 +17,24 @@ A scripted loop at three times the real speed: the workshop with the lidar
 echoes, the robot camera, the lidar scan and the route by odometry against
 the MuJoCo ground truth.
 
+## What v0.5 does
+
+v0.5 puts the simulator on ROS 2, so the rest of a robot stack can talk to it
+the way it will talk to the real Waffle Pi. One node publishes the simulated
+clock, the true pose, the wheel joints, the footprint in TF, the lidar scan
+and the camera picture with its calibration, each at its own rate in simulated
+time, and takes velocity commands on `/cmd_vel`. One launch file adds the URDF,
+a fixed `world` frame and an RViz view with the robot model, its frames, the
+true pose, the lidar echoes and the camera picture with the scene drawn over
+it. Every stand-in for real hardware is listed under
+[Temporary bridges](#temporary-bridges) with what replaces it.
+
+![v0.5 in RViz next to the MuJoCo viewer](docs/v0.5.gif)
+
+RViz on the left and the MuJoCo viewer on the right, both following one drive
+through the workshop: the camera picture and the same picture with the scene
+drawn over it, the lidar echoes in green and the true pose as a red arrow.
+
 ## Layout
 
 The `robocell_sim` package splits into four worlds, each with its own
@@ -180,7 +198,64 @@ ros2 launch robocell_sim workshop.launch.xml
 
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
 turn along with the wheels in MuJoCo. A red arrow marks the true pose from
-`/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, and a
-panel shows the picture from `/camera/image_raw`. Steer it with the arrow keys
-in the viewer, or from a second terminal with `teleop_twist_keyboard` on
-`/cmd_vel`.
+`/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, one
+panel shows the picture from `/camera/image_raw`, and another draws the lidar,
+the frames and the robot over that picture at half opacity, so the echoes land
+on the walls the camera sees. Steer it with the arrow keys in the viewer, or
+from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
+
+## ROS 2 reference
+
+### Topics
+
+Rates count in simulated time. QoS is what `ros2 topic info -v` reports for
+the publisher, or for the subscription on `/cmd_vel`.
+
+| Topic                 | Type                     | Rate          | QoS                              | Why this QoS                                                                                                   |
+| --------------------- | ------------------------ | ------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `/clock`              | `rosgraph_msgs/Clock`    | 100 Hz        | reliable, keep last 10           | Timers of every `use_sim_time` node step on it; the message is tiny, so delivery costs nothing.                |
+| `/ground_truth/odom`  | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | It is the reference that estimates are judged against, so a gap would skew the error.                         |
+| `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the wheels come from `robot_state_publisher` at its own 20 Hz cap. |
+| `/tf_static`          | `tf2_msgs/TFMessage`     | once          | reliable, transient local        | Fixed frames go out once, so a node that starts late must still get them.                                     |
+| `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |
+| `/joint_states`       | `sensor_msgs/JointState` | 50 Hz         | reliable, keep last 10           | A small message; reliable publishing also serves `robot_state_publisher`, which subscribes best effort.        |
+| `/scan`               | `sensor_msgs/LaserScan`  | 5 Hz          | reliable, keep last 10           | 360 floats at 5 Hz load nothing, and a reliable publisher serves both RViz and best effort readers like Nav2.   |
+| `/camera/image_raw`   | `sensor_msgs/Image`      | 29.4 Hz       | best effort, keep last 5         | A frame is 900 KB and only the newest one matters, so a lost frame is skipped rather than resent late.         |
+| `/camera/camera_info` | `sensor_msgs/CameraInfo` | 29.4 Hz       | reliable, keep last 10           | Readers pair it with each picture; it is small, and reliable serves readers of either kind.                    |
+| `/cmd_vel`            | `geometry_msgs/Twist`    | as sent       | reliable, keep last 10           | A lost command would leave the robot on its last speed, so every one must arrive.                              |
+
+### Frames
+
+![TF tree of the simulator](docs/tf_tree.svg)
+
+The tree above comes from `ros2 run tf2_tools view_frames` against the launch
+file; the same tree is in [docs/tf_tree.pdf](docs/tf_tree.pdf).
+
+| Frame                      | Meaning                                                                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `world`                    | The MuJoCo world, fixed forever; the true pose lives here, so truth and every estimate can be compared in it.                  |
+| `odom`                     | Where odometry counts from; it moves smoothly and never jumps, but drifts from `world`. Today a static identity pins it to `world`. |
+| `base_footprint`           | The robot on the floor: its position and heading, with no height, roll or pitch.                                             |
+| `base_link`                | The body of the robot, 0.01 m above the footprint, centered between the wheels.                                              |
+| `wheel_left_link`, `wheel_right_link` | The wheels, turned by the angles in `/joint_states`.                                                              |
+| `caster_back_left_link`, `caster_back_right_link` | The rear casters, fixed to the body.                                                                  |
+| `base_scan`                | The lidar; `/scan` counts its rays counterclockwise from its x axis.                                                          |
+| `imu_link`                 | The IMU on the control board; nothing publishes `/imu` yet (#73).                                                            |
+| `camera_link`, `camera_rgb_frame` | The camera body and its lens, x forward as on the robot.                                                              |
+| `camera_rgb_optical_frame` | The lens in optical axes, z forward, x right and y down, where pictures and their calibration live.                          |
+
+### Temporary bridges
+
+Some topics come straight out of MuJoCo where the real robot will have a driver
+or an estimator. Each bridge stays until its successor lands:
+
+| Bridge today                                    | Replaced by                               |
+| ----------------------------------------------- | ----------------------------------------- |
+| `/cmd_vel` straight into `data.ctrl`            | `motor_driver` over CANopen (week 4)      |
+| `/joint_states` from the simulator              | `motor_driver` (week 4)                   |
+| TF `odom → base_footprint` from the true pose   | an odometry node (#72), then an EKF       |
+| `/scan` straight from `Raycast`                 | `lidar_driver` over UART (week 3)         |
+| the camera straight from `Rendered`             | stays, as a simplification of the project |
+
+`/clock` and `/ground_truth/odom` are no bridges: they exist only in the
+simulation and simply go away on the real robot.
