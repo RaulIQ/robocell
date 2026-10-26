@@ -49,6 +49,23 @@ Visualization Manager:
       Topic:
         Value: /camera/image_raw
         Reliability Policy: Best Effort
+    - Class: rviz_default_plugins/Camera
+      Name: Camera Overlay
+      Enabled: true
+      Topic:
+        Value: /camera/image_raw
+        Reliability Policy: Best Effort
+      Image Rendering: background and overlay
+      Overlay Alpha: 0.5
+      Zoom Factor: 1
+      Visibility:
+        Value: true
+        Grid: false
+        RobotModel: true
+        TF: true
+        Ground Truth: false
+        Lidar: true
+        Camera: false
   Tools:
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select
