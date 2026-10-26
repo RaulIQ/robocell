@@ -120,9 +120,10 @@ robot bumps into the pallet and the wheels spin in place, the right map smears
 the walls along the way the encoders think the robot went.
 
 The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
-rate in simulated time: `/clock` at 100 Hz, `/scan` at 5 Hz and the rest at
-50 Hz. The `/clock` topic carries the simulated time as `rosgraph_msgs/Clock`,
-so nodes with `use_sim_time` follow the simulation and stop while it pauses.
+rate in simulated time: `/clock` at 100 Hz, the camera at 29.4 Hz, `/scan` at
+5 Hz and the rest at 50 Hz. The `/clock` topic carries the simulated time as
+`rosgraph_msgs/Clock`, so nodes with `use_sim_time` follow the simulation and
+stop while it pauses.
 The `/ground_truth/odom` topic carries where MuJoCo truly has `base_link` as
 `nav_msgs/Odometry`: the pose in the `world` frame and the twist in the frame
 of the robot, stamped with the simulated time.
@@ -156,6 +157,17 @@ reports them.
 ros2 topic echo --once /scan
 ```
 
+The `/camera/image_raw` topic carries what `camera_rgb` sees as an `rgb8`
+`sensor_msgs/Image` of 640 by 480 pixels, sent best effort like any video, and
+`/camera/camera_info` carries its ideal pinhole as `sensor_msgs/CameraInfo`,
+with no distortion. Both lie in `camera_rgb_optical_frame`. The step count
+rounds 1/30 s to 17 physics steps, so the camera runs at 29.4 Hz rather than 30.
+
+```console
+ros2 topic hz /camera/image_raw
+ros2 topic echo --once /camera/camera_info
+```
+
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
@@ -168,5 +180,7 @@ ros2 launch robocell_sim workshop.launch.xml
 
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
 turn along with the wheels in MuJoCo. A red arrow marks the true pose from
-`/ground_truth/odom`, and green squares mark the lidar echoes from `/scan`. Steer it with the arrow keys in the
-viewer, or from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
+`/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, and a
+panel shows the picture from `/camera/image_raw`. Steer it with the arrow keys
+in the viewer, or from a second terminal with `teleop_twist_keyboard` on
+`/cmd_vel`.

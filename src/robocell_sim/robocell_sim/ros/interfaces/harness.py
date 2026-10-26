@@ -21,6 +21,14 @@ class Harness(Protocol):
         """Topic of the ranges the lidar reads around the robot."""
         ...
 
+    def picture(self) -> Topic:
+        """Topic of what the camera sees, sent best effort like any video."""
+        ...
+
+    def calibration(self) -> Topic:
+        """Topic of how the camera projects the world onto its pixels."""
+        ...
+
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
         """Queue every velocity command as forward speed and yaw rate."""
         ...

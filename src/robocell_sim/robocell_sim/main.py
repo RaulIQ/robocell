@@ -26,6 +26,7 @@ from robocell_sim.hardware.implementations.paced import Paced
 from robocell_sim.hardware.implementations.physical import Physical
 from robocell_sim.hardware.implementations.pinhole import Pinhole
 from robocell_sim.hardware.implementations.raycast import Raycast
+from robocell_sim.hardware.implementations.rendered import Rendered
 from robocell_sim.hardware.implementations.simulated import Simulated
 from robocell_sim.robot.implementations.arrows import Arrows
 from robocell_sim.robot.implementations.compared import Compared
@@ -39,7 +40,9 @@ from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.advertised import Advertised
+from robocell_sim.ros.implementations.calibrated import Calibrated
 from robocell_sim.ros.implementations.clocked import Clocked
+from robocell_sim.ros.implementations.filmed import Filmed
 from robocell_sim.ros.implementations.grounded import Grounded
 from robocell_sim.ros.implementations.jointed import Jointed
 from robocell_sim.ros.implementations.periodic import Periodic
@@ -91,21 +94,20 @@ multiprocessing.get_context("fork").Process(
     target=route.show, daemon=True
 ).start()
 sample = 0.0
+size = (640, 480)
 camera = Screen(
     multiprocessing.get_context("fork").Queue(maxsize=2),
     model,
     "camera_rgb",
-    (640, 480),
+    size,
 )
 multiprocessing.get_context("fork").Process(
     target=camera.show, daemon=True
 ).start()
-log.info(
-    "Camera sees through the intrinsics %s",
-    Pinhole(
-        math.radians(model.cam_fovy[model.camera("camera_rgb").id]), 640, 480
-    ).matrix(),
+lens = Pinhole(
+    math.radians(model.cam_fovy[model.camera("camera_rgb").id]), *size
 )
+log.info("Camera sees through the intrinsics %s", lens.matrix())
 shot = 0.0
 reach = (0.12, 3.5)
 lidar = Raycast(model, data, "base_scan", reach)
@@ -132,30 +134,48 @@ physics = Paced(
             Periodic(
                 Periodic(
                     Periodic(
-                        Integrated(Physical(model, data), data, "imu_gyro", 0),
+                        Periodic(
+                            Periodic(
+                                Integrated(
+                                    Physical(model, data), data, "imu_gyro", 0
+                                ),
+                                data,
+                                1 / 100,
+                                Clocked(data, bridge.clock()),
+                            ),
+                            data,
+                            1 / 50,
+                            Tracked(data, "base_link", bridge.truth()),
+                        ),
                         data,
-                        1 / 100,
-                        Clocked(data, bridge.clock()),
+                        1 / 50,
+                        Grounded(data, "base_link", bridge.frames()),
                     ),
                     data,
                     1 / 50,
-                    Tracked(data, "base_link", bridge.truth()),
+                    Jointed(
+                        data,
+                        {"wheel_left_joint": left, "wheel_right_joint": right},
+                        harness.joints(),
+                    ),
                 ),
                 data,
-                1 / 50,
-                Grounded(data, "base_link", bridge.frames()),
+                0.2,
+                Ranged(data, lidar, reach, harness.scan()),
             ),
             data,
-            1 / 50,
-            Jointed(
+            1 / 30,
+            Filmed(
                 data,
-                {"wheel_left_joint": left, "wheel_right_joint": right},
-                harness.joints(),
+                Rendered(
+                    mujoco.Renderer(model, size[1], size[0]), data, "camera_rgb"
+                ),
+                harness.picture(),
             ),
         ),
         data,
-        0.2,
-        Ranged(data, lidar, reach, harness.scan()),
+        1 / 30,
+        Calibrated(data, lens, size, harness.calibration()),
     ),
     data,
 )

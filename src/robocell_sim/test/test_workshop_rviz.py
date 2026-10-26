@@ -34,3 +34,18 @@ def test_workshop_rviz_shows_the_lidar_scan() -> None:
         equal_to(["/scan"]),
         "RViz did not show the lidar scan",
     )
+
+
+def test_workshop_rviz_shows_the_camera_picture() -> None:
+    """An image display shows what the robot camera sees, best effort."""
+    assert_that(
+        [
+            (display["Topic"]["Value"], display["Topic"]["Reliability Policy"])
+            for display in yaml.safe_load(
+                (Path(__file__).parents[1] / "rviz/workshop.rviz").read_text()
+            )["Visualization Manager"]["Displays"]
+            if display["Class"] == "rviz_default_plugins/Image"
+        ],
+        equal_to([("/camera/image_raw", "Best Effort")]),
+        "RViz did not show the camera picture best effort",
+    )
