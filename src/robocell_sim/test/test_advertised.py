@@ -7,6 +7,8 @@ from rclpy.context import Context
 from rclpy.node import Node
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
 
+from test.settled import Settled
+
 
 def test_advertised_opens_the_clock_topic() -> None:
     """The bridge advertises the clock as rosgraph_msgs/Clock on /clock."""
@@ -15,7 +17,7 @@ def test_advertised_opens_the_clock_topic() -> None:
     node = Node(f"advertised{secrets.token_hex(4)}", context=context)
     Advertised(node).clock()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/clock", 2.0).publishers(),
         has_entry("/clock", ["rosgraph_msgs/msg/Clock"]),
         "bridge did not advertise the clock topic",
     )
@@ -28,7 +30,7 @@ def test_advertised_opens_the_ground_truth_topic() -> None:
     node = Node(f"advertised{secrets.token_hex(4)}", context=context)
     Advertised(node).truth()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/ground_truth/odom", 2.0).publishers(),
         has_entry("/ground_truth/odom", ["nav_msgs/msg/Odometry"]),
         "bridge did not advertise the ground truth topic",
     )
