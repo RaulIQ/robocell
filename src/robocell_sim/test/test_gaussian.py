@@ -58,9 +58,8 @@ def test_gaussian_errs_by_the_bias_on_average() -> None:
         secrets.SystemRandom().uniform(-0.02, 0.02),
     )
     noise = secrets.SystemRandom().uniform(0.0005, 0.03)
-    inaccuracy = Gaussian(
-        bias, noise, np.random.default_rng(secrets.randbits(64))
-    )
+    seed = secrets.randbits(64)
+    inaccuracy = Gaussian(bias, noise, np.random.default_rng(seed))
     assert_that(
         float(
             np.max(
@@ -77,17 +76,16 @@ def test_gaussian_errs_by_the_bias_on_average() -> None:
             )
         ),
         close_to(0.0, noise * 0.05),
-        "mean error did not match the bias",
+        f"mean error did not match the bias with the seed {seed}",
     )
 
 
 def test_gaussian_scatters_by_the_noise() -> None:
     """Over many readings, the error on each axis deviates by the noise."""
     noise = secrets.SystemRandom().uniform(0.0005, 0.03)
+    seed = secrets.randbits(64)
     inaccuracy = Gaussian(
-        (0.004, -0.007, 0.009),
-        noise,
-        np.random.default_rng(secrets.randbits(64)),
+        (0.004, -0.007, 0.009), noise, np.random.default_rng(seed)
     )
     assert_that(
         float(
@@ -105,7 +103,7 @@ def test_gaussian_scatters_by_the_noise() -> None:
             )
         ),
         close_to(0.0, noise * 0.05),
-        "error did not scatter by the noise",
+        f"error did not scatter by the noise with the seed {seed}",
     )
 
 

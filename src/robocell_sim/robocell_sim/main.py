@@ -5,6 +5,7 @@ import logging
 import math
 import multiprocessing
 import queue
+import secrets
 import sys
 import threading
 import time
@@ -146,16 +147,20 @@ node = rclpy.create_node("sim")
 bridge = Advertised(node)
 harness = Wired(node)
 harness.listen(twists)
-generator = np.random.default_rng()
+seed = int(node.declare_parameter("seed", -1).value)
+if seed < 0:
+    seed = secrets.randbits(31)
+generator = np.random.default_rng(seed)
 x, y, z = generator.normal(
     0.0, float(node.declare_parameter("gyro_bias", 0.0075).value), 3
 )
 log.info(
     "Gyro of the IMU board is biased by %.5f, %.5f and %.5f rad/s about "
-    "x, y and z",
+    "x, y and z with the seed %d",
     x,
     y,
     z,
+    seed,
 )
 imu = Noisy(
     Sensed(data, "imu_gyro", "imu_accelerometer"),

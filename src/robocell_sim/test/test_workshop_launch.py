@@ -100,7 +100,7 @@ def test_workshop_launch_runs_the_imu_driver_on_simulated_time() -> None:
 
 
 def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
-    """The simulator gets the gyro bias and both noises from the arguments."""
+    """The simulator gets the bias, both noises and the seed from arguments."""
     assert_that(
         [
             {
@@ -118,6 +118,7 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
                     "gyro_bias": "$(var gyro_bias)",
                     "gyro_noise": "$(var gyro_noise)",
                     "accelerometer_noise": "$(var accelerometer_noise)",
+                    "seed": "$(var seed)",
                 }
             ]
         ),

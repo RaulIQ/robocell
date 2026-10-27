@@ -183,12 +183,19 @@ Like a cheap MEMS chip, the board does not read its sensors exactly. Its gyro
 carries a bias on each axis, drawn once at start from a normal distribution
 with a deviation of 0.0075 rad/s and logged in one line, and both sensors add a
 fresh normal noise to every axis of every measurement: 0.001 rad/s for the gyro
-and 0.02 m/s² for the accelerometer. The noise comes from one generator with no
-fixed seed, so every run gets a bias of its own, and each measurement draws it
-exactly once, so the frames do not depend on how the simulation steps. The `sim`
-node takes these as the parameters `gyro_bias`, `gyro_noise` and
+and 0.02 m/s² for the accelerometer. Each measurement draws its noise exactly
+once, so the frames do not depend on how the simulation steps. The `sim` node
+takes these as the parameters `gyro_bias`, `gyro_noise` and
 `accelerometer_noise`, all standard deviations; the v0 windows still read the
 clean MuJoCo gyro.
+
+The bias and the noise come from one generator, seeded by the `seed` parameter.
+A negative seed, the default, picks a fresh random one, so every run gets a bias
+of its own; the start log names the seed next to the bias, so any run can be
+repeated. A fixed seed gives the same bias and the same noise on every run,
+which is what an experiment needs to compare two estimators on one gyro. About
+one run in five draws a z bias under 0.002 rad/s, too small to see the heading
+drift, so pick a seed whose logged bias is large enough.
 
 At rest the accelerometer frame ends in about `52 26 xx 00`, 9.81 m/s² up, and
 its z bytes jitter by about twenty units; the z bytes of the gyro frame stay
@@ -299,10 +306,10 @@ from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
 
 The launch file sets the errors of the IMU board and the variances the driver
 reports from one place. Its arguments `gyro_bias` (0.0075 rad/s), `gyro_noise`
-(0.001 rad/s) and `accelerometer_noise` (0.02 m/s²) go to the simulator, and
-`gyro_variance` and `accelerometer_variance` go to the driver, defaulting to
-the squares of the matching noises. So by default `/imu` reports exactly the
-noise the board adds, and one argument changes both:
+(0.001 rad/s), `accelerometer_noise` (0.02 m/s²) and `seed` (-1) go to the
+simulator, and `gyro_variance` and `accelerometer_variance` go to the driver,
+defaulting to the squares of the matching noises. So by default `/imu` reports
+exactly the noise the board adds, and one argument changes both:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml gyro_noise:=0.005
