@@ -12,6 +12,7 @@ import time
 import can
 import mujoco
 import mujoco.viewer
+import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 
@@ -27,7 +28,9 @@ from robocell_sim.hardware.implementations.camera.rendered import Rendered
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
+from robocell_sim.hardware.implementations.imu.gaussian import Gaussian
 from robocell_sim.hardware.implementations.imu.integrated import Integrated
+from robocell_sim.hardware.implementations.imu.noisy import Noisy
 from robocell_sim.hardware.implementations.imu.sensed import Sensed
 from robocell_sim.hardware.implementations.lidar.raycast import Raycast
 from robocell_sim.hardware.implementations.physics.joined import Joined
@@ -143,6 +146,30 @@ node = rclpy.create_node("sim")
 bridge = Advertised(node)
 harness = Wired(node)
 harness.listen(twists)
+generator = np.random.default_rng()
+x, y, z = generator.normal(
+    0.0, float(node.declare_parameter("gyro_bias", 0.0075).value), 3
+)
+log.info(
+    "Gyro of the IMU board is biased by %.5f, %.5f and %.5f rad/s about "
+    "x, y and z",
+    x,
+    y,
+    z,
+)
+imu = Noisy(
+    Sensed(data, "imu_gyro", "imu_accelerometer"),
+    Gaussian(
+        (float(x), float(y), float(z)),
+        float(node.declare_parameter("gyro_noise", 0.001).value),
+        generator,
+    ),
+    Gaussian(
+        (0.0, 0.0, 0.0),
+        float(node.declare_parameter("accelerometer_noise", 0.02).value),
+        generator,
+    ),
+)
 renderer = mujoco.Renderer(model, size[1], size[0])
 physics = Paced(
     Reported(
@@ -154,7 +181,7 @@ physics = Paced(
                     data,
                     0.01,
                     Emulated(
-                        Sensed(data, "imu_gyro", "imu_accelerometer"),
+                        imu,
                         data,
                         0.01,
                         Transmitted(bus),

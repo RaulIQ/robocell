@@ -8,11 +8,11 @@ import can
 import mujoco
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
-from robocell_sim.hardware.implementations.imu.sensed import Sensed
 from robocell_sim.hardware.implementations.physics.paced import Paced
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
+from robocell_sim.hardware.interfaces.imu import Imu
 
 from test.traffic import Traffic
 
@@ -22,13 +22,15 @@ from test.traffic import Traffic
 class Aired(Traffic):
     """Frames a listener hears while the board runs as in the simulator.
 
-    The data holds the simulation the board measures, and the moments are
-    the simulated times the physics advance to, one after another. The
-    board measures every 10 ms and sends on a virtual bus of its own, so
-    nothing outside the test hears it and no vcan0 is needed.
+    The data holds the simulation the board measures, the IMU reads its
+    sensors, and the moments are the simulated times the physics advance
+    to, one after another. The board measures every 10 ms and sends on a
+    virtual bus of its own, so nothing outside the test hears it and no
+    vcan0 is needed.
     """
 
     _data: mujoco.MjData
+    _imu: Imu
     _moments: tuple[float, ...]
 
     @override
@@ -46,9 +48,7 @@ class Aired(Traffic):
                             self._data,
                             0.01,
                             Emulated(
-                                Sensed(
-                                    self._data, "imu_gyro", "imu_accelerometer"
-                                ),
+                                self._imu,
                                 self._data,
                                 0.01,
                                 Transmitted(sender),

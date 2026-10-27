@@ -179,9 +179,22 @@ byte; `candump` from `can-utils` shows them as they go out:
 candump -td vcan0
 ```
 
-At rest the accelerometer frame ends in about `52 26 xx 00`, 9.81 m/s² up,
-and the gyro frame reads about zero; turning left in place makes the z bytes of
-the gyro frame, bytes 4 and 5, a positive number that grows with the turn rate.
+Like a cheap MEMS chip, the board does not read its sensors exactly. Its gyro
+carries a bias on each axis, drawn once at start from a normal distribution
+with a deviation of 0.0075 rad/s and logged in one line, and both sensors add a
+fresh normal noise to every axis of every measurement: 0.001 rad/s for the gyro
+and 0.02 m/s² for the accelerometer. The noise comes from one generator with no
+fixed seed, so every run gets a bias of its own, and each measurement draws it
+exactly once, so the frames do not depend on how the simulation steps. The `sim`
+node takes these as the parameters `gyro_bias`, `gyro_noise` and
+`accelerometer_noise`, all standard deviations; the v0 windows still read the
+clean MuJoCo gyro.
+
+At rest the accelerometer frame ends in about `52 26 xx 00`, 9.81 m/s² up, and
+its z bytes jitter by about twenty units; the z bytes of the gyro frame stay
+near the logged bias, in thousandths of rad/s, and jitter by about one unit.
+Turning left in place makes the z bytes of the gyro frame, bytes 4 and 5, a
+positive number that grows with the turn rate.
 
 The IMU driver reads those frames back, the way a driver on the real robot
 would, and publishes them on `/imu` as `sensor_msgs/Imu` in `imu_link`. It
@@ -201,7 +214,7 @@ ros2 topic echo --once /imu
 
 Its parameters are `channel` (`vcan0`), `period` (0.005 s), `frame_id`
 (`imu_link`), `gyro_variance` (1e-6 (rad/s)²) and `accelerometer_variance`
-(4e-4 (m/s²)²), the last two from the noise #98 gives the board.
+(4e-4 (m/s²)²), the last two the squares of the default noises of the board.
 
 The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
 rate in simulated time: `/clock` at 100 Hz, the camera at 29.4 Hz, `/scan` at
@@ -283,6 +296,29 @@ panel shows the picture from `/camera/image_raw`, and another draws the lidar,
 the frames and the robot over that picture at half opacity, so the echoes land
 on the walls the camera sees. Steer it with the arrow keys in the viewer, or
 from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
+
+The launch file sets the errors of the IMU board and the variances the driver
+reports from one place. Its arguments `gyro_bias` (0.0075 rad/s), `gyro_noise`
+(0.001 rad/s) and `accelerometer_noise` (0.02 m/s²) go to the simulator, and
+`gyro_variance` and `accelerometer_variance` go to the driver, defaulting to
+the squares of the matching noises. So by default `/imu` reports exactly the
+noise the board adds, and one argument changes both:
+
+```console
+ros2 launch robocell_sim workshop.launch.xml gyro_noise:=0.005
+```
+
+Now the gyro bytes jitter by about five units, and `/imu` reports a gyro
+variance of 2.5e-5. Setting a variance by hand breaks that match on purpose,
+to study an estimator that trusts the sensor more than it deserves:
+
+```console
+ros2 launch robocell_sim workshop.launch.xml gyro_noise:=0.005 gyro_variance:=1e-8
+```
+
+Write every value with a decimal point, such as `gyro_bias:=0.0` rather than
+`gyro_bias:=0`, since ROS 2 reads a bare `0` as an integer and refuses it for
+a parameter declared as a float.
 
 ## ROS 2 reference
 
