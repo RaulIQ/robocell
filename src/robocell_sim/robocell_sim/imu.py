@@ -28,8 +28,8 @@ channel = str(node.declare_parameter("channel", "vcan0").value)
 period = float(node.declare_parameter("period", 0.005).value)
 frame = str(node.declare_parameter("frame_id", "imu_link").value)
 variances = (
-    float(node.declare_parameter("gyro_variance", 1e-6).value),
-    float(node.declare_parameter("accelerometer_variance", 4e-4).value),
+    float(node.declare_parameter("gyro_variance", 0.001**2).value),
+    float(node.declare_parameter("accelerometer_variance", 0.02**2).value),
 )
 topic = node.create_publisher(Imu, "/imu", qos_profile_sensor_data)
 try:

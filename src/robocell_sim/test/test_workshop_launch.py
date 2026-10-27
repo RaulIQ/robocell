@@ -85,6 +85,63 @@ def test_workshop_launch_runs_the_imu_driver_on_simulated_time() -> None:
             ).iter("node")
             if node.get("exec") == "imu.py"
         ],
-        equal_to([{"use_sim_time": "true"}]),
-        "launch file did not run the IMU driver on simulated time",
+        equal_to(
+            [
+                {
+                    "use_sim_time": "true",
+                    "gyro_variance": "$(var gyro_variance)",
+                    "accelerometer_variance": "$(var accelerometer_variance)",
+                }
+            ]
+        ),
+        "launch file did not run the IMU driver on simulated time "
+        "with the variances of its arguments",
+    )
+
+
+def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
+    """The simulator gets the gyro bias and both noises from the arguments."""
+    assert_that(
+        [
+            {
+                param.get("name"): param.get("value")
+                for param in node.iter("param")
+            }
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "main.py"
+        ],
+        equal_to(
+            [
+                {
+                    "gyro_bias": "$(var gyro_bias)",
+                    "gyro_noise": "$(var gyro_noise)",
+                    "accelerometer_noise": "$(var accelerometer_noise)",
+                }
+            ]
+        ),
+        "launch file did not pass the noise arguments to the simulator",
+    )
+
+
+def test_workshop_launch_defaults_the_variances_to_the_noises_squared() -> None:
+    """Unless set by hand, the driver reports the variance the board adds."""
+    assert_that(
+        {
+            argument.get("name"): argument.get("default")
+            for argument in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("arg")
+            if argument.get("name", "").endswith("_variance")
+        },
+        equal_to(
+            {
+                "gyro_variance": "$(eval '$(var gyro_noise) ** 2')",
+                "accelerometer_variance": (
+                    "$(eval '$(var accelerometer_noise) ** 2')"
+                ),
+            }
+        ),
+        "variances did not default to the squares of the noises",
     )
