@@ -10,6 +10,8 @@ from rclpy.node import Node
 from rclpy.qos import ReliabilityPolicy
 from robocell_sim.ros.implementations.wiring.wired import Wired
 
+from test.settled import Settled
+
 
 def test_wired_subscribes_to_the_velocity_command() -> None:
     """The harness subscribes to geometry_msgs/Twist on /cmd_vel."""
@@ -18,7 +20,7 @@ def test_wired_subscribes_to_the_velocity_command() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).listen(queue.SimpleQueue())
     assert_that(
-        dict(node.get_subscriber_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/cmd_vel", 2.0).subscribers(),
         has_entry("/cmd_vel", ["geometry_msgs/msg/Twist"]),
         "harness did not subscribe to the velocity command",
     )
@@ -55,7 +57,7 @@ def test_wired_opens_the_joint_states_topic() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).joints()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/joint_states", 2.0).publishers(),
         has_entry("/joint_states", ["sensor_msgs/msg/JointState"]),
         "harness did not advertise the joint states topic",
     )
@@ -68,7 +70,7 @@ def test_wired_opens_the_scan_topic() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).scan()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/scan", 2.0).publishers(),
         has_entry("/scan", ["sensor_msgs/msg/LaserScan"]),
         "harness did not advertise the scan topic",
     )
@@ -81,7 +83,7 @@ def test_wired_opens_the_picture_topic() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).picture()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/camera/image_raw", 2.0).publishers(),
         has_entry("/camera/image_raw", ["sensor_msgs/msg/Image"]),
         "harness did not advertise the picture topic",
     )
@@ -94,9 +96,9 @@ def test_wired_sends_the_picture_best_effort() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).picture()
     assert_that(
-        node.get_publishers_info_by_topic("/camera/image_raw")[
-            0
-        ].qos_profile.reliability,
+        Settled(node, "/camera/image_raw", 2.0)
+        .publications()[0]
+        .qos_profile.reliability,
         equal_to(ReliabilityPolicy.BEST_EFFORT),
         "harness did not send the picture best effort",
     )
@@ -109,7 +111,7 @@ def test_wired_opens_the_calibration_topic() -> None:
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
     Wired(node).calibration()
     assert_that(
-        dict(node.get_publisher_names_and_types_by_node(node.get_name(), "/")),
+        Settled(node, "/camera/camera_info", 2.0).publishers(),
         has_entry("/camera/camera_info", ["sensor_msgs/msg/CameraInfo"]),
         "harness did not advertise the calibration topic",
     )
