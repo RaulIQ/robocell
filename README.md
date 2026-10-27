@@ -183,6 +183,26 @@ At rest the accelerometer frame ends in about `52 26 xx 00`, 9.81 m/s² up,
 and the gyro frame reads about zero; turning left in place makes the z bytes of
 the gyro frame, bytes 4 and 5, a positive number that grows with the turn rate.
 
+The IMU driver reads those frames back, the way a driver on the real robot
+would, and publishes them on `/imu` as `sensor_msgs/Imu` in `imu_link`. It
+is a node of its own named `imu`, which the launch file starts next to the
+simulator, and it knows the board only through the protocol document. Every
+5 ms it takes all frames waiting on `vcan0`, pairs the gyro and the
+accelerometer frame of each measurement by their number, and publishes the
+pair stamped with the time it arrived. The message carries no orientation,
+so its orientation covariance starts with -1, and the variances of the gyro
+and the accelerometer sit on their diagonals. When frames go missing, the
+driver logs one warning per gap with the number of measurements it lost.
+
+```console
+ros2 run robocell_sim imu.py --ros-args -p use_sim_time:=true
+ros2 topic echo --once /imu
+```
+
+Its parameters are `channel` (`vcan0`), `period` (0.005 s), `frame_id`
+(`imu_link`), `gyro_variance` (1e-6 (rad/s)²) and `accelerometer_variance`
+(4e-4 (m/s²)²), the last two from the noise #98 gives the board.
+
 The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
 rate in simulated time: `/clock` at 100 Hz, the camera at 29.4 Hz, `/scan` at
 5 Hz and the rest at 50 Hz. The `/clock` topic carries the simulated time as
@@ -269,6 +289,7 @@ the publisher, or for the subscription on `/cmd_vel`.
 | `/camera/image_raw`   | `sensor_msgs/Image`      | 29.4 Hz       | best effort, keep last 5         | A frame is 900 KB and only the newest one matters, so a lost frame is skipped rather than resent late.         |
 | `/camera/camera_info` | `sensor_msgs/CameraInfo` | 29.4 Hz       | reliable, keep last 10           | Readers pair it with each picture; it is small, and reliable serves readers of either kind.                    |
 | `/cmd_vel`            | `geometry_msgs/Twist`    | as sent       | reliable, keep last 10           | A lost command would leave the robot on its last speed, so every one must arrive.                              |
+| `/imu`                | `sensor_msgs/Imu`        | 100 Hz        | best effort, keep last 5         | Readings come every 10 ms, so a late resend is worth less than the next fresh reading.                         |
 
 ### Frames
 
@@ -286,7 +307,7 @@ file; the same tree is in [docs/tf_tree.pdf](docs/tf_tree.pdf).
 | `wheel_left_link`, `wheel_right_link` | The wheels, turned by the angles in `/joint_states`.                                                              |
 | `caster_back_left_link`, `caster_back_right_link` | The rear casters, fixed to the body.                                                                  |
 | `base_scan`                | The lidar; `/scan` counts its rays counterclockwise from its x axis.                                                          |
-| `imu_link`                 | The IMU on the control board; nothing publishes `/imu` yet (#73).                                                            |
+| `imu_link`                 | The IMU on the control board, where the IMU driver publishes `/imu`.                                                         |
 | `camera_link`, `camera_rgb_frame` | The camera body and its lens, x forward as on the robot.                                                              |
 | `camera_rgb_optical_frame` | The lens in optical axes, z forward, x right and y down, where pictures and their calibration live.                          |
 
