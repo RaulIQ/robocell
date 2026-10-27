@@ -1,0 +1,13 @@
+[Unit]
+Description=Virtual CAN bus vcan0 for robocell
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/usr/sbin/modprobe vcan
+ExecStart=-/usr/sbin/ip link add dev vcan0 type vcan
+ExecStart=/usr/sbin/ip link set up vcan0
+ExecStop=/usr/sbin/ip link delete vcan0
+
+[Install]
+WantedBy=multi-user.target

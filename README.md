@@ -56,8 +56,19 @@ type checks, line by line for mypy and by folder for Pylance.
 ## Run the simulation
 
 The simulator sends the readings of its IMU board on the virtual CAN bus
-`vcan0`, and stops at start if that bus is missing. Bring it up on the host
-once after every boot:
+`vcan0`, and stops at start if that bus is missing. Install the systemd unit
+from `docker/vcan0.service` on the host once, from the workspace root, and it
+brings `vcan0` up on every boot:
+
+```console
+sudo cp docker/vcan0.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now vcan0.service
+```
+
+The unit loads the `vcan` module, adds `vcan0` unless it is already there and
+sets it up; `sudo systemctl stop vcan0` deletes the bus again. Without the
+unit, the same three steps bring it up by hand until the next boot:
 
 ```console
 sudo modprobe vcan
