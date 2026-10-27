@@ -6,6 +6,7 @@ import math
 import multiprocessing
 import queue
 import secrets
+import signal
 import sys
 import threading
 import time
@@ -16,6 +17,7 @@ import mujoco.viewer
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
+from rclpy.signals import SignalHandlerOptions
 
 from robocell_sim.display.implementations.camera.screen import Screen
 from robocell_sim.display.implementations.lidar.beams import Beams
@@ -67,6 +69,7 @@ data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
 beams = threading.Event()
+stop = threading.Event()
 keys: queue.SimpleQueue[int] = queue.SimpleQueue()
 twists: queue.SimpleQueue[tuple[float, float]] = queue.SimpleQueue()
 
@@ -142,7 +145,9 @@ multiprocessing.get_context("fork").Process(
 survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
-rclpy.init()
+rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
+signal.signal(signal.SIGINT, lambda *_: stop.set())
+signal.signal(signal.SIGTERM, lambda *_: stop.set())
 node = rclpy.create_node("sim")
 bridge = Advertised(node)
 harness = Wired(node)
@@ -230,7 +235,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
         (None, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT.value, "9", "Lidar lines")
     )
     frame = time.time()
-    while viewer.is_running():
+    while viewer.is_running() and not stop.is_set():
         now = time.time()
         rclpy.spin_once(node, timeout_sec=0)
         while not keys.empty():
