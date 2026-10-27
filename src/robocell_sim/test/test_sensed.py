@@ -39,18 +39,14 @@ def test_sensed_measures_the_yaw_rate_of_a_spinning_robot() -> None:
 
 def test_sensed_measures_gravity_at_rest() -> None:
     """The acceleration of a robot at rest is gravity up its z axis."""
+    model = mujoco.MjModel.from_xml_path(
+        str(Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml")
+    )
     assert_that(
         math.dist(
             Sensed(
                 Waffle(
-                    mujoco.MjModel.from_xml_path(
-                        str(
-                            Path(__file__).parents[1]
-                            / "models"
-                            / "waffle_pi"
-                            / "scene.xml"
-                        )
-                    ),
+                    model,
                     0.0,
                     0.0,
                     secrets.SystemRandom().uniform(-math.pi, math.pi),

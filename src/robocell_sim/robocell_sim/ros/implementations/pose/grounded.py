@@ -40,9 +40,10 @@ class Grounded(Report):
 
     @override
     def publish(self) -> None:
+        body = self._data.body(self._body)
         heading = math.atan2(
-            self._data.body(self._body).xmat[3],
-            self._data.body(self._body).xmat[0],
+            body.xmat[3],
+            body.xmat[0],
         )
         self._topic.publish(
             TFMessage(
@@ -57,8 +58,8 @@ class Grounded(Report):
                         child_frame_id="base_footprint",
                         transform=Transform(
                             translation=Vector3(
-                                x=float(self._data.body(self._body).xpos[0]),
-                                y=float(self._data.body(self._body).xpos[1]),
+                                x=float(body.xpos[0]),
+                                y=float(body.xpos[1]),
                                 z=0.0,
                             ),
                             rotation=Quaternion(
