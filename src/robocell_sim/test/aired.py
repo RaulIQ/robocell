@@ -9,8 +9,8 @@ import mujoco
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
 from robocell_sim.hardware.implementations.imu.sensed import Sensed
-from robocell_sim.hardware.implementations.physics.every import Every
 from robocell_sim.hardware.implementations.physics.paced import Paced
+from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
 
@@ -42,7 +42,7 @@ class Aired(Traffic):
                 Paced(
                     Reported(
                         Physical(self._data.model, self._data),
-                        Every(
+                        Periodic(
                             self._data,
                             0.01,
                             Emulated(

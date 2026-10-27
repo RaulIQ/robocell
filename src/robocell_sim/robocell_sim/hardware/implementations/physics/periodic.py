@@ -10,7 +10,7 @@ from robocell_sim.hardware.interfaces.report import Report
 
 @final
 @dataclass(frozen=True)
-class Every(Report):
+class Periodic(Report):
     """Report that lets its origin out only on the boundaries of a period.
 
     The data holds the live state of the simulation, the period sets in

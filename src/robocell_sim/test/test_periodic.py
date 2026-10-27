@@ -5,7 +5,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, equal_to
-from robocell_sim.hardware.implementations.physics.every import Every
+from robocell_sim.hardware.implementations.physics.periodic import Periodic
 
 from test.noted import Noted
 
@@ -21,7 +21,7 @@ def test_every_publishes_once_per_period() -> None:
     times: list[float] = []
     for _ in range(count):
         mujoco.mj_step(model, data)
-        Every(data, every * model.opt.timestep, Noted(times, data)).publish()
+        Periodic(data, every * model.opt.timestep, Noted(times, data)).publish()
     assert_that(
         len(times),
         equal_to(count // every),
@@ -39,7 +39,7 @@ def test_every_publishes_on_the_boundaries_of_the_period() -> None:
     times: list[float] = []
     for _ in range(secrets.SystemRandom().randint(50, 900)):
         mujoco.mj_step(model, data)
-        Every(data, every * model.opt.timestep, Noted(times, data)).publish()
+        Periodic(data, every * model.opt.timestep, Noted(times, data)).publish()
     assert_that(
         {round(time / model.opt.timestep) % every for time in times},
         equal_to({0}),

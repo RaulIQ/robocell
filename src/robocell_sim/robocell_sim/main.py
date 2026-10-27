@@ -30,9 +30,9 @@ from robocell_sim.hardware.implementations.imu.emulated import Emulated
 from robocell_sim.hardware.implementations.imu.integrated import Integrated
 from robocell_sim.hardware.implementations.imu.sensed import Sensed
 from robocell_sim.hardware.implementations.lidar.raycast import Raycast
-from robocell_sim.hardware.implementations.physics.every import Every
 from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.hardware.implementations.physics.paced import Paced
+from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
 from robocell_sim.hardware.implementations.wheels.simulated import Simulated
@@ -150,8 +150,8 @@ physics = Paced(
         Integrated(Physical(model, data), data, "imu_gyro", 0),
         Joined(
             (
-                Every(data, 0.01, Clocked(data, bridge.clock())),
-                Every(
+                Periodic(data, 0.01, Clocked(data, bridge.clock())),
+                Periodic(
                     data,
                     0.01,
                     Emulated(
@@ -161,11 +161,13 @@ physics = Paced(
                         Transmitted(bus),
                     ),
                 ),
-                Every(data, 1 / 50, Tracked(data, "base_link", bridge.truth())),
-                Every(
+                Periodic(
+                    data, 1 / 50, Tracked(data, "base_link", bridge.truth())
+                ),
+                Periodic(
                     data, 1 / 50, Grounded(data, "base_link", bridge.frames())
                 ),
-                Every(
+                Periodic(
                     data,
                     1 / 50,
                     Jointed(
@@ -174,8 +176,8 @@ physics = Paced(
                         harness.joints(),
                     ),
                 ),
-                Every(data, 0.2, Ranged(data, lidar, reach, harness.scan())),
-                Every(
+                Periodic(data, 0.2, Ranged(data, lidar, reach, harness.scan())),
+                Periodic(
                     data,
                     1 / 30,
                     Filmed(
@@ -184,7 +186,7 @@ physics = Paced(
                         harness.picture(),
                     ),
                 ),
-                Every(
+                Periodic(
                     data,
                     1 / 30,
                     Calibrated(data, lens, size, harness.calibration()),
