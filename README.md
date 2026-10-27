@@ -259,3 +259,12 @@ or an estimator. Each bridge stays until its successor lands:
 
 `/clock` and `/ground_truth/odom` are no bridges: they exist only in the
 simulation and simply go away on the real robot.
+
+## Hardware protocols
+
+The emulated boards and their drivers talk over the wire protocols described
+in [docs/protocols](docs/protocols):
+
+| Board | Bus                     | Document                                       |
+| ----- | ----------------------- | ---------------------------------------------- |
+| IMU   | classic CAN, 500 kbit/s | [docs/protocols/imu.md](docs/protocols/imu.md) |
