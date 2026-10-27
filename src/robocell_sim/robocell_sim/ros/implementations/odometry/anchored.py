@@ -1,65 +1,53 @@
-"""Report that publishes the footprint of the robot to TF."""
+"""Report that places the body by the odometry in TF."""
 
 import math
 from dataclasses import dataclass
 from typing import final, override
 
-import mujoco
 from geometry_msgs.msg import (  # type: ignore[import-untyped]  # ROS generates message modules without types
     Quaternion,
     Transform,
     TransformStamped,
     Vector3,
 )
-from rclpy.time import Time
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 from tf2_msgs.msg import TFMessage  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.hardware.interfaces.report import Report
+from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.ros.interfaces.topic import Topic
 
 
 @final
 @dataclass(frozen=True)
-class Grounded(Report):
-    """Report that places base_footprint in the odom frame by the true pose.
+class Anchored(Report):
+    """Report that places the body where the odometry reckons it.
 
-    This is a temporary bridge: the odometry of the robot will take its
-    place and reckon the footprint from the wheels rather than from MuJoCo.
-    The data holds the live state of the simulation, the body names the
-    MuJoCo body above the footprint, and the topic carries the transform
-    as tf2_msgs/TFMessage stamped with the simulated time. The footprint
-    lies on the floor right below the body and keeps only its heading, so
-    robot_state_publisher alone lifts base_link above it by the offset of
-    the URDF.
+    The odometry gives the position and the heading, the header the stamp
+    of the inputs and the parent frame, odom, the child names the body,
+    base_footprint, and the topic carries the transform as
+    tf2_msgs/TFMessage. The body lies on the floor and turns only about z,
+    so robot_state_publisher alone lifts base_link above it.
     """
 
-    _data: mujoco.MjData
-    _body: str
+    _odometry: Odometry
+    _header: Header
+    _child: str
     _topic: Topic
 
     @override
     def publish(self) -> None:
-        body = self._data.body(self._body)
-        heading = math.atan2(
-            body.xmat[3],
-            body.xmat[0],
-        )
+        heading = self._odometry.heading()
         self._topic.publish(
             TFMessage(
                 transforms=[
                     TransformStamped(
-                        header=Header(
-                            stamp=Time(
-                                nanoseconds=round(self._data.time * 1e9)
-                            ).to_msg(),
-                            frame_id="odom",
-                        ),
-                        child_frame_id="base_footprint",
+                        header=self._header,
+                        child_frame_id=self._child,
                         transform=Transform(
                             translation=Vector3(
-                                x=float(body.xpos[0]),
-                                y=float(body.xpos[1]),
+                                x=self._odometry.position()[0],
+                                y=self._odometry.position()[1],
                                 z=0.0,
                             ),
                             rotation=Quaternion(

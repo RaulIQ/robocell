@@ -6,7 +6,6 @@ from typing import final, override
 from nav_msgs.msg import Odometry  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.node import Node
 from rosgraph_msgs.msg import Clock  # type: ignore[import-untyped]  # ROS generates message modules without types
-from tf2_msgs.msg import TFMessage  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.ros.interfaces.bridge import Bridge
 from robocell_sim.ros.interfaces.topic import Topic
@@ -30,7 +29,3 @@ class Advertised(Bridge):
     @override
     def truth(self) -> Topic:
         return self._node.create_publisher(Odometry, "/ground_truth/odom", 10)
-
-    @override
-    def frames(self) -> Topic:
-        return self._node.create_publisher(TFMessage, "/tf", 10)

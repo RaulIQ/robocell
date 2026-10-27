@@ -219,18 +219,31 @@ ros2 topic echo --once /ground_truth/odom
 
 The `/joint_states` topic carries the wheel angles as `sensor_msgs/JointState`.
 It counts them from whole encoder ticks, the way the motor driver will report
-them over CAN, rather than from the exact MuJoCo joints. The `/tf` topic carries
-`odom → base_footprint` as `tf2_msgs/TFMessage`. The footprint lies on the floor
-under `base_link` and keeps only its heading, so `robot_state_publisher` alone
-lifts `base_link` 0.01 m above it, as the URDF says. This transform comes from
-the true pose in MuJoCo and is a temporary bridge, which the odometry of the
-robot will replace. Both topics stamp their headers with the simulated time, so
-a lidar scan and the pose it was taken from line up while the robot turns.
+them over CAN, rather than from the exact MuJoCo joints.
+
+The odometry is a node of its own named `odometry`, which the launch file
+starts next to the simulator. It knows the robot only through ROS: it turns
+the wheel angles of `/joint_states` back into encoder ticks, adds up the yaw
+rate of `/imu` over the stamps of its messages, and moves by the wheels and
+turns by the gyro, as `Gyroscopic` does. For every `/joint_states` it publishes
+where it reckons the robot is, as `nav_msgs/Odometry` on `/odom` and as
+`odom → base_footprint` on `/tf`, both stamped with the time of the wheel
+angles, so a lidar scan and the pose it was taken from line up while the robot
+turns. The footprint lies on the floor under `base_link` and keeps only its
+heading, so `robot_state_publisher` alone lifts `base_link` 0.01 m above it, as
+the URDF says. The odometry starts at zero, so `odom` lies where the robot
+starts, and from there it drifts from the true pose as the wheels slip.
 
 ```console
 ros2 topic echo --once /joint_states
+ros2 topic echo --once /odom
 ros2 run tf2_ros tf2_echo odom base_scan
 ```
+
+Its parameters are `resolution` (4096 ticks per wheel turn), `wheel_radius`
+(0.033 m), `wheel_separation` (0.288 m), `left_joint` and `right_joint`
+(`wheel_left_joint` and `wheel_right_joint`), `odom_frame` (`odom`) and
+`base_frame` (`base_footprint`).
 
 The `/scan` topic carries the 360 lidar rays as `sensor_msgs/LaserScan` in the
 `base_scan` frame, counterclockwise from ahead one degree apart, from 0.12 to
@@ -255,8 +268,9 @@ ros2 topic echo --once /camera/camera_info
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
-`models/waffle_pi`, a static transform that fixes `odom` in the MuJoCo `world`
-and RViz with a saved view, all on simulated time:
+`models/waffle_pi`, the IMU driver, the odometry, a static transform that places
+`odom` in the MuJoCo `world` where the robot starts, and RViz with a saved
+view, all on simulated time:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml
@@ -281,7 +295,8 @@ the publisher, or for the subscription on `/cmd_vel`.
 | --------------------- | ------------------------ | ------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `/clock`              | `rosgraph_msgs/Clock`    | 100 Hz        | reliable, keep last 10           | Timers of every `use_sim_time` node step on it; the message is tiny, so delivery costs nothing.                |
 | `/ground_truth/odom`  | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | It is the reference that estimates are judged against, so a gap would skew the error.                         |
-| `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the wheels come from `robot_state_publisher` at its own 20 Hz cap. |
+| `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the footprint comes from the odometry with each `/joint_states`, the wheels from `robot_state_publisher` at its own 20 Hz cap. |
+| `/odom`               | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | Each pose builds on the one before, and estimators that fuse it expect every one; it is small.                |
 | `/tf_static`          | `tf2_msgs/TFMessage`     | once          | reliable, transient local        | Fixed frames go out once, so a node that starts late must still get them.                                     |
 | `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |
 | `/joint_states`       | `sensor_msgs/JointState` | 50 Hz         | reliable, keep last 10           | A small message; reliable publishing also serves `robot_state_publisher`, which subscribes best effort.        |
@@ -301,7 +316,7 @@ file; the same tree is in [docs/tf_tree.pdf](docs/tf_tree.pdf).
 | Frame                      | Meaning                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `world`                    | The MuJoCo world, fixed forever; the true pose lives here, so truth and every estimate can be compared in it.                  |
-| `odom`                     | Where odometry counts from; it moves smoothly and never jumps, but drifts from `world`. Today a static identity pins it to `world`. |
+| `odom`                     | Where odometry counts from; it moves smoothly and never jumps, but drifts from `world`. A static transform pins it to `world` where the robot starts. |
 | `base_footprint`           | The robot on the floor: its position and heading, with no height, roll or pitch.                                             |
 | `base_link`                | The body of the robot, 0.01 m above the footprint, centered between the wheels.                                              |
 | `wheel_left_link`, `wheel_right_link` | The wheels, turned by the angles in `/joint_states`.                                                              |
@@ -320,7 +335,6 @@ or an estimator. Each bridge stays until its successor lands:
 | ----------------------------------------------- | ----------------------------------------- |
 | `/cmd_vel` straight into `data.ctrl`            | `motor_driver` over CANopen (week 4)      |
 | `/joint_states` from the simulator              | `motor_driver` (week 4)                   |
-| TF `odom → base_footprint` from the true pose   | an odometry node (#72), then an EKF       |
 | `/scan` straight from `Raycast`                 | `lidar_driver` over UART (week 3)         |
 | the camera straight from `Rendered`             | stays, as a simplification of the project |
 
