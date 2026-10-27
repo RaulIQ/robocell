@@ -6,8 +6,8 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.raycast import Raycast
-from robocell_sim.robot.implementations.placed import Placed
+from robocell_sim.hardware.implementations.lidar.raycast import Raycast
+from robocell_sim.robot.implementations.lidar.placed import Placed
 
 
 def test_placed_puts_the_echo_ahead_along_the_heading() -> None:

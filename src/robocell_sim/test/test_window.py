@@ -4,7 +4,7 @@ import multiprocessing
 import secrets
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.display.implementations.window import Window
+from robocell_sim.display.implementations.route.window import Window
 
 
 def test_window_queues_both_positions_and_the_slip() -> None:

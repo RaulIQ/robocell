@@ -4,7 +4,7 @@ import math
 import secrets
 
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.pinhole import Pinhole
+from robocell_sim.hardware.implementations.camera.pinhole import Pinhole
 
 
 def test_pinhole_focuses_by_the_vertical_field_of_view() -> None:

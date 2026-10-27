@@ -7,7 +7,7 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.raycast import Raycast
+from robocell_sim.hardware.implementations.lidar.raycast import Raycast
 
 
 def test_raycast_ranges_the_wall_ahead_at_index_zero() -> None:

@@ -4,7 +4,7 @@ import multiprocessing
 import secrets
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.display.implementations.survey import Survey
+from robocell_sim.display.implementations.maps.survey import Survey
 
 
 def test_survey_queues_both_maps() -> None:

@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 import mujoco
 from hamcrest import assert_that, equal_to
-from robocell_sim.hardware.implementations.integrated import Integrated
-from robocell_sim.hardware.implementations.paced import Paced
-from robocell_sim.hardware.implementations.physical import Physical
-from robocell_sim.hardware.implementations.simulated import Simulated
-from robocell_sim.robot.implementations.compared import Compared
-from robocell_sim.robot.implementations.differential import Differential
+from robocell_sim.hardware.implementations.imu.integrated import Integrated
+from robocell_sim.hardware.implementations.physics.paced import Paced
+from robocell_sim.hardware.implementations.physics.physical import Physical
+from robocell_sim.hardware.implementations.wheels.simulated import Simulated
+from robocell_sim.robot.implementations.drive.differential import Differential
+from robocell_sim.robot.implementations.odometry.compared import Compared
 
 if TYPE_CHECKING:
     from robocell_sim.robot.interfaces.slip import Slip

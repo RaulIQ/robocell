@@ -5,7 +5,7 @@ from typing import final, override
 
 import mujoco
 
-from robocell_sim.hardware.implementations.packed import Packed
+from robocell_sim.hardware.implementations.imu.packed import Packed
 from robocell_sim.hardware.interfaces.bus import Bus
 from robocell_sim.hardware.interfaces.imu import Imu
 from robocell_sim.hardware.interfaces.report import Report

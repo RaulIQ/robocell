@@ -6,7 +6,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to
-from robocell_sim.hardware.implementations.sensed import Sensed
+from robocell_sim.hardware.implementations.imu.sensed import Sensed
 
 from test.waffle import Waffle
 

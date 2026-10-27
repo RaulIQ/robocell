@@ -5,8 +5,8 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.physical import Physical
-from robocell_sim.ros.implementations.periodic import Periodic
+from robocell_sim.hardware.implementations.physics.periodic import Periodic
+from robocell_sim.hardware.implementations.physics.physical import Physical
 
 from test.noted import Noted
 

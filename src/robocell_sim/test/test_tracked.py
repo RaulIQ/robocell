@@ -7,8 +7,8 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.robot.implementations.differential import Differential
-from robocell_sim.ros.implementations.tracked import Tracked
+from robocell_sim.robot.implementations.drive.differential import Differential
+from robocell_sim.ros.implementations.pose.tracked import Tracked
 
 from test.kept import Kept
 from test.waffle import Waffle

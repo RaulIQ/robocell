@@ -4,9 +4,9 @@ import secrets
 
 import glfw
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.robot.implementations.arrows import Arrows
-from robocell_sim.robot.implementations.remote import Remote
-from robocell_sim.robot.implementations.stepped import Stepped
+from robocell_sim.robot.implementations.command.arrows import Arrows
+from robocell_sim.robot.implementations.command.remote import Remote
+from robocell_sim.robot.implementations.drive.stepped import Stepped
 
 
 def test_remote_drives_at_the_steered_velocity() -> None:

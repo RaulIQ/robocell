@@ -10,7 +10,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.projections.polar import PolarAxes
 
-from robocell_sim.display.implementations.sweep import Sweep
+from robocell_sim.display.implementations.lidar.sweep import Sweep
 from robocell_sim.display.interfaces.radar import Radar
 
 

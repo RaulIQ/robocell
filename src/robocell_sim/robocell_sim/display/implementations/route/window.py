@@ -7,7 +7,7 @@ from typing import final, override
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from robocell_sim.display.implementations.tracks import Tracks
+from robocell_sim.display.implementations.route.tracks import Tracks
 from robocell_sim.display.interfaces.route import Route
 
 

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.paced import Paced
-from robocell_sim.hardware.implementations.physical import Physical
+from robocell_sim.hardware.implementations.physics.paced import Paced
+from robocell_sim.hardware.implementations.physics.physical import Physical
 
 
 def test_paced_reaches_the_moment_within_one_step() -> None:

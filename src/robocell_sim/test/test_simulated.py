@@ -6,7 +6,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to, less_than
-from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.hardware.implementations.wheels.simulated import Simulated
 
 
 def test_simulated_counts_whole_ticks_of_the_wheel_angle() -> None:

@@ -4,7 +4,7 @@ import multiprocessing
 import secrets
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.display.implementations.polar import Polar
+from robocell_sim.display.implementations.lidar.polar import Polar
 
 
 def test_polar_queues_the_scan() -> None:

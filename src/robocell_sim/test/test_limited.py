@@ -3,8 +3,8 @@
 import secrets
 
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.robot.implementations.differential import Differential
-from robocell_sim.robot.implementations.limited import Limited
+from robocell_sim.robot.implementations.drive.differential import Differential
+from robocell_sim.robot.implementations.drive.limited import Limited
 
 
 def test_limited_holds_the_fastest_wheel_at_the_limit() -> None:

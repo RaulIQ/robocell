@@ -5,7 +5,7 @@ from typing import final, override
 
 import glfw
 
-from robocell_sim.robot.implementations.remote import Remote
+from robocell_sim.robot.implementations.command.remote import Remote
 from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.speed import Speed
 

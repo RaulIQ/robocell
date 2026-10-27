@@ -7,8 +7,8 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.simulated import Simulated
-from robocell_sim.ros.implementations.jointed import Jointed
+from robocell_sim.hardware.implementations.wheels.simulated import Simulated
+from robocell_sim.ros.implementations.wheels.jointed import Jointed
 
 from test.kept import Kept
 from test.waffle import Waffle

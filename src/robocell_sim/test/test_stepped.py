@@ -3,7 +3,7 @@
 import secrets
 
 from hamcrest import assert_that, close_to
-from robocell_sim.robot.implementations.stepped import Stepped
+from robocell_sim.robot.implementations.drive.stepped import Stepped
 
 
 def test_stepped_rises_by_one_step() -> None:

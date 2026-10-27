@@ -7,8 +7,8 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.pinhole import Pinhole
-from robocell_sim.ros.implementations.calibrated import Calibrated
+from robocell_sim.hardware.implementations.camera.pinhole import Pinhole
+from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 
 from test.kept import Kept
 

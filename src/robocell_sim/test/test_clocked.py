@@ -6,7 +6,7 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.ros.implementations.clocked import Clocked
+from robocell_sim.ros.implementations.clock.clocked import Clocked
 
 from test.kept import Kept
 

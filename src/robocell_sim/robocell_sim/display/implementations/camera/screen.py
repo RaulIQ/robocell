@@ -12,7 +12,7 @@ import numpy as np
 import numpy.typing as npt
 
 from robocell_sim.display.interfaces.video import Video
-from robocell_sim.hardware.implementations.rendered import Rendered
+from robocell_sim.hardware.implementations.camera.rendered import Rendered
 
 
 @final

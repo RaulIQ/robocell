@@ -5,7 +5,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, equal_to
-from robocell_sim.hardware.implementations.accumulated import Accumulated
+from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
 
 
 def test_accumulated_reads_the_angle_from_its_slot() -> None:
