@@ -101,22 +101,20 @@ def test_emulated_sends_a_gyro_and_an_accelerometer_frame_each_period() -> None:
 
 def test_emulated_numbers_each_measurement_one_past_the_last() -> None:
     """The measurement number grows by one every period of simulated time."""
+    data = mujoco.MjData(
+        mujoco.MjModel.from_xml_path(
+            str(
+                Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml"
+            )
+        )
+    )
     assert_that(
         {
             (later[6] - earlier[6]) % 256
             for earlier, later in itertools.pairwise(
                 payload
                 for identifier, payload in Aired(
-                    mujoco.MjData(
-                        mujoco.MjModel.from_xml_path(
-                            str(
-                                Path(__file__).parents[1]
-                                / "models"
-                                / "waffle_pi"
-                                / "scene.xml"
-                            )
-                        )
-                    ),
+                    data,
                     (secrets.SystemRandom().uniform(0.2, 2.0),),
                 ).frames()
                 if identifier == GYRO
@@ -129,22 +127,20 @@ def test_emulated_numbers_each_measurement_one_past_the_last() -> None:
 
 def test_emulated_wraps_the_number_from_255_to_0() -> None:
     """The only measurement whose number drops is a 0 after a 255."""
+    data = mujoco.MjData(
+        mujoco.MjModel.from_xml_path(
+            str(
+                Path(__file__).parents[1] / "models" / "waffle_pi" / "scene.xml"
+            )
+        )
+    )
     assert_that(
         {
             (earlier[6], later[6])
             for earlier, later in itertools.pairwise(
                 payload
                 for identifier, payload in Aired(
-                    mujoco.MjData(
-                        mujoco.MjModel.from_xml_path(
-                            str(
-                                Path(__file__).parents[1]
-                                / "models"
-                                / "waffle_pi"
-                                / "scene.xml"
-                            )
-                        )
-                    ),
+                    data,
                     (secrets.SystemRandom().uniform(2.6, 6.0),),
                 ).frames()
                 if identifier == GYRO

@@ -30,9 +30,11 @@ from robocell_sim.hardware.implementations.imu.emulated import Emulated
 from robocell_sim.hardware.implementations.imu.integrated import Integrated
 from robocell_sim.hardware.implementations.imu.sensed import Sensed
 from robocell_sim.hardware.implementations.lidar.raycast import Raycast
+from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.hardware.implementations.physics.paced import Paced
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
+from robocell_sim.hardware.implementations.physics.reported import Reported
 from robocell_sim.hardware.implementations.wheels.simulated import Simulated
 from robocell_sim.robot.implementations.command.arrows import Arrows
 from robocell_sim.robot.implementations.command.guarded import Guarded
@@ -142,46 +144,30 @@ node = rclpy.create_node("sim")
 bridge = Advertised(node)
 harness = Wired(node)
 harness.listen(twists)
+renderer = mujoco.Renderer(model, size[1], size[0])
 physics = Paced(
-    Periodic(
-        Periodic(
-            Periodic(
+    Reported(
+        Integrated(Physical(model, data), data, "imu_gyro", 0),
+        Joined(
+            (
+                Periodic(data, 0.01, Clocked(data, bridge.clock())),
                 Periodic(
-                    Periodic(
-                        Periodic(
-                            Periodic(
-                                Periodic(
-                                    Integrated(
-                                        Physical(model, data),
-                                        data,
-                                        "imu_gyro",
-                                        0,
-                                    ),
-                                    data,
-                                    0.01,
-                                    Emulated(
-                                        Sensed(
-                                            data,
-                                            "imu_gyro",
-                                            "imu_accelerometer",
-                                        ),
-                                        data,
-                                        0.01,
-                                        Transmitted(bus),
-                                    ),
-                                ),
-                                data,
-                                1 / 100,
-                                Clocked(data, bridge.clock()),
-                            ),
-                            data,
-                            1 / 50,
-                            Tracked(data, "base_link", bridge.truth()),
-                        ),
+                    data,
+                    0.01,
+                    Emulated(
+                        Sensed(data, "imu_gyro", "imu_accelerometer"),
                         data,
-                        1 / 50,
-                        Grounded(data, "base_link", bridge.frames()),
+                        0.01,
+                        Transmitted(bus),
                     ),
+                ),
+                Periodic(
+                    data, 1 / 50, Tracked(data, "base_link", bridge.truth())
+                ),
+                Periodic(
+                    data, 1 / 50, Grounded(data, "base_link", bridge.frames())
+                ),
+                Periodic(
                     data,
                     1 / 50,
                     Jointed(
@@ -190,23 +176,23 @@ physics = Paced(
                         harness.joints(),
                     ),
                 ),
-                data,
-                0.2,
-                Ranged(data, lidar, reach, harness.scan()),
-            ),
-            data,
-            1 / 30,
-            Filmed(
-                data,
-                Rendered(
-                    mujoco.Renderer(model, size[1], size[0]), data, "camera_rgb"
+                Periodic(data, 0.2, Ranged(data, lidar, reach, harness.scan())),
+                Periodic(
+                    data,
+                    1 / 30,
+                    Filmed(
+                        data,
+                        Rendered(renderer, data, "camera_rgb"),
+                        harness.picture(),
+                    ),
                 ),
-                harness.picture(),
-            ),
+                Periodic(
+                    data,
+                    1 / 30,
+                    Calibrated(data, lens, size, harness.calibration()),
+                ),
+            )
         ),
-        data,
-        1 / 30,
-        Calibrated(data, lens, size, harness.calibration()),
     ),
     data,
 )

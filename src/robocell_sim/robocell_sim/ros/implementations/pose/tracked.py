@@ -39,6 +39,7 @@ class Tracked(Report):
 
     @override
     def publish(self) -> None:
+        body = self._data.body(self._body)
         velocity = np.zeros(6)
         mujoco.mj_objectVelocity(
             self._data.model,
@@ -60,15 +61,15 @@ class Tracked(Report):
                 pose=PoseWithCovariance(
                     pose=Pose(
                         position=Point(
-                            x=float(self._data.body(self._body).xpos[0]),
-                            y=float(self._data.body(self._body).xpos[1]),
-                            z=float(self._data.body(self._body).xpos[2]),
+                            x=float(body.xpos[0]),
+                            y=float(body.xpos[1]),
+                            z=float(body.xpos[2]),
                         ),
                         orientation=Quaternion(
-                            w=float(self._data.body(self._body).xquat[0]),
-                            x=float(self._data.body(self._body).xquat[1]),
-                            y=float(self._data.body(self._body).xquat[2]),
-                            z=float(self._data.body(self._body).xquat[3]),
+                            w=float(body.xquat[0]),
+                            x=float(body.xquat[1]),
+                            y=float(body.xquat[2]),
+                            z=float(body.xquat[3]),
                         ),
                     )
                 ),
