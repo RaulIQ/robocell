@@ -9,7 +9,7 @@ from sensor_msgs.msg import CameraInfo  # type: ignore[import-untyped]  # ROS ge
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.hardware.interfaces.intrinsics import Intrinsics
-from robocell_sim.ros.interfaces.report import Report
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
 

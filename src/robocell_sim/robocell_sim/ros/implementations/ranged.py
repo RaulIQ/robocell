@@ -10,7 +10,7 @@ from sensor_msgs.msg import LaserScan  # type: ignore[import-untyped]  # ROS gen
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.hardware.interfaces.lidar import Lidar
-from robocell_sim.ros.interfaces.report import Report
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
 

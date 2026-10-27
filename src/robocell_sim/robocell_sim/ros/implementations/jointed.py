@@ -9,8 +9,8 @@ from rclpy.time import Time
 from sensor_msgs.msg import JointState  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.hardware.interfaces.wheel import Wheel
-from robocell_sim.ros.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
 

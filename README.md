@@ -55,6 +55,19 @@ type checks, line by line for mypy and by folder for Pylance.
 
 ## Run the simulation
 
+The simulator sends the readings of its IMU board on the virtual CAN bus
+`vcan0`, and stops at start if that bus is missing. Bring it up on the host
+once after every boot:
+
+```console
+sudo modprobe vcan
+sudo ip link add dev vcan0 type vcan
+sudo ip link set up vcan0
+```
+
+The dev container shares the network of the host through `network_mode: host`
+in `compose.yaml`, so it sees `vcan0` as soon as the host brings it up.
+
 `robocell_sim` is an `ament_python` package. Build it with colcon from the
 workspace root, then start the TurtleBot3 Waffle Pi in the MuJoCo viewer:
 
@@ -136,6 +149,23 @@ second: on the left by the true pose from MuJoCo, on the right by the pose the
 odometry reckons. While the odometry holds, both show the same plan; when the
 robot bumps into the pallet and the wheels spin in place, the right map smears
 the walls along the way the encoders think the robot went.
+
+The simulator also plays the IMU board of the robot. A hundred times a second
+of simulated time, the board reads the gyro and the accelerometer on the `imu`
+site, which sits where the URDF puts `imu_link`, and sends one measurement on
+`vcan0` as two classic CAN frames: `0x101` with the angular velocity and
+`0x102` with the linear acceleration, gravity included. Both frames carry the
+same measurement number, which counts up from the start and wraps after 255.
+[docs/protocols/imu.md](docs/protocols/imu.md) describes the frames byte by
+byte; `candump` from `can-utils` shows them as they go out:
+
+```console
+candump -td vcan0
+```
+
+At rest the accelerometer frame ends in about `52 26 xx 00`, 9.81 m/s² up,
+and the gyro frame reads about zero; turning left in place makes the z bytes of
+the gyro frame, bytes 4 and 5, a positive number that grows with the turn rate.
 
 The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
 rate in simulated time: `/clock` at 100 Hz, the camera at 29.4 Hz, `/scan` at

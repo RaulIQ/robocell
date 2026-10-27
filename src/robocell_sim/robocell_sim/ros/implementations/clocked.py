@@ -7,7 +7,7 @@ import mujoco
 from rclpy.time import Time
 from rosgraph_msgs.msg import Clock  # type: ignore[import-untyped]  # ROS generates message modules without types
 
-from robocell_sim.ros.interfaces.report import Report
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
 

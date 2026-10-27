@@ -5,8 +5,8 @@ from typing import final, override
 
 import mujoco
 
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.hardware.interfaces.step import Step
-from robocell_sim.ros.interfaces.report import Report
 
 
 @final

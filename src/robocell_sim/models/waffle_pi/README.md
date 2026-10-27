@@ -25,6 +25,9 @@ and it reuses the STL meshes of that package under the Apache 2.0 license in
 6. Added the `camera_rgb` camera at the URDF `camera_rgb_frame`, looking forward.
 7. Added `jointpos` sensors `wheel_left_encoder` and `wheel_right_encoder` on the wheel joints,
    in radians, to stand in for the encoders of the Dynamixel XM430 wheel servos.
+8. Added the `imu_gyro` and `imu_accelerometer` sensors on the `imu` site at the URDF
+   `imu_link`, in rad/s and m/s², to stand in for the IMU of the OpenCR board;
+   the accelerometer includes gravity, so at rest it reads about 9.81 m/s² up.
 
 ## URDF
 

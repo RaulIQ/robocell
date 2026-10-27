@@ -18,7 +18,7 @@ from nav_msgs.msg import Odometry  # type: ignore[import-untyped]  # ROS generat
 from rclpy.time import Time
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
-from robocell_sim.ros.interfaces.report import Report
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
 

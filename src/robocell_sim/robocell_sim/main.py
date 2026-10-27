@@ -5,9 +5,11 @@ import logging
 import math
 import multiprocessing
 import queue
+import sys
 import threading
 import time
 
+import can
 import mujoco
 import mujoco.viewer
 import rclpy
@@ -21,13 +23,16 @@ from robocell_sim.display.implementations.screen import Screen
 from robocell_sim.display.implementations.survey import Survey
 from robocell_sim.display.implementations.window import Window
 from robocell_sim.hardware.implementations.accumulated import Accumulated
+from robocell_sim.hardware.implementations.emulated import Emulated
 from robocell_sim.hardware.implementations.integrated import Integrated
 from robocell_sim.hardware.implementations.paced import Paced
 from robocell_sim.hardware.implementations.physical import Physical
 from robocell_sim.hardware.implementations.pinhole import Pinhole
 from robocell_sim.hardware.implementations.raycast import Raycast
 from robocell_sim.hardware.implementations.rendered import Rendered
+from robocell_sim.hardware.implementations.sensed import Sensed
 from robocell_sim.hardware.implementations.simulated import Simulated
+from robocell_sim.hardware.implementations.transmitted import Transmitted
 from robocell_sim.robot.implementations.arrows import Arrows
 from robocell_sim.robot.implementations.compared import Compared
 from robocell_sim.robot.implementations.differential import Differential
@@ -80,6 +85,15 @@ right = Simulated(data, "wheel_right_encoder", 4096)
 gyro = Accumulated(data, 0)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("robocell")
+try:
+    bus = can.Bus(interface="socketcan", channel="vcan0")
+except OSError:
+    log.critical(
+        "CAN interface vcan0 is missing, so bring it up on the host with "
+        "sudo modprobe vcan && sudo ip link add dev vcan0 type vcan && "
+        "sudo ip link set up vcan0"
+    )
+    sys.exit(1)
 moment = 0.0
 clock = 0.0
 odometry: Odometry = Gyroscopic(
@@ -136,8 +150,25 @@ physics = Paced(
                     Periodic(
                         Periodic(
                             Periodic(
-                                Integrated(
-                                    Physical(model, data), data, "imu_gyro", 0
+                                Periodic(
+                                    Integrated(
+                                        Physical(model, data),
+                                        data,
+                                        "imu_gyro",
+                                        0,
+                                    ),
+                                    data,
+                                    0.01,
+                                    Emulated(
+                                        Sensed(
+                                            data,
+                                            "imu_gyro",
+                                            "imu_accelerometer",
+                                        ),
+                                        data,
+                                        0.01,
+                                        Transmitted(bus),
+                                    ),
                                 ),
                                 data,
                                 1 / 100,
@@ -273,3 +304,4 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
         time.sleep(max(0.0, model.opt.timestep - (time.time() - now)))
 
 rclpy.shutdown()
+bus.shutdown()

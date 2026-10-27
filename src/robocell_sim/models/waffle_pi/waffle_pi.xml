@@ -73,5 +73,6 @@
     <jointpos name="wheel_left_encoder" joint="wheel_left_joint"/>
     <jointpos name="wheel_right_encoder" joint="wheel_right_joint"/>
     <gyro name="imu_gyro" site="imu"/>
+    <accelerometer name="imu_accelerometer" site="imu"/>
   </sensor>
 </mujoco>
