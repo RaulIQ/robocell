@@ -3,7 +3,7 @@
 import secrets
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.hardware.implementations.packed import Packed
+from robocell_sim.hardware.implementations.imu.packed import Packed
 
 
 def test_packed_matches_the_example_frames_of_the_protocol() -> None:

@@ -6,7 +6,7 @@ import secrets
 import numpy as np
 from hamcrest import assert_that, equal_to
 from matplotlib.figure import Figure
-from robocell_sim.display.implementations.clouds import Clouds
+from robocell_sim.display.implementations.maps.clouds import Clouds
 
 
 def test_clouds_pile_up_the_true_map() -> None:

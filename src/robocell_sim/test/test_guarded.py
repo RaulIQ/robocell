@@ -7,12 +7,12 @@ from pathlib import Path
 import glfw
 import mujoco
 from hamcrest import assert_that, close_to, equal_to, greater_than
-from robocell_sim.hardware.implementations.raycast import Raycast
-from robocell_sim.robot.implementations.arrows import Arrows
-from robocell_sim.robot.implementations.differential import Differential
-from robocell_sim.robot.implementations.guarded import Guarded
-from robocell_sim.robot.implementations.limited import Limited
-from robocell_sim.robot.implementations.stepped import Stepped
+from robocell_sim.hardware.implementations.lidar.raycast import Raycast
+from robocell_sim.robot.implementations.command.arrows import Arrows
+from robocell_sim.robot.implementations.command.guarded import Guarded
+from robocell_sim.robot.implementations.drive.differential import Differential
+from robocell_sim.robot.implementations.drive.limited import Limited
+from robocell_sim.robot.implementations.drive.stepped import Stepped
 
 
 def test_guarded_lets_the_robot_drive_on_a_clear_path() -> None:

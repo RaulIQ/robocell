@@ -5,7 +5,7 @@ import secrets
 from hamcrest import assert_that, has_entry
 from rclpy.context import Context
 from rclpy.node import Node
-from robocell_sim.ros.implementations.advertised import Advertised
+from robocell_sim.ros.implementations.wiring.advertised import Advertised
 
 
 def test_advertised_opens_the_clock_topic() -> None:

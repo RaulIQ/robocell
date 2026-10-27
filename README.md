@@ -37,15 +37,20 @@ drawn over it, the lidar echoes in green and the true pose as a red arrow.
 
 ## Layout
 
-The `robocell_sim` package splits into four worlds, each with its own
-`interfaces` and `implementations`:
+The `robocell_sim` package splits into four worlds. Each world keeps all its
+interfaces in one `interfaces` folder and sorts its `implementations` into one
+folder per device or subject:
 
-| Package    | Role                                         | Examples                              |
-| ---------- | -------------------------------------------- | ------------------------------------- |
-| `hardware` | stands in for the real TurtleBot3            | physics, IMU board, encoders, lidar   |
-| `robot`    | would run on a real TurtleBot3 under ROS 2   | kinematics, odometry, slip, safety    |
-| `display`  | stands in for RViz and a web console         | route, lidar and camera windows       |
-| `ros`      | carries the simulation to ROS 2              | clock, ground truth, joints, TF, scan |
+| Package    | Role                                       | Implementations                                        |
+| ---------- | ------------------------------------------ | ------------------------------------------------------ |
+| `hardware` | stands in for the real TurtleBot3          | `physics`, `imu`, `can`, `wheels`, `lidar`, `camera`   |
+| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `command`, `odometry`, `lidar`                |
+| `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`                     |
+| `ros`      | carries the simulation to ROS 2            | `wiring`, `clock`, `pose`, `wheels`, `lidar`, `camera` |
+
+For example, the `Imu` interface lives in `hardware/interfaces`, while
+`hardware/implementations/imu` holds `Sensed`, which reads it from MuJoCo, and
+`Emulated`, the board that sends it on CAN.
 
 Nothing under `robot` imports MuJoCo, and a test keeps it that way. Only `ros`
 imports ROS message types, so the other worlds test without them; ROS

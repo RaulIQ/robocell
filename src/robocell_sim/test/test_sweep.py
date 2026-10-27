@@ -7,7 +7,7 @@ import secrets
 import numpy as np
 from hamcrest import assert_that, equal_to
 from matplotlib.figure import Figure
-from robocell_sim.display.implementations.sweep import Sweep
+from robocell_sim.display.implementations.lidar.sweep import Sweep
 
 
 def test_sweep_draws_the_echoes_of_the_scan() -> None:

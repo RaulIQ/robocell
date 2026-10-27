@@ -8,7 +8,7 @@ from hamcrest import assert_that, equal_to, has_entry
 from rclpy.context import Context
 from rclpy.node import Node
 from rclpy.qos import ReliabilityPolicy
-from robocell_sim.ros.implementations.wired import Wired
+from robocell_sim.ros.implementations.wiring.wired import Wired
 
 
 def test_wired_subscribes_to_the_velocity_command() -> None:

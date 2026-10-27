@@ -8,8 +8,8 @@ from typing import Any
 import mujoco
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.raycast import Raycast
-from robocell_sim.ros.implementations.ranged import Ranged
+from robocell_sim.hardware.implementations.lidar.raycast import Raycast
+from robocell_sim.ros.implementations.lidar.ranged import Ranged
 
 from test.echoed import Echoed
 from test.kept import Kept

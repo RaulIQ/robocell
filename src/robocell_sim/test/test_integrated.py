@@ -6,8 +6,8 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to
-from robocell_sim.hardware.implementations.integrated import Integrated
-from robocell_sim.hardware.implementations.physical import Physical
+from robocell_sim.hardware.implementations.imu.integrated import Integrated
+from robocell_sim.hardware.implementations.physics.physical import Physical
 
 
 def test_integrated_follows_the_heading_of_a_turning_robot() -> None:

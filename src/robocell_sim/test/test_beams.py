@@ -6,8 +6,8 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.display.implementations.beams import Beams
-from robocell_sim.display.implementations.scanned import Scanned
+from robocell_sim.display.implementations.lidar.beams import Beams
+from robocell_sim.display.implementations.lidar.scanned import Scanned
 
 
 def test_beams_draw_a_line_per_echo() -> None:

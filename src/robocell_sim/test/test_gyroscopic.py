@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to, less_than
-from robocell_sim.hardware.implementations.accumulated import Accumulated
-from robocell_sim.hardware.implementations.integrated import Integrated
-from robocell_sim.hardware.implementations.paced import Paced
-from robocell_sim.hardware.implementations.physical import Physical
-from robocell_sim.hardware.implementations.simulated import Simulated
-from robocell_sim.robot.implementations.differential import Differential
-from robocell_sim.robot.implementations.gyroscopic import Gyroscopic
+from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
+from robocell_sim.hardware.implementations.imu.integrated import Integrated
+from robocell_sim.hardware.implementations.physics.paced import Paced
+from robocell_sim.hardware.implementations.physics.physical import Physical
+from robocell_sim.hardware.implementations.wheels.simulated import Simulated
+from robocell_sim.robot.implementations.drive.differential import Differential
+from robocell_sim.robot.implementations.odometry.gyroscopic import Gyroscopic
 
 if TYPE_CHECKING:
     from robocell_sim.robot.interfaces.odometry import Odometry

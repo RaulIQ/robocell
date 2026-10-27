@@ -4,7 +4,7 @@ import secrets
 
 import can
 from hamcrest import assert_that, equal_to
-from robocell_sim.hardware.implementations.transmitted import Transmitted
+from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 
 
 def test_transmitted_puts_the_frame_on_the_bus() -> None:

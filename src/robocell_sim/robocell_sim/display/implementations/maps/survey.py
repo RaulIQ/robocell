@@ -7,7 +7,7 @@ from typing import final, override
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from robocell_sim.display.implementations.clouds import Clouds
+from robocell_sim.display.implementations.maps.clouds import Clouds
 from robocell_sim.display.interfaces.atlas import Atlas
 
 

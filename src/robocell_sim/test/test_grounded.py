@@ -7,7 +7,7 @@ from typing import Any
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.ros.implementations.grounded import Grounded
+from robocell_sim.ros.implementations.pose.grounded import Grounded
 
 from test.kept import Kept
 from test.waffle import Waffle

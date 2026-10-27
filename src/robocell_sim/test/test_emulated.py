@@ -7,7 +7,7 @@ from pathlib import Path
 
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.packed import ACCELEROMETER, GYRO
+from robocell_sim.hardware.implementations.imu.packed import ACCELEROMETER, GYRO
 
 from test.aired import Aired
 from test.waffle import Waffle
