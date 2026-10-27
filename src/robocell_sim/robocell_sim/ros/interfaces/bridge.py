@@ -18,7 +18,3 @@ class Bridge(Protocol):
     def truth(self) -> Topic:
         """Topic of the true pose and velocity of the robot."""
         ...
-
-    def frames(self) -> Topic:
-        """Topic of the moving transforms between the frames of the robot."""
-        ...

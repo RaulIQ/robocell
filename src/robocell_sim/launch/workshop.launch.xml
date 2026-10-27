@@ -1,10 +1,13 @@
 <launch>
-  <!-- Simulator with its ROS 2 bridge, the IMU driver, odom fixed in the world, the URDF on simulated time, and RViz -->
+  <!-- Simulator with its ROS 2 bridge, the IMU driver, the odometry, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
   <node pkg="robocell_sim" exec="main.py" output="screen"/>
   <node pkg="robocell_sim" exec="imu.py" output="screen">
     <param name="use_sim_time" value="true"/>
   </node>
-  <node pkg="tf2_ros" exec="static_transform_publisher" args="--frame-id world --child-frame-id odom"/>
+  <node pkg="robocell_sim" exec="odometry.py" output="screen">
+    <param name="use_sim_time" value="true"/>
+  </node>
+  <node pkg="tf2_ros" exec="static_transform_publisher" args="--x -2.1 --y -2.5 --yaw 1.5707963267948966 --frame-id world --child-frame-id odom"/>
   <node pkg="robot_state_publisher" exec="robot_state_publisher">
     <param name="robot_description" value="$(command 'cat $(find-pkg-share robocell_sim)/models/waffle_pi/waffle_pi.urdf')"/>
     <param name="use_sim_time" value="true"/>

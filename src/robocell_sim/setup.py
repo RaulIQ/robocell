@@ -40,5 +40,9 @@ setup(
     description="MuJoCo simulation of a TurtleBot3 Waffle Pi",
     license="Apache-2.0",
     tests_require=["pytest"],
-    scripts=["robocell_sim/main.py", "robocell_sim/imu.py"],
+    scripts=[
+        "robocell_sim/main.py",
+        "robocell_sim/imu.py",
+        "robocell_sim/odometry.py",
+    ],
 )

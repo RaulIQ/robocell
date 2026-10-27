@@ -51,7 +51,6 @@ from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
 from robocell_sim.ros.implementations.lidar.ranged import Ranged
-from robocell_sim.ros.implementations.pose.grounded import Grounded
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.wheels.jointed import Jointed
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
@@ -163,9 +162,6 @@ physics = Paced(
                 ),
                 Periodic(
                     data, 1 / 50, Tracked(data, "base_link", bridge.truth())
-                ),
-                Periodic(
-                    data, 1 / 50, Grounded(data, "base_link", bridge.frames())
                 ),
                 Periodic(
                     data,
