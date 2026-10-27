@@ -3,12 +3,14 @@
   <arg name="gyro_bias" default="0.0075" description="Standard deviation in rad/s that the gyro bias of each axis is drawn from"/>
   <arg name="gyro_noise" default="0.001" description="Standard deviation in rad/s of the gyro noise on each measurement"/>
   <arg name="accelerometer_noise" default="0.02" description="Standard deviation in m/s² of the accelerometer noise on each measurement"/>
+  <arg name="seed" default="-1" description="Seed of the noise generator of the IMU board, a fresh random one when negative"/>
   <arg name="gyro_variance" default="$(eval '$(var gyro_noise) ** 2')" description="Gyro variance the IMU driver reports, the square of the gyro noise unless set"/>
   <arg name="accelerometer_variance" default="$(eval '$(var accelerometer_noise) ** 2')" description="Accelerometer variance the IMU driver reports, the square of the accelerometer noise unless set"/>
   <node pkg="robocell_sim" exec="main.py" output="screen">
     <param name="gyro_bias" value="$(var gyro_bias)"/>
     <param name="gyro_noise" value="$(var gyro_noise)"/>
     <param name="accelerometer_noise" value="$(var accelerometer_noise)"/>
+    <param name="seed" value="$(var seed)"/>
   </node>
   <node pkg="robocell_sim" exec="imu.py" output="screen">
     <param name="use_sim_time" value="true"/>
