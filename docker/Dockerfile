@@ -4,7 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-rviz2 ros-jazzy-robot-state-publisher ros-jazzy-xacro \
       ros-jazzy-cv-bridge ros-jazzy-rmw-cyclonedds-cpp ros-jazzy-teleop-twist-keyboard \
-      ros-jazzy-joint-state-publisher-gui \
+      ros-jazzy-joint-state-publisher-gui ros-jazzy-robot-localization \
       python3-pip python3-venv python3-opencv python3-numpy python3-colcon-common-extensions python3-tk \
       can-utils socat iproute2 gh \
       libgl1 libegl1 libglfw3 libosmesa6 \
