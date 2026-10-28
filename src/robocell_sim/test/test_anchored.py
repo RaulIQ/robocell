@@ -6,7 +6,7 @@ from typing import Any
 
 from hamcrest import assert_that, close_to, equal_to
 from robocell_sim.robot.implementations.drive.differential import Differential
-from robocell_sim.robot.implementations.odometry.unread import Unread
+from robocell_sim.robot.implementations.odometry.parked import Parked
 from robocell_sim.ros.implementations.odometry.anchored import Anchored
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
@@ -18,7 +18,7 @@ def test_anchored_links_the_body_to_the_header_frame() -> None:
     child = f"base_{secrets.token_hex(4)}"
     messages: list[Any] = []
     Anchored(
-        Unread(Differential(0.033, 0.288), 4096, (0.0, 0.0, 0.0)),
+        Parked(Differential(0.033, 0.288), 4096, (0.0, 0.0, 0.0)),
         Header(frame_id="odom"),
         child,
         Kept(messages),
@@ -42,7 +42,7 @@ def test_anchored_moves_the_body_to_the_reckoned_position() -> None:
     )
     messages: list[Any] = []
     Anchored(
-        Unread(Differential(0.033, 0.288), 4096, pose),
+        Parked(Differential(0.033, 0.288), 4096, pose),
         Header(frame_id="odom"),
         "base_footprint",
         Kept(messages),
@@ -63,7 +63,7 @@ def test_anchored_turns_the_body_to_the_heading() -> None:
     heading = secrets.SystemRandom().uniform(-math.pi, math.pi)
     messages: list[Any] = []
     Anchored(
-        Unread(Differential(0.033, 0.288), 4096, (0.0, 0.0, heading)),
+        Parked(Differential(0.033, 0.288), 4096, (0.0, 0.0, heading)),
         Header(frame_id="odom"),
         "base_footprint",
         Kept(messages),
