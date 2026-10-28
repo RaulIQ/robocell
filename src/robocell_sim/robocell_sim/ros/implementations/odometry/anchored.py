@@ -14,7 +14,7 @@ from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates
 from tf2_msgs.msg import TFMessage  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.hardware.interfaces.report import Report
-from robocell_sim.robot.interfaces.odometry import Odometry
+from robocell_sim.robot.interfaces.travel import Travel
 from robocell_sim.ros.interfaces.topic import Topic
 
 
@@ -30,7 +30,7 @@ class Anchored(Report):
     so robot_state_publisher alone lifts base_link above it.
     """
 
-    _odometry: Odometry
+    _odometry: Travel
     _header: Header
     _child: str
     _topic: Topic

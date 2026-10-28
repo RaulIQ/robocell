@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Odometry that reckons the pose of the robot from /joint_states and /imu."""
+"""Odometry that reckons the pose of the robot from /joint_states alone."""
 
 import contextlib
 import queue
@@ -10,10 +10,8 @@ from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates
 
 from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.robot.implementations.drive.differential import Differential
-from robocell_sim.robot.implementations.odometry.still import Still
-from robocell_sim.robot.implementations.odometry.unread import Unread
-from robocell_sim.robot.interfaces.odometry import Odometry
-from robocell_sim.robot.interfaces.turn import Turn
+from robocell_sim.robot.implementations.odometry.parked import Parked
+from robocell_sim.robot.interfaces.travel import Travel
 from robocell_sim.ros.implementations.odometry.anchored import Anchored
 from robocell_sim.ros.implementations.odometry.estimated import Estimated
 from robocell_sim.ros.implementations.settings.declared import Declared
@@ -33,27 +31,28 @@ drive = Differential(
     settings.number("wheel_radius", 0.033),
     settings.number("wheel_separation", 0.288),
 )
-rates: queue.SimpleQueue[tuple[float, float]] = queue.SimpleQueue()
-counts: queue.SimpleQueue[tuple[int, int, Header]] = queue.SimpleQueue()
+# @todo #115:30min Calibrate linear_variance and angular_variance against
+#  /ground_truth/odom, since these defaults are guesses, not measurements.
+variances = (
+    settings.number("linear_variance", 0.01**2),
+    settings.number("angular_variance", 0.02**2),
+)
+counts: queue.SimpleQueue[tuple[int, int, float, Header]] = queue.SimpleQueue()
 instruments = Geared(node, wheels, resolution, frame)
-instruments.sense(rates)
 instruments.count(counts)
 pose = instruments.pose()
 transforms = instruments.transforms()
-turn: Turn = Still(0.0)
-odometry: Odometry = Unread(drive, resolution, (0.0, 0.0, 0.0))
+travel: Travel = Parked(drive, resolution, (0.0, 0.0, 0.0))
 with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
     while node.context.ok():
         rclpy.spin_once(node, timeout_sec=0.1)
-        while not rates.empty():
-            turn = turn.read(*rates.get())
         while not counts.empty():
-            left, right, header = counts.get()
-            odometry = turn.apply(odometry, left, right)
+            left, right, moment, header = counts.get()
+            travel = travel.read(left, right, moment)
             Joined(
                 (
-                    Estimated(odometry, header, child, pose),
-                    Anchored(odometry, header, child, transforms),
+                    Estimated(travel, variances, (header, child), pose),
+                    Anchored(travel, header, child, transforms),
                 )
             ).publish()
 node.context.try_shutdown()

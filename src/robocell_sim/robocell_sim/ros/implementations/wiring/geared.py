@@ -7,9 +7,8 @@ from typing import final, override
 
 from nav_msgs.msg import Odometry  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
-from sensor_msgs.msg import Imu, JointState  # type: ignore[import-untyped]  # ROS generates message modules without types
+from sensor_msgs.msg import JointState  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 from tf2_msgs.msg import TFMessage  # type: ignore[import-untyped]  # ROS generates message modules without types
 
@@ -35,28 +34,16 @@ class Geared(Instruments):
 
     @override
     def pose(self) -> Topic:
-        return self._node.create_publisher(Odometry, "/odom", 10)
+        return self._node.create_publisher(Odometry, "/wheel/odometry", 10)
 
     @override
     def transforms(self) -> Topic:
         return self._node.create_publisher(TFMessage, "/tf", 10)
 
     @override
-    def sense(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
-        def receive(message: Imu) -> None:
-            inbox.put(
-                (
-                    float(message.angular_velocity.z),
-                    Time.from_msg(message.header.stamp).nanoseconds * 1e-9,
-                )
-            )
-
-        self._node.create_subscription(
-            Imu, "/imu", receive, qos_profile_sensor_data
-        )
-
-    @override
-    def count(self, inbox: queue.SimpleQueue[tuple[int, int, Header]]) -> None:
+    def count(
+        self, inbox: queue.SimpleQueue[tuple[int, int, float, Header]]
+    ) -> None:
         def receive(message: JointState) -> None:
             angles: dict[str, float] = dict(
                 zip(message.name, message.position, strict=True)
@@ -73,6 +60,7 @@ class Geared(Instruments):
                         * self._resolution
                         / (2 * math.pi)
                     ),
+                    Time.from_msg(message.header.stamp).nanoseconds * 1e-9,
                     Header(stamp=message.header.stamp, frame_id=self._frame),
                 )
             )
