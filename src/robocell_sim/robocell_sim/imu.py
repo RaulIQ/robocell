@@ -8,8 +8,6 @@ import sys
 import can
 import rclpy
 from rclpy.executors import ExternalShutdownException
-from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import Imu  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.robot.implementations.can.drained import Drained
@@ -19,19 +17,22 @@ from robocell_sim.robot.implementations.imu.scaled import Scaled
 from robocell_sim.robot.implementations.imu.silent import Silent
 from robocell_sim.robot.interfaces.pairing import Pairing
 from robocell_sim.ros.implementations.imu.inertial import Inertial
+from robocell_sim.ros.implementations.settings.declared import Declared
+from robocell_sim.ros.implementations.wiring.plugged import Plugged
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("imu")
 rclpy.init()
 node = rclpy.create_node("imu")
-channel = str(node.declare_parameter("channel", "vcan0").value)
-period = float(node.declare_parameter("period", 0.005).value)
-frame = str(node.declare_parameter("frame_id", "imu_link").value)
+settings = Declared(node)
+channel = settings.text("channel", "vcan0")
+period = settings.number("period", 0.005)
+frame = settings.text("frame_id", "imu_link")
 variances = (
-    float(node.declare_parameter("gyro_variance", 0.001**2).value),
-    float(node.declare_parameter("accelerometer_variance", 0.02**2).value),
+    settings.number("gyro_variance", 0.001**2),
+    settings.number("accelerometer_variance", 0.02**2),
 )
-topic = node.create_publisher(Imu, "/imu", qos_profile_sensor_data)
+topic = Plugged(node).imu()
 try:
     bus = can.Bus(interface="socketcan", channel=channel, can_filters=FILTERS)
 except OSError:
