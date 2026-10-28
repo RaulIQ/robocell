@@ -56,6 +56,7 @@ from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
 from robocell_sim.ros.implementations.lidar.ranged import Ranged
 from robocell_sim.ros.implementations.pose.tracked import Tracked
+from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wheels.jointed import Jointed
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
 from robocell_sim.ros.implementations.wiring.wired import Wired
@@ -146,14 +147,13 @@ rclpy.init()
 node = rclpy.create_node("sim")
 bridge = Advertised(node)
 harness = Wired(node)
+settings = Declared(node)
 harness.listen(twists)
-seed = int(node.declare_parameter("seed", -1).value)
+seed = settings.whole("seed", -1)
 if seed < 0:
     seed = secrets.randbits(31)
 generator = np.random.default_rng(seed)
-x, y, z = generator.normal(
-    0.0, float(node.declare_parameter("gyro_bias", 0.0075).value), 3
-)
+x, y, z = generator.normal(0.0, settings.number("gyro_bias", 0.0075), 3)
 log.info(
     "Gyro of the IMU board is biased by %.5f, %.5f and %.5f rad/s about "
     "x, y and z with the seed %d",
@@ -166,12 +166,12 @@ imu = Noisy(
     Sensed(data, "imu_gyro", "imu_accelerometer"),
     Gaussian(
         (float(x), float(y), float(z)),
-        float(node.declare_parameter("gyro_noise", 0.001).value),
+        settings.number("gyro_noise", 0.001),
         generator,
     ),
     Gaussian(
         (0.0, 0.0, 0.0),
-        float(node.declare_parameter("accelerometer_noise", 0.02).value),
+        settings.number("accelerometer_noise", 0.02),
         generator,
     ),
 )
