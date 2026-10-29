@@ -1,5 +1,9 @@
 <launch>
   <!-- Simulator with its ROS 2 bridge, the IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
+  <arg name="route" default="false" description="Show the robot route window"/>
+  <arg name="camera" default="false" description="Show the robot camera in a separate window"/>
+  <arg name="radar" default="false" description="Show the lidar scan window"/>
+  <arg name="survey" default="false" description="Show the maps by true pose and odometry"/>
   <arg name="lidar_port" default="$(env HOME)/.ros/robocell-lidar" description="Shared named UART endpoint of the simulator and lidar driver"/>
   <arg name="gyro_bias" default="0.0075" description="Standard deviation in rad/s that the gyro bias of each axis is drawn from"/>
   <arg name="gyro_noise" default="0.001" description="Standard deviation in rad/s of the gyro noise on each measurement"/>
@@ -7,7 +11,7 @@
   <arg name="seed" default="-1" description="Seed of the noise generator of the IMU board, a fresh random one when negative"/>
   <arg name="gyro_variance" default="$(eval '$(var gyro_noise) ** 2')" description="Gyro variance the IMU driver reports, the square of the gyro noise unless set"/>
   <arg name="accelerometer_variance" default="$(eval '$(var accelerometer_noise) ** 2')" description="Accelerometer variance the IMU driver reports, the square of the accelerometer noise unless set"/>
-  <node pkg="robocell_sim" exec="main.py" output="screen">
+  <node pkg="robocell_sim" exec="main.py" args="--route=$(var route) --camera=$(var camera) --radar=$(var radar) --survey=$(var survey)" output="screen">
     <param name="lidar_port" value="$(var lidar_port)"/>
     <param name="gyro_bias" value="$(var gyro_bias)"/>
     <param name="gyro_noise" value="$(var gyro_noise)"/>

@@ -6,7 +6,7 @@ v0 drives a simulated TurtleBot3 Waffle Pi through a 6 by 6 m workshop in
 MuJoCo from the keyboard. Its odometry takes the distance from the wheel
 encoders and the turn from an integrated gyro, a 360-ray lidar ranges the
 room five times a second, a camera renders what the robot sees, and a guard
-stops the robot short of anything the lidar sees. Separate windows plot the
+stops the robot short of anything the lidar sees. Optional windows plot the
 route against the ground truth, the latest lidar scan, the camera image and
 two maps of the room, by the true pose and by odometry; the viewer marks
 every lidar echo, and the console warns when the wheels slip.
@@ -108,6 +108,20 @@ source install/setup.bash
 ros2 run robocell_sim main.py
 ```
 
+Only the MuJoCo viewer opens by default. Request any of the four extra
+windows with `--route`, `--camera`, `--radar` or `--survey`, independently
+or together:
+
+```console
+ros2 run robocell_sim main.py --route --survey
+ros2 run robocell_sim main.py --route --camera --radar --survey
+```
+
+Disabled windows create no processes or queues and receive no data. The
+ROS camera image, lidar scan and other topics still work without the extra
+windows. Use `ros2 run robocell_sim main.py --help` to list the flags; they
+can be combined with the usual `--ros-args` options.
+
 Run colcon through `python -m` so it uses the virtual environment that holds
 MuJoCo; the plain `colcon` command runs the system Python, which does not.
 With `--symlink-install`, edits to the code and the models take effect without
@@ -140,11 +154,11 @@ Every press changes the speed by one step, up to the robot limits.
 Every half second of simulated time the console logs both wheel encoders
 in ticks, at 4096 ticks per wheel revolution, as the Dynamixel XM430 counts them.
 
-A second window draws the route of the robot as it drives: the dashed line is
-where the wheel encoders and the gyroscope put it, the solid line is where
-MuJoCo actually has it, and the title tells how far apart they are in
-millimeters. The distance comes from the encoders and the turn from the
-gyroscope, whose yaw rate adds up on every physics step.
+With `--route`, a window draws the route of the robot as it drives: the
+dashed line is where the wheel encoders and the gyroscope put it, the solid
+line is where MuJoCo actually has it, and the title tells how far apart they
+are in millimeters. The distance comes from the encoders and the turn from
+the gyroscope, whose yaw rate adds up on every physics step.
 
 Every tenth of a second of simulated time the robot also compares how fast
 the encoders and the gyroscope say it turns. When the two rates differ by
@@ -152,15 +166,15 @@ more than 0.3 rad/s, the wheels slip: the console logs a warning, the route
 window marks the spot on the dashed line with a red cross, and the console
 logs again once the wheels grip.
 
-A third window shows what the robot camera sees, 640 by 480 pixels thirty
-times a second. MuJoCo renders it in a process of its own from the joint
+With `--camera`, a window shows what the robot camera sees, 640 by 480 pixels
+thirty times a second. MuJoCo renders it in a process of its own from the joint
 positions the simulation sends, so a slow window drops frames instead of
 slowing the robot down. At start the console logs the camera matrix of this
 ideal pinhole camera, computed from its vertical field of view, with no
 lens distortion.
 
-A fourth window draws the lidar scan five times a second on a polar chart,
-with ahead at the top. The lidar casts 360 level rays from the scanner, one
+With `--radar`, a window draws the lidar scan five times a second on a polar
+chart, with ahead at the top. The lidar casts 360 level rays from the scanner, one
 per degree counterclockwise from ahead as in ROS, and keeps ranges between
 0.12 and 3.5 m; the low pallet stays under its scan plane, so only the camera
 sees it.
@@ -174,8 +188,9 @@ drops to zero, and an echo in the same corridor behind blocks reversing.
 Turning in place stays free, so you can steer away. The low pallet stays
 under the scan plane, so the robot can still bump into it.
 
-A fifth window piles the lidar scans up into two maps of the workshop, once a
-second: on the left by the true pose from MuJoCo, on the right by the pose the
+With `--survey`, a window piles the lidar scans up into two maps of the
+workshop, once a second: on the left by the true pose from MuJoCo, on the
+right by the pose the
 odometry reckons. While the odometry holds, both show the same plan; when the
 robot bumps into the pallet and the wheels spin in place, the right map smears
 the walls along the way the encoders think the robot went.
@@ -333,6 +348,13 @@ view, all on simulated time:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml
+```
+
+The launch opens the MuJoCo viewer and RViz by default. Enable extra windows
+with the matching launch arguments, all `false` unless requested:
+
+```console
+ros2 launch robocell_sim workshop.launch.xml route:=true survey:=true
 ```
 
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels

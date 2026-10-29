@@ -13,6 +13,7 @@ import termios
 import threading
 import time
 import tty
+from argparse import ArgumentParser
 from pathlib import Path
 
 import can
@@ -21,6 +22,7 @@ import mujoco.viewer
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
+from rclpy.utilities import remove_ros_args
 
 from robocell_sim.display.implementations.camera.screen import Screen
 from robocell_sim.display.implementations.lidar.beams import Beams
@@ -71,6 +73,22 @@ from robocell_sim.ros.implementations.wheels.jointed import Jointed
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
 from robocell_sim.ros.implementations.wiring.wired import Wired
 
+arguments = ArgumentParser(description="Run the workshop simulator")
+for name, description in (
+    ("route", "Show the robot route"),
+    ("camera", "Show the robot camera in a separate window"),
+    ("radar", "Show the lidar scan"),
+    ("survey", "Show the maps by true pose and odometry"),
+):
+    arguments.add_argument(
+        f"--{name}",
+        nargs="?",
+        const="true",
+        default="false",
+        choices=("true", "false"),
+        help=description,
+    )
+options = arguments.parse_args(remove_ros_args()[1:])
 model = mujoco.MjModel.from_xml_path(
     f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
 )
@@ -119,21 +137,31 @@ odometry: Odometry = Gyroscopic(
     (0, 0, 0.0),
 )
 slip: Slip = Compared(drive, 4096, 0.3, ((0, 0, 0.0, 0.0), (0, 0, 0.0, 0.0)))
-route = Window(multiprocessing.get_context("fork").Queue())
-multiprocessing.get_context("fork").Process(
-    target=route.show, daemon=True
-).start()
+route = (
+    Window(multiprocessing.get_context("fork").Queue())
+    if options.route == "true"
+    else None
+)
+if route is not None:
+    multiprocessing.get_context("fork").Process(
+        target=route.show, daemon=True
+    ).start()
 sample = 0.0
 size = (640, 480)
-camera = Screen(
-    multiprocessing.get_context("fork").Queue(maxsize=2),
-    model,
-    "camera_rgb",
-    size,
+camera = (
+    Screen(
+        multiprocessing.get_context("fork").Queue(maxsize=2),
+        model,
+        "camera_rgb",
+        size,
+    )
+    if options.camera == "true"
+    else None
 )
-multiprocessing.get_context("fork").Process(
-    target=camera.show, daemon=True
-).start()
+if camera is not None:
+    multiprocessing.get_context("fork").Process(
+        target=camera.show, daemon=True
+    ).start()
 lens = Pinhole(
     math.radians(model.cam_fovy[model.camera("camera_rgb").id]), *size
 )
@@ -141,15 +169,25 @@ log.info("Camera sees through the intrinsics %s", lens.matrix())
 shot = 0.0
 reach = (0.12, 3.5)
 lidar = Raycast(model, data, "base_scan", reach)
-radar = Polar(multiprocessing.get_context("fork").Queue(maxsize=2), 3.5)
-multiprocessing.get_context("fork").Process(
-    target=radar.show, daemon=True
-).start()
+radar = (
+    Polar(multiprocessing.get_context("fork").Queue(maxsize=2), 3.5)
+    if options.radar == "true"
+    else None
+)
+if radar is not None:
+    multiprocessing.get_context("fork").Process(
+        target=radar.show, daemon=True
+    ).start()
 scan = 0.0
-atlas = Survey(multiprocessing.get_context("fork").Queue())
-multiprocessing.get_context("fork").Process(
-    target=atlas.show, daemon=True
-).start()
+atlas = (
+    Survey(multiprocessing.get_context("fork").Queue())
+    if options.survey == "true"
+    else None
+)
+if atlas is not None:
+    multiprocessing.get_context("fork").Process(
+        target=atlas.show, daemon=True
+    ).start()
 survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
@@ -307,19 +345,21 @@ with (
                     )
                 if slipped and not slip.slipping():
                     log.info("Wheels grip again at %.1f s", data.time)
-                route.mark(
-                    odometry.position(),
-                    (
-                        data.body("base_link").xpos[0],
-                        data.body("base_link").xpos[1],
-                    ),
-                    slipping=slip.slipping(),
-                )
+                if route is not None:
+                    route.mark(
+                        odometry.position(),
+                        (
+                            data.body("base_link").xpos[0],
+                            data.body("base_link").xpos[1],
+                        ),
+                        slipping=slip.slipping(),
+                    )
                 sample += 0.1
             if data.time >= scan:
                 ranges = lidar.ranges()
-                radar.mark(ranges)
-                if data.time >= survey:
+                if radar is not None:
+                    radar.mark(ranges)
+                if atlas is not None and data.time >= survey:
                     atlas.mark(
                         Placed(
                             ranges,
@@ -350,7 +390,7 @@ with (
                         viewer.user_scn
                     )
                 scan += 0.2
-            if data.time >= shot:
+            if camera is not None and data.time >= shot:
                 camera.record(data.qpos)
                 shot += 1 / 30
             if data.time >= moment:
