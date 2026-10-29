@@ -7,6 +7,50 @@ from defusedxml import ElementTree
 from hamcrest import assert_that, close_to, equal_to
 
 
+def test_workshop_launch_disables_extra_windows_by_default() -> None:
+    """The launch opens only the MuJoCo viewer and RViz unless requested."""
+    assert_that(
+        {
+            argument.get("name"): argument.get("default")
+            for argument in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("arg")
+            if argument.get("name") in {"route", "camera", "radar", "survey"}
+        },
+        equal_to(
+            {
+                "route": "false",
+                "camera": "false",
+                "radar": "false",
+                "survey": "false",
+            }
+        ),
+        "launch did not disable extra windows by default",
+    )
+
+
+def test_workshop_launch_passes_window_flags_to_the_simulator() -> None:
+    """Window flags reach the simulator as arguments rather than parameters."""
+    assert_that(
+        [
+            node.get("args")
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "main.py"
+        ],
+        equal_to(
+            [
+                (
+                    "--route=$(var route) --camera=$(var camera) "
+                    "--radar=$(var radar) --survey=$(var survey)"
+                )
+            ]
+        ),
+        "launch did not pass requested window flags to the simulator",
+    )
+
+
 def test_workshop_launch_fixes_odom_in_the_world() -> None:
     """A static transform hangs odom from the world frame of MuJoCo."""
     assert_that(
