@@ -58,6 +58,20 @@ generates its message modules without types, so `ros` alone suppresses those
 type checks, line by line for mypy and by folder for Pylance.
 `main.py` wires objects from all four worlds together.
 
+## Work with Codex
+
+Rebuild and reopen the workspace with **Dev Containers: Rebuild and Reopen in
+Container** in VS Code. The container installs the Codex extension and CLI;
+`~/.codex` is mounted at `/home/ubuntu/.codex` to keep your configuration,
+sign-in and global `AGENTS.md` available across rebuilds.
+
+Open the Codex sidebar to chat, or run `codex` in the container terminal.
+If sign-in is required, use the extension or `codex login --device-auth`.
+Review and trust the project hooks with `/hooks` in Codex CLI, once for the
+host checkout and once for `/ws` inside the container. The shared EO gate
+runs after patches and before Codex finishes a turn; on the host it runs
+through Docker Compose, and in the container it uses the installed Python.
+
 ## Run the simulation
 
 The simulator sends the readings of its IMU board on the virtual CAN bus

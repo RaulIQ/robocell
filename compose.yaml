@@ -15,8 +15,7 @@ services:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ${XAUTHORITY:?set XAUTHORITY on the host to the X11 cookie file}:/home/ubuntu/.Xauthority:ro
-      - ~/.claude:/home/ubuntu/.claude
-      - ~/.claude.json:/home/ubuntu/.claude.json
+      - ~/.codex:/home/ubuntu/.codex
     devices:
       - /dev/dri:/dev/dri
     stdin_open: true
