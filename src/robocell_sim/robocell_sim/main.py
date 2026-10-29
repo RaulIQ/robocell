@@ -13,6 +13,7 @@ import termios
 import threading
 import time
 import tty
+from pathlib import Path
 
 import can
 import mujoco
@@ -46,6 +47,7 @@ from robocell_sim.hardware.implementations.physics.paced import Paced
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
+from robocell_sim.hardware.implementations.uart.named import Named
 from robocell_sim.hardware.implementations.uart.terminal import Terminal
 from robocell_sim.hardware.implementations.wheels.simulated import Simulated
 from robocell_sim.hardware.interfaces.device import Device
@@ -63,7 +65,6 @@ from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
-from robocell_sim.ros.implementations.lidar.ranged import Ranged
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wheels.jointed import Jointed
@@ -238,7 +239,6 @@ physics = Paced(
                         harness.joints(),
                     ),
                 ),
-                Periodic(data, 0.2, Ranged(data, lidar, reach, harness.scan())),
                 Periodic(
                     data,
                     1 / 30,
@@ -262,6 +262,14 @@ physics = Paced(
 with (
     os.fdopen(master, "rb+", buffering=0),
     os.fdopen(slave, "rb+", buffering=0),
+    Named(
+        Path(
+            settings.text(
+                "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
+            )
+        ),
+        os.ttyname(slave),
+    ).binding(),
     mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer,
 ):
     viewer.set_texts(
