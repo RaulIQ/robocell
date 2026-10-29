@@ -426,3 +426,25 @@ in [docs/protocols](docs/protocols):
 | Board | Bus                     | Document                                       |
 | ----- | ----------------------- | ---------------------------------------------- |
 | IMU   | classic CAN, 500 kbit/s | [docs/protocols/imu.md](docs/protocols/imu.md) |
+| RPLIDAR A1 | UART, 115200 baud | [docs/protocols/rplidar-a1.md](docs/protocols/rplidar-a1.md) |
+
+## Emulated RPLIDAR A1
+
+The simulator also exposes a standard-SCAN RPLIDAR A1M8 device through a
+raw virtual UART. Its startup log names the allocated `/dev/pts/N` port.
+A client can query information and health, start SCAN or FORCE_SCAN, read
+five-byte angle/distance packets, and stop or reset the device. The
+[protocol document](docs/protocols/rplidar-a1.md) includes a bounded Python
+client and the exact emulated profile.
+
+The emulator samples the live MuJoCo scene sequentially at a 476-microsecond
+standard period, with a continuously powered 5.5 Hz motor and a 0.15–12 m
+range. Samples share the current world state within a physics step. New
+acquisitions pause with the simulation; commands and queued serial output
+continue to be serviced. UART delivery is paced to 115200-baud 8N1 in wall
+time, with a bounded backlog and explicit failure if a host cannot keep up.
+
+The existing ROS `/scan` publisher and display still use their direct
+simulation path. A separate UART lidar driver will replace that bridge in
+the next step. Express scan modes and USB adapter motor-control lines are
+outside the standard-SCAN emulator.
