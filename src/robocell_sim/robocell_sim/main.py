@@ -4,11 +4,15 @@
 import logging
 import math
 import multiprocessing
+import os
+import pty
 import queue
 import secrets
 import sys
+import termios
 import threading
 import time
+import tty
 
 import can
 import mujoco
@@ -33,13 +37,18 @@ from robocell_sim.hardware.implementations.imu.gaussian import Gaussian
 from robocell_sim.hardware.implementations.imu.integrated import Integrated
 from robocell_sim.hardware.implementations.imu.noisy import Noisy
 from robocell_sim.hardware.implementations.imu.sensed import Sensed
+from robocell_sim.hardware.implementations.lidar.directed import Directed
 from robocell_sim.hardware.implementations.lidar.raycast import Raycast
+from robocell_sim.hardware.implementations.lidar.rplidar import Rplidar
+from robocell_sim.hardware.implementations.lidar.serving import Serving
 from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.hardware.implementations.physics.paced import Paced
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
+from robocell_sim.hardware.implementations.uart.terminal import Terminal
 from robocell_sim.hardware.implementations.wheels.simulated import Simulated
+from robocell_sim.hardware.interfaces.device import Device
 from robocell_sim.robot.implementations.command.arrows import Arrows
 from robocell_sim.robot.implementations.command.guarded import Guarded
 from robocell_sim.robot.implementations.drive.differential import Differential
@@ -176,11 +185,36 @@ imu = Noisy(
     ),
 )
 renderer = mujoco.Renderer(model, size[1], size[0])
+master, slave = pty.openpty()
+tty.setraw(slave)
+attributes = termios.tcgetattr(slave)
+attributes[4] = termios.B115200
+attributes[5] = termios.B115200
+termios.tcsetattr(slave, termios.TCSANOW, attributes)
+os.set_blocking(master, False)
+state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+state.put(
+    (
+        Rplidar(
+            Directed(data, "base_scan", (0.15, 12.0)),
+            (False, 0.0, 0),
+            (b"", data.time),
+        ),
+        b"",
+        time.monotonic(),
+    )
+)
+serial = Serving(data, Terminal(master), state, 65536)
+log.info(
+    "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
+    os.ttyname(slave),
+)
 physics = Paced(
     Reported(
         Integrated(Physical(model, data), data, "imu_gyro", 0),
         Joined(
             (
+                serial,
                 Periodic(data, 0.01, Clocked(data, bridge.clock())),
                 Periodic(
                     data,
@@ -225,7 +259,11 @@ physics = Paced(
     data,
 )
 
-with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
+with (
+    os.fdopen(master, "rb+", buffering=0),
+    os.fdopen(slave, "rb+", buffering=0),
+    mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer,
+):
     viewer.set_texts(
         (None, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT.value, "9", "Lidar lines")
     )
@@ -233,6 +271,7 @@ with mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer:
     while viewer.is_running():
         now = time.time()
         rclpy.spin_once(node, timeout_sec=0)
+        serial.publish()
         while not keys.empty():
             command = command.press(keys.get())
         while not twists.empty():

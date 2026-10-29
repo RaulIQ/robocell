@@ -1,13 +1,13 @@
 # UART protocol of the RPLIDAR A1
 
-This document is the contract for the planned lidar emulator and driver.
+This document is the contract for the lidar emulator and its future driver.
 It describes the A1 standard SCAN protocol, with the original bytes and
 units. The emulator will obtain distances from MuJoCo; the driver will know
 only the serial stream. Neither side adds timestamps, sequence numbers,
 checksums or custom headers to measurement packets.
 
-This is a specification, not an implemented device. The current simulator
-still publishes `/scan` directly. Express scan modes are separate formats
+The simulator exposes the standard-SCAN emulator on a pseudo-terminal.
+It still publishes `/scan` directly until a separate lidar driver is added. Express scan modes are separate formats
 and are not described here; standard SCAN compatibility does not imply
 support for every A1 firmware feature or SDK startup sequence.
 
@@ -144,6 +144,9 @@ rotation; it is not its last measurement. `S=0` continues the current
 rotation. Discard data before the first accepted start marker after a
 connection or recovery. The first start after SCAN need not be at exactly
 zero degrees, and a real A1 need not produce 360 measurements per turn.
+The emulator marks its first sample immediately even if the powered motor
+is partway through a turn, so discard the initial partial rotation when
+checking complete-circle counts.
 
 Keep incomplete packets buffered. When structural checks fail, discard one
 byte and search again, rather than skipping five bytes from an unknown
@@ -203,11 +206,42 @@ simulation cannot both exceed that wall-clock bandwidth and preserve real
 UART timing. Simulation clock and serial delivery clock must not be
 silently substituted for one another.
 
-The current 360-ray, 5 Hz, 0.12–3.5 m simulator settings are not the hardware
-specification of an A1. Before implementing the emulator, select the A1M8
-hardware/firmware profile from its datasheet and set the sample period,
-rotation rate and range limits accordingly. Packet encoding alone does
-not reproduce hardware noise, reflectivity or motor dynamics.
+The emulator uses the A1M8-R5 distance interval, 0.15–12 m, and the typical
+5.5 Hz rotation rate from the [A1M8 datasheet](https://bucket.download.slamtec.com/7fe7e3656e811ab1a645753af40809f05fa7ddcd/LD108_SLAMTEC_rplidar_datasheet_A1M8_v2.4_en.pdf).
+Its standard period is 476 microseconds, the SDK's
+[legacy standard-SCAN fallback](https://github.com/Slamtec/rplidar_sdk/blob/master/sdk/include/sl_lidar_driver.h).
+This produces about 2101 samples/s and 382 points/rotation, not a fixed
+360 points. The 125-microsecond express period in GET_SAMPLERATE describes
+the A1M8 hardware mode; Express packets are not implemented.
+
+GET_INFO uses model 0x18, synthetic firmware 1.17, hardware field 5 and the
+16-byte serial `ROBOCELL-A1-0001`. This identifies the emulated wire profile;
+it is not a claim to reproduce a particular physical board's firmware.
+The motor is modeled as continuously powered and already at 5.5 Hz, as if
+wired to a fixed supply. SCAN and STOP control acquisition, not motor power.
+PTY modem-control ioctls do not emulate the USB adapter's DTR motor line.
+Quality is 15 for a valid return and 0 for an invalid one. The model has
+ideal distances apart from protocol quantization, not a reflectivity or
+optical-noise model. The old ROS bridge and display retain their separate
+360-ray, 5 Hz, 0.12–3.5 m settings until the driver replaces that bridge.
+
+The simulator services acquisitions after every physics step and services
+commands and delivery on every viewer iteration, including while paused.
+At the current 2 ms physics step, several rays share one world state; each
+measurement uses its own scheduled angle and acquisition is quantized by
+at most one physics step. No full-circle snapshot is reused.
+
+Delivery is paced by monotonic wall time at 11520 bytes/s, with at most
+256 bytes of accumulated credit. Partial writes retain their unsent tail.
+An application backlog above 65536 bytes fails explicitly; the kernel PTY
+buffer is an additional finite queue. Commands already received can still
+leave stale output in transit after STOP, as on a buffered real link.
+A session advance requiring more than 4096 catch-up samples also fails
+rather than allocating an unbounded output. Incomplete host requests
+expire after five seconds of simulated device time. Unknown commands and
+complete unsupported payload requests are consumed without a response.
+RESET immediately returns this idealized board to idle without a startup
+banner or a modeled reboot delay.
 
 ## ROS output
 
@@ -264,3 +298,75 @@ host -> lidar: A5 25
 
 The second start packet closes the preceding circle and belongs to the
 next one. No extra header, timestamp or terminator is appended.
+
+## Open the virtual device
+
+Start the simulator normally. Its log prints the allocated slave path:
+
+```text
+RPLIDAR A1 standard SCAN is available on /dev/pts/N at 115200 baud
+```
+
+The actual number changes between runs. Only one host should use that port.
+The simulator retains both endpoints until its viewer closes, so the port
+exists even before a client connects. External client disconnects do not
+implicitly issue STOP; send STOP before closing a session.
+
+The following standard-library client queries health and reads one raw
+measurement. Replace the example path with the logged path and let the
+simulation run; acquisition does not advance while paused.
+
+```bash
+python - /dev/pts/N <<'PY'
+import os
+import select
+import struct
+import sys
+import time
+import tty
+
+
+def exact(port, count):
+    deadline = time.monotonic() + 2.0
+    payload = b""
+    while len(payload) < count:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or not select.select([port], [], [], remaining)[0]:
+            raise TimeoutError("RPLIDAR response did not arrive within two seconds")
+        payload += os.read(port, count - len(payload))
+    return payload
+
+
+with os.fdopen(os.open(sys.argv[1], os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK),
+               "rb+", buffering=0) as device:
+    port = device.fileno()
+    tty.setraw(port)
+    try:
+        os.write(port, bytes.fromhex("A5 52"))
+        print("health:", exact(port, 10).hex(" "))
+        os.write(port, bytes.fromhex("A5 20"))
+        print("descriptor:", exact(port, 7).hex(" "))
+        flags, angle, distance = struct.unpack("<BHH", exact(port, 5))
+        print("start:", flags & 1, "quality:", flags >> 2,
+              "angle:", (angle >> 1) / 64, "meters:", distance / 4000)
+    finally:
+        os.write(port, bytes.fromhex("A5 25"))
+PY
+```
+
+This tests the device side only. It neither publishes ROS messages nor
+replaces the `/scan` publisher. A host that starts a new session on a reused
+port must first STOP, allow it to take effect, and drain stale input.
+
+
+## Compatibility check
+
+The official SLAMTEC SDK at commit
+[`99478e5`](https://github.com/Slamtec/rplidar_sdk/commit/99478e5)
+was used as an independent serial client against the emulator while MuJoCo
+advanced a moving robot. Device information, health and
+`startScan(false, false)` succeeded. After discarding the startup partial
+rotation, `grabScanDataHq` returned three complete rotations of 382 points
+at the reported 476-microsecond standard period, including valid returns.
+This checks standard SCAN; the SDK's typical/Express mode and the complete
+ROS driver startup sequence were not exercised.
