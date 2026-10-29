@@ -258,13 +258,13 @@ them over CAN, rather than from the exact MuJoCo joints.
 The odometry is a node of its own named `odometry`, which the launch file
 starts next to the simulator. It knows the robot only through ROS: it turns
 the wheel angles of `/joint_states` back into encoder ticks and both moves and
-turns by the wheels alone, leaving the gyro of `/imu` to a filter that will fuse
-it on its own (#36), so that filter counts each sensor once. For every
+turns by the wheels alone, leaving the gyro of `/imu` to the EKF, so the filter
+counts each sensor once. For every
 `/joint_states` it publishes what the wheels reckon, as `nav_msgs/Odometry` on
 `/wheel/odometry` with the forward speed and the yaw rate over the last two
-readings and their variances, and as `odom → base_footprint` on `/tf`, both
-stamped with the time of the wheel angles, so a lidar scan and the pose it was
-taken from line up while the robot turns. The footprint lies on the floor under `base_link` and keeps only its
+readings and their variances, stamped with the time of the wheel angles.
+The wheel node publishes no TF; the EKF owns `odom → base_footprint`.
+The footprint lies on the floor under `base_link` and keeps only its
 heading, so `robot_state_publisher` alone lifts `base_link` 0.01 m above it, as
 the URDF says. The odometry starts at zero, so `odom` lies where the robot
 starts, and from there it drifts from the true pose as the wheels slip.
@@ -281,6 +281,22 @@ Its parameters are `resolution` (4096 ticks per wheel turn), `wheel_radius`
 `base_frame` (`base_footprint`), and `linear_variance` (1e-4 (m/s)²) and
 `angular_variance` (4e-4 (rad/s)²), the spread it reports for the forward speed
 and the yaw rate.
+
+The `ekf_filter_node` from `robot_localization` fuses the forward speed and
+yaw rate of `/wheel/odometry` with the gyro yaw rate of `/imu`. It runs at
+50 Hz on simulated time in planar mode, publishes `nav_msgs/Odometry` on
+`/odometry/filtered`, and publishes `odom → base_footprint` on `/tf`. Its
+configuration lives in `src/robocell_sim/config/ekf.yaml`. It uses neither
+the pose derived from the same wheels nor the IMU acceleration or orientation.
+The IMU reports no orientation, and its acceleration still includes gravity.
+The filter weights both yaw rates by their reported variances; it does not
+estimate the gyro bias or correct drift against an external position source.
+The v0 route and map windows keep their original encoder and clean-gyro estimate.
+
+```console
+ros2 topic echo --once /odometry/filtered
+ros2 run tf2_ros tf2_echo odom base_footprint
+```
 
 The `/scan` topic carries the 360 lidar rays as `sensor_msgs/LaserScan` in the
 `base_scan` frame, counterclockwise from ahead one degree apart, from 0.12 to
@@ -305,7 +321,7 @@ ros2 topic echo --once /camera/camera_info
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
-`models/waffle_pi`, the IMU driver, the odometry, a static transform that places
+`models/waffle_pi`, the IMU driver, the wheel odometry, the EKF, a static transform that places
 `odom` in the MuJoCo `world` where the robot starts, and RViz with a saved
 view, all on simulated time:
 
@@ -355,8 +371,9 @@ the publisher, or for the subscription on `/cmd_vel`.
 | --------------------- | ------------------------ | ------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `/clock`              | `rosgraph_msgs/Clock`    | 100 Hz        | reliable, keep last 10           | Timers of every `use_sim_time` node step on it; the message is tiny, so delivery costs nothing.                |
 | `/ground_truth/odom`  | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | It is the reference that estimates are judged against, so a gap would skew the error.                         |
-| `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the footprint comes from the odometry with each `/joint_states`, the wheels from `robot_state_publisher` at its own 20 Hz cap. |
+| `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the footprint comes from the EKF at 50 Hz, the wheels from `robot_state_publisher` at its own 20 Hz cap. |
 | `/wheel/odometry`     | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | Each pose builds on the one before, and estimators that fuse it expect every one; it is small.                |
+| `/odometry/filtered` | `nav_msgs/Odometry` | 50 Hz | reliable, keep last 10 | The EKF pose and velocity after fusing wheel and gyro measurements. |
 | `/tf_static`          | `tf2_msgs/TFMessage`     | once          | reliable, transient local        | Fixed frames go out once, so a node that starts late must still get them.                                     |
 | `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |
 | `/joint_states`       | `sensor_msgs/JointState` | 50 Hz         | reliable, keep last 10           | A small message; reliable publishing also serves `robot_state_publisher`, which subscribes best effort.        |

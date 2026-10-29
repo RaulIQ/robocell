@@ -1,5 +1,5 @@
 <launch>
-  <!-- Simulator with its ROS 2 bridge, the IMU driver, the odometry, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
+  <!-- Simulator with its ROS 2 bridge, the IMU driver, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
   <arg name="gyro_bias" default="0.0075" description="Standard deviation in rad/s that the gyro bias of each axis is drawn from"/>
   <arg name="gyro_noise" default="0.001" description="Standard deviation in rad/s of the gyro noise on each measurement"/>
   <arg name="accelerometer_noise" default="0.02" description="Standard deviation in m/s² of the accelerometer noise on each measurement"/>
@@ -19,6 +19,9 @@
   </node>
   <node pkg="robocell_sim" exec="odometry.py" output="screen">
     <param name="use_sim_time" value="true"/>
+  </node>
+  <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node" output="screen">
+    <param from="$(find-pkg-share robocell_sim)/config/ekf.yaml"/>
   </node>
   <node pkg="tf2_ros" exec="static_transform_publisher" args="--x -2.1 --y -2.5 --yaw 1.5707963267948966 --frame-id world --child-frame-id odom"/>
   <node pkg="robot_state_publisher" exec="robot_state_publisher">
