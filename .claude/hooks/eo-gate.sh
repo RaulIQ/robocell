@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Claude Code hook: run `pytest --eo` and, when it is red, give the
-# findings back to Claude (exit code 2) so it fixes them before going on.
+# Run `pytest --eo` for Claude Code and Codex, returning findings
+# with exit code 2 so the agent fixes them before going on.
 # Used for PostToolUse (after editing a Python or config file) and Stop.
 set -u
 
@@ -29,9 +29,14 @@ print(value)
 
 event=$(field hook_event_name)
 if [ "$event" = "PostToolUse" ]; then
-  case "$(field tool_input.file_path)" in
-    *.py|*.toml|*.ini|*.cfg) ;;
-    *) exit 0 ;;
+  case "$(field tool_name)" in
+    *apply_patch) ;;
+    *)
+      case "$(field tool_input.file_path)" in
+        *.py|*.toml|*.ini|*.cfg) ;;
+        *) exit 0 ;;
+      esac
+      ;;
   esac
 fi
 
