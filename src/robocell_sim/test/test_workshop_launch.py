@@ -115,6 +115,7 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
         equal_to(
             [
                 {
+                    "lidar_port": "$(var lidar_port)",
                     "gyro_bias": "$(var gyro_bias)",
                     "gyro_noise": "$(var gyro_noise)",
                     "accelerometer_noise": "$(var accelerometer_noise)",
@@ -178,4 +179,22 @@ def test_workshop_launch_runs_the_filter_with_its_configuration() -> None:
             ]
         ),
         "launch file did not start the EKF with its sensor configuration",
+    )
+
+
+def test_workshop_launch_shares_the_named_lidar_endpoint() -> None:
+    """Simulator and driver receive one explicit endpoint on simulated time."""
+    assert_that(
+        [
+            {
+                param.get("name"): param.get("value")
+                for param in node.iter("param")
+            }
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "lidar.py"
+        ],
+        equal_to([{"use_sim_time": "true", "port": "$(var lidar_port)"}]),
+        "launch did not share the named UART endpoint with the lidar driver",
     )

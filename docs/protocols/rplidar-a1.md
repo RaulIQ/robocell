@@ -1,13 +1,14 @@
 # UART protocol of the RPLIDAR A1
 
-This document is the contract for the lidar emulator and its future driver.
+This document is the contract for the lidar emulator and its ROS driver.
 It describes the A1 standard SCAN protocol, with the original bytes and
 units. The emulator will obtain distances from MuJoCo; the driver will know
 only the serial stream. Neither side adds timestamps, sequence numbers,
 checksums or custom headers to measurement packets.
 
 The simulator exposes the standard-SCAN emulator on a pseudo-terminal.
-It still publishes `/scan` directly until a separate lidar driver is added. Express scan modes are separate formats
+A separate ROS driver consumes the stream and alone publishes `/scan`.
+Express scan modes are separate formats
 and are not described here; standard SCAN compatibility does not imply
 support for every A1 firmware feature or SDK startup sequence.
 
@@ -222,8 +223,8 @@ wired to a fixed supply. SCAN and STOP control acquisition, not motor power.
 PTY modem-control ioctls do not emulate the USB adapter's DTR motor line.
 Quality is 15 for a valid return and 0 for an invalid one. The model has
 ideal distances apart from protocol quantization, not a reflectivity or
-optical-noise model. The old ROS bridge and display retain their separate
-360-ray, 5 Hz, 0.12–3.5 m settings until the driver replaces that bridge.
+optical-noise model. Display and guard raycasts retain separate 360-ray, 5 Hz, 0.12–3.5 m
+settings; they do not publish ROS scans.
 
 The simulator services acquisitions after every physics step and services
 commands and delivery on every viewer iteration, including while paused.
@@ -307,7 +308,11 @@ Start the simulator normally. Its log prints the allocated slave path:
 RPLIDAR A1 standard SCAN is available on /dev/pts/N at 115200 baud
 ```
 
-The actual number changes between runs. Only one host should use that port.
+The actual number changes between runs. The simulator also binds an
+explicit stable endpoint, `$HOME/.ros/robocell-lidar` by default, which the
+workshop launch shares with the driver through its `lidar_port` argument.
+Only one host should use the endpoint; do not run the manual client while
+the ROS lidar driver is connected.
 The simulator retains both endpoints until its viewer closes, so the port
 exists even before a client connects. External client disconnects do not
 implicitly issue STOP; send STOP before closing a session.
@@ -370,3 +375,80 @@ rotation, `grabScanDataHq` returned three complete rotations of 382 points
 at the reported 476-microsecond standard period, including valid returns.
 This checks standard SCAN; the SDK's typical/Express mode and the complete
 ROS driver startup sequence were not exercised.
+
+
+## ROS driver behavior
+
+`lidar.py` opens the explicit endpoint in raw 115200-baud 8N1 mode. It sends
+STOP, waits, drains until a quiet interval, requests health and sample
+period, and starts standard SCAN. Transactions are limited to one second.
+The node publishes `/scan` on simulated time in `base_scan`; it imports no
+MuJoCo. The simulator no longer opens a ROS scan publisher.
+
+The receiver preserves partial packets and validates their inverse start
+bit, check bit and angular interval. Losing alignment discards the damaged
+turn and requires fresh boundaries, including one discarded partial turn,
+before publication resumes. Receive buffers are bounded at 65536 bytes and
+a rotation at 4096 measurements. Standard packets have no sequence counter
+or checksum, so silent loss of a whole valid packet or plausible corrupted
+payload cannot always be detected.
+
+Each completed turn uses one uniform bin per received point, anchored at
+its first angle. Clockwise points remain in chronological order. Therefore
+`angle_increment` is negative, `angle_max` is numerically below `angle_min`,
+and `time_increment` is positive. Binning absorbs Q6 angle quantization;
+empty bins and zero-quality or out-of-range returns become `inf`. Quality
+is copied to intensities. Binning is an angular approximation, not motion
+distortion compensation.
+
+`scan_time` is the point count times the reported standard sample period,
+and `time_increment` is that period. Within a received chunk, first-ray
+arrival estimates are backdated by the number of later packets and their
+period. The completed turn's first stamp is no later than its closing
+marker minus the estimated turn duration. These estimates cannot remove
+unknown UART/USB buffering latency or variable motor/sample timing. They
+retain temporal direction instead of reversing points with an unchanged
+start stamp. No device timestamps are invented or added to the wire.
+
+The liveness check uses monotonic wall time but observes ROS clock
+progress. A two-second data gap triggers recovery while ROS time advances;
+a paused clock does not. Resume starts a new grace period. A backwards ROS
+clock or terminal hangup restarts the session. Failed operations reconnect
+with 100 ms backoff under `connection_timeout`; a healthy long-running
+session receives a fresh recovery budget. An orderly stop sends STOP even
+when the polling loop exits because of ROS shutdown.
+
+The named link is created exclusively and removed with its owning
+simulator context. Its parent directory is created if needed. A second
+simulator must use a different explicit endpoint. An unclean process crash
+can leave a stale symlink; the simulator will fail rather than replace an
+existing owner's path.
+
+## Driver validation
+
+A headless ROS 2 integration run used an asymmetric MuJoCo scene with a
+moving robot, the real pseudo-terminal emulator, and a separate `lidar.py`
+process on simulated time. It produced 21 scans. The ROS graph contained
+one `/scan` publisher, named `lidar`. Runs exercised both 381- and 382-point
+turns, a three-second pause, resume, terminal disconnection, a replacement
+endpoint and clean shutdown. The recorded command stream ended with STOP.
+
+Comparing sampled published rays against independently restored MuJoCo
+poses gave a median absolute range error of 0.2 mm and a 95th percentile
+of 1.2 mm in the final run. These figures validate this idealized scene and
+timing path, not a real A1's optical accuracy. ROS `LaserProjection`
+accepted the decreasing angular grid and returned the expected valid-point
+count in `base_scan`.
+
+The final local recording is under
+`log/lidar-126/serial-scan-1793284132`, with 21 `/scan` messages and `/clock`.
+The log directory is ignored by Git. To record another workshop run:
+
+```console
+ros2 bag record -o log/lidar-uart /scan /clock /tf /tf_static
+```
+
+The full GUI workshop was not run in the validation environment: it had no
+display and no `vcan0` interface. A visual RViz check while driving remains
+necessary on the configured development host. The headless scene comparison
+and `LaserProjection` check do not substitute for that visual check.

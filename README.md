@@ -237,9 +237,9 @@ Its parameters are `channel` (`vcan0`), `period` (0.005 s), `frame_id`
 (`imu_link`), `gyro_variance` (1e-6 (rad/s)²) and `accelerometer_variance`
 (4e-4 (m/s²)²), the last two the squares of the default noises of the board.
 
-The simulator publishes to ROS 2 from a node named `sim`, each topic at its own
-rate in simulated time: `/clock` at 100 Hz, the camera at 29.4 Hz, `/scan` at
-5 Hz and the rest at 50 Hz. The `/clock` topic carries the simulated time as
+The simulator publishes ROS 2 topics from `sim` on simulated time:
+`/clock` at 100 Hz, the camera at 29.4 Hz and truth and wheel joints at
+50 Hz. The separate `lidar` node publishes full UART scans at about 5.5 Hz. The `/clock` topic carries the simulated time as
 `rosgraph_msgs/Clock`, so nodes with `use_sim_time` follow the simulation and
 stop while it pauses.
 The `/ground_truth/odom` topic carries where MuJoCo truly has `base_link` as
@@ -298,10 +298,16 @@ ros2 topic echo --once /odometry/filtered
 ros2 run tf2_ros tf2_echo odom base_footprint
 ```
 
-The `/scan` topic carries the 360 lidar rays as `sensor_msgs/LaserScan` in the
-`base_scan` frame, counterclockwise from ahead one degree apart, from 0.12 to
-3.5 m, with `inf` where no echo comes back, as the LDS of the real TurtleBot3
-reports them.
+The `lidar` driver reads the emulated RPLIDAR A1 standard-SCAN stream over
+UART and alone publishes `/scan` as `sensor_msgs/LaserScan` in `base_scan`.
+The A1 profile ranges 0.15–12 m at 5.5 rotations/s, normally 381 or 382
+points/rotation. The driver discards the initial partial rotation, bins
+each full turn onto a uniform grid, and reports `inf` for invalid returns.
+Samples keep their acquisition order: clockwise rotation becomes a negative
+ROS angular increment, with positive time between samples. The first-ray
+stamp is estimated from ROS reception time and the queried sample period;
+it is not a timestamp transmitted by the A1. The MuJoCo scan and map windows
+retain their separate 360-ray, 5 Hz, 0.12–3.5 m display/guard path.
 
 ```console
 ros2 topic echo --once /scan
@@ -321,7 +327,7 @@ ros2 topic echo --once /camera/camera_info
 ## Watch the robot in RViz
 
 One launch file starts the simulator, `robot_state_publisher` with the URDF from
-`models/waffle_pi`, the IMU driver, the wheel odometry, the EKF, a static transform that places
+`models/waffle_pi`, the IMU and lidar drivers, the wheel odometry, the EKF, a static transform that places
 `odom` in the MuJoCo `world` where the robot starts, and RViz with a saved
 view, all on simulated time:
 
@@ -377,7 +383,7 @@ the publisher, or for the subscription on `/cmd_vel`.
 | `/tf_static`          | `tf2_msgs/TFMessage`     | once          | reliable, transient local        | Fixed frames go out once, so a node that starts late must still get them.                                     |
 | `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |
 | `/joint_states`       | `sensor_msgs/JointState` | 50 Hz         | reliable, keep last 10           | A small message; reliable publishing also serves `robot_state_publisher`, which subscribes best effort.        |
-| `/scan`               | `sensor_msgs/LaserScan`  | 5 Hz          | reliable, keep last 10           | 360 floats at 5 Hz load nothing, and a reliable publisher serves both RViz and best effort readers like Nav2.   |
+| `/scan`               | `sensor_msgs/LaserScan`  | 5.5 Hz          | reliable, keep last 10           | A full turn at 5.5 Hz is small, and reliable publishing serves both RViz and best effort readers like Nav2.   |
 | `/camera/image_raw`   | `sensor_msgs/Image`      | 29.4 Hz       | best effort, keep last 5         | A frame is 900 KB and only the newest one matters, so a lost frame is skipped rather than resent late.         |
 | `/camera/camera_info` | `sensor_msgs/CameraInfo` | 29.4 Hz       | reliable, keep last 10           | Readers pair it with each picture; it is small, and reliable serves readers of either kind.                    |
 | `/cmd_vel`            | `geometry_msgs/Twist`    | as sent       | reliable, keep last 10           | A lost command would leave the robot on its last speed, so every one must arrive.                              |
@@ -398,7 +404,7 @@ file; the same tree is in [docs/tf_tree.pdf](docs/tf_tree.pdf).
 | `base_link`                | The body of the robot, 0.01 m above the footprint, centered between the wheels.                                              |
 | `wheel_left_link`, `wheel_right_link` | The wheels, turned by the angles in `/joint_states`.                                                              |
 | `caster_back_left_link`, `caster_back_right_link` | The rear casters, fixed to the body.                                                                  |
-| `base_scan`                | The lidar; `/scan` counts its rays counterclockwise from its x axis.                                                          |
+| `base_scan`                | The lidar; positive ROS angles are counterclockwise from x, while the scan array follows clockwise acquisition.                                                          |
 | `imu_link`                 | The IMU on the control board, where the IMU driver publishes `/imu`.                                                         |
 | `camera_link`, `camera_rgb_frame` | The camera body and its lens, x forward as on the robot.                                                              |
 | `camera_rgb_optical_frame` | The lens in optical axes, z forward, x right and y down, where pictures and their calibration live.                          |
@@ -412,7 +418,6 @@ or an estimator. Each bridge stays until its successor lands:
 | ----------------------------------------------- | ----------------------------------------- |
 | `/cmd_vel` straight into `data.ctrl`            | `motor_driver` over CANopen (week 4)      |
 | `/joint_states` from the simulator              | `motor_driver` (week 4)                   |
-| `/scan` straight from `Raycast`                 | `lidar_driver` over UART (week 3)         |
 | the camera straight from `Rendered`             | stays, as a simplification of the project |
 
 `/clock` and `/ground_truth/odom` are no bridges: they exist only in the
@@ -444,7 +449,36 @@ acquisitions pause with the simulation; commands and queued serial output
 continue to be serviced. UART delivery is paced to 115200-baud 8N1 in wall
 time, with a bounded backlog and explicit failure if a host cannot keep up.
 
-The existing ROS `/scan` publisher and display still use their direct
-simulation path. A separate UART lidar driver will replace that bridge in
-the next step. Express scan modes and USB adapter motor-control lines are
+The separate `lidar.py` driver consumes this serial path and is the sole
+ROS `/scan` publisher. The display and guard retain their direct raycasts.
+Express scan modes and USB adapter motor-control lines are
 outside the standard-SCAN emulator.
+
+
+The workshop launch passes the same `lidar_port` to simulator and driver.
+Its default is `$HOME/.ros/robocell-lidar`, an exclusive symlink created by
+the simulator and removed on normal shutdown. Override the launch argument
+for concurrent instances; the simulator refuses to overwrite an existing
+endpoint. After an unclean crash, remove only a stale link belonging to the
+stopped simulator before restarting.
+
+```console
+ros2 launch robocell_sim workshop.launch.xml
+ros2 topic echo --once /scan
+```
+
+For separate processes, start the simulator and then the driver with the
+same explicit endpoint (the default is shared automatically):
+
+```console
+ros2 run robocell_sim main.py
+ros2 run robocell_sim lidar.py --ros-args -p use_sim_time:=true
+```
+
+Driver parameters are `port`, `frame_id` (`base_scan`), `range_min` (0.15 m),
+`range_max` (12.0 m) and `connection_timeout` (10.0 s). Startup sends STOP,
+drains stale bytes, checks health, queries sample timing and sends SCAN.
+Protocol errors, a disconnected terminal or missing data while ROS time
+advances restart the session with bounded transactions and reconnect waits.
+Pausing simulated time keeps the connection and gives it a fresh grace
+period on resume. Backwards time restarts acquisition. Shutdown sends STOP.
