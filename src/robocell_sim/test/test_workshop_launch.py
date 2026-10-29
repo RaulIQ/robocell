@@ -146,3 +146,36 @@ def test_workshop_launch_defaults_the_variances_to_the_noises_squared() -> None:
         ),
         "variances did not default to the squares of the noises",
     )
+
+
+def test_workshop_launch_runs_the_filter_with_its_configuration() -> None:
+    """The EKF starts with the workshop and loads the installed sensor setup."""
+    assert_that(
+        [
+            (
+                node.get("pkg"),
+                node.get("name"),
+                [param.attrib for param in node.iter("param")],
+            )
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "ekf_node"
+        ],
+        equal_to(
+            [
+                (
+                    "robot_localization",
+                    "ekf_filter_node",
+                    [
+                        {
+                            "from": (
+                                "$(find-pkg-share robocell_sim)/config/ekf.yaml"
+                            )
+                        }
+                    ],
+                )
+            ]
+        ),
+        "launch file did not start the EKF with its sensor configuration",
+    )

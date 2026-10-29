@@ -8,11 +8,9 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
-from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.robot.implementations.drive.differential import Differential
 from robocell_sim.robot.implementations.odometry.parked import Parked
 from robocell_sim.robot.interfaces.travel import Travel
-from robocell_sim.ros.implementations.odometry.anchored import Anchored
 from robocell_sim.ros.implementations.odometry.estimated import Estimated
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.geared import Geared
@@ -41,7 +39,6 @@ counts: queue.SimpleQueue[tuple[int, int, float, Header]] = queue.SimpleQueue()
 instruments = Geared(node, wheels, resolution, frame)
 instruments.count(counts)
 pose = instruments.pose()
-transforms = instruments.transforms()
 travel: Travel = Parked(drive, resolution, (0.0, 0.0, 0.0))
 with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
     while node.context.ok():
@@ -49,10 +46,5 @@ with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
         while not counts.empty():
             left, right, moment, header = counts.get()
             travel = travel.read(left, right, moment)
-            Joined(
-                (
-                    Estimated(travel, variances, (header, child), pose),
-                    Anchored(travel, header, child, transforms),
-                )
-            ).publish()
+            Estimated(travel, variances, (header, child), pose).publish()
 node.context.try_shutdown()
