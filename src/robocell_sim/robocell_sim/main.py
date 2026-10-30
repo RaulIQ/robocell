@@ -243,7 +243,6 @@ state.put(
         time.monotonic(),
     )
 )
-serial = Serving(data, Terminal(master), state, 65536)
 log.info(
     "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
     os.ttyname(slave),
@@ -253,7 +252,11 @@ physics = Paced(
         Integrated(Physical(model, data), data, "imu_gyro", 0),
         Joined(
             (
-                serial,
+                Periodic(
+                    data,
+                    model.opt.timestep,
+                    Serving(data, Terminal(master), state, 65536),
+                ),
                 Periodic(data, 0.01, Clocked(data, bridge.clock())),
                 Periodic(
                     data,
@@ -317,7 +320,7 @@ with (
     while viewer.is_running():
         now = time.time()
         rclpy.spin_once(node, timeout_sec=0)
-        serial.publish()
+        Serving(data, Terminal(master), state, 65536).publish()
         while not keys.empty():
             command = command.press(keys.get())
         while not twists.empty():

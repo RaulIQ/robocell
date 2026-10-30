@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import pytest
-from hamcrest import assert_that, equal_to
+from hamcrest import assert_that, equal_to, matches_regexp
 
 from test.booted import Booted
 
@@ -40,4 +40,16 @@ def test_main_starts_and_feeds_only_requested_windows(
         Booted(flags, tmp_path, monkeypatch).events(),
         equal_to((count, [False] * count, [1] * count)),
         "simulator did not start and feed only requested windows before ROS",
+    )
+
+
+def test_physics_schedules_lidar_servicing_every_step() -> None:
+    """The lidar service follows the periodic physics report composition."""
+    assert_that(
+        (Path(__file__).parents[1] / "robocell_sim/main.py").read_text(),
+        matches_regexp(
+            r"Joined\(\s*\(\s*Periodic\(\s*data,\s*"
+            r"model\.opt\.timestep,\s*Serving\("
+        ),
+        "physics reports did not schedule the lidar service every step",
     )
