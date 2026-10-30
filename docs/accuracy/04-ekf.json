@@ -1,0 +1,408 @@
+{
+  "train-before": {
+    "profile": {
+      "seed": 121,
+      "bias": [
+        -0.0018339441930656758,
+        -0.004335082662133902,
+        0.0019494138484706658
+      ],
+      "route": [
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          -0.4
+        ],
+        [
+          8,
+          0.12,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0.4
+        ],
+        [
+          8,
+          0.12,
+          0
+        ],
+        [
+          4,
+          -0.08,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ]
+      ],
+      "linear_variance": 0.0001,
+      "angular_variance": 0.0004,
+      "contacts": [],
+      "duration": 33.00199999999437,
+      "elapsed": 33.50865384399367
+    },
+    "metrics": {
+      "offset": [
+        -2.1,
+        -2.5,
+        1.5707963267948963
+      ],
+      "counts": {
+        "/ground_truth/odom": 1650,
+        "/wheel/odometry": 1650,
+        "/odometry/filtered": 1649
+      },
+      "/wheel/odometry": {
+        "samples": 1551,
+        "first_time": 2.0,
+        "last_time": 33.0,
+        "position_rms": 0.016248263673941967,
+        "position_final": 0.018487200873697412,
+        "position_max": 0.021934390223017467,
+        "heading_rms": 0.013534369638265627,
+        "heading_final": 0.0004537949636913563,
+        "linear_mean": 0.0003376593405883837,
+        "linear_variance": 7.1348610716086525e-06,
+        "angular_mean": -9.726821474578418e-07,
+        "angular_variance": 7.853584756060019e-05
+      },
+      "/odometry/filtered": {
+        "samples": 1550,
+        "first_time": 2.0,
+        "last_time": 32.98,
+        "position_rms": 0.02299636475355976,
+        "position_final": 0.028952898972630356,
+        "position_max": 0.04417405988040072,
+        "heading_rms": 0.03818779152881346,
+        "heading_final": 0.06448197906557063,
+        "linear_mean": 0.00033702800337051563,
+        "linear_variance": 1.0444995475546157e-05,
+        "angular_mean": 0.0019565385222561436,
+        "angular_variance": 1.1549979540690706e-06
+      }
+    },
+    "recording": "log/accuracy-121/train-free-before",
+    "sha256": "78071dc67f4b56bcb9ea320a8887d32520ae872f658c9333368f0d9bad64c321"
+  },
+  "train-after": {
+    "profile": {
+      "seed": 121,
+      "bias": [
+        -0.0018339441930656758,
+        -0.004335082662133902,
+        0.0019494138484706658
+      ],
+      "route": [
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          -0.4
+        ],
+        [
+          8,
+          0.12,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          0.4
+        ],
+        [
+          8,
+          0.12,
+          0
+        ],
+        [
+          4,
+          -0.08,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ]
+      ],
+      "linear_variance": 7.1e-06,
+      "angular_variance": 7.9e-05,
+      "contacts": [],
+      "duration": 33.00199999999437,
+      "elapsed": 33.50966128700384
+    },
+    "metrics": {
+      "offset": [
+        -2.1,
+        -2.5,
+        1.5707963267948963
+      ],
+      "counts": {
+        "/ground_truth/odom": 1650,
+        "/wheel/odometry": 1650,
+        "/odometry/filtered": 1649
+      },
+      "/wheel/odometry": {
+        "samples": 1551,
+        "first_time": 2.0,
+        "last_time": 33.0,
+        "position_rms": 0.016248263673941967,
+        "position_final": 0.018487200873697412,
+        "position_max": 0.021934390223017467,
+        "heading_rms": 0.013534369638265627,
+        "heading_final": 0.0004537949636913563,
+        "linear_mean": 0.0003376593405883837,
+        "linear_variance": 7.1348610716086525e-06,
+        "angular_mean": -9.726821474578418e-07,
+        "angular_variance": 7.853584756060019e-05
+      },
+      "/odometry/filtered": {
+        "samples": 1550,
+        "first_time": 2.0,
+        "last_time": 32.98,
+        "position_rms": 0.022811869246081053,
+        "position_final": 0.02871948452404844,
+        "position_max": 0.043944976189268944,
+        "heading_rms": 0.03796860107698825,
+        "heading_final": 0.06415809822317398,
+        "linear_mean": 0.0003384202313900695,
+        "linear_variance": 7.385806878620591e-06,
+        "angular_mean": 0.0019461279979118907,
+        "angular_variance": 1.0575677291145163e-06
+      }
+    },
+    "recording": "log/accuracy-121/train-free-after",
+    "sha256": "7104eb1ec53bc85ce4325d7e1adc0ccd0e995925342cf7b8526b80e3d3ad2dc0"
+  },
+  "validation-before": {
+    "profile": {
+      "seed": 422,
+      "bias": [
+        0.015074526303029238,
+        0.00394355058378954,
+        0.004976121189318709
+      ],
+      "route": [
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          -0.4
+        ],
+        [
+          7,
+          0.12,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          3.8,
+          0,
+          0.4
+        ],
+        [
+          5,
+          0.1,
+          0
+        ],
+        [
+          4,
+          0.08,
+          -0.25
+        ],
+        [
+          4,
+          -0.07,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ]
+      ],
+      "linear_variance": 0.0001,
+      "angular_variance": 0.0004,
+      "contacts": [],
+      "duration": 32.80199999999412,
+      "elapsed": 33.30721143700066
+    },
+    "metrics": {
+      "offset": [
+        -2.1,
+        -2.5,
+        1.5707963267948963
+      ],
+      "counts": {
+        "/ground_truth/odom": 1640,
+        "/wheel/odometry": 1640,
+        "/odometry/filtered": 1639
+      },
+      "/wheel/odometry": {
+        "samples": 1541,
+        "first_time": 2.0,
+        "last_time": 32.8,
+        "position_rms": 0.014218962079463838,
+        "position_final": 0.012018703983509228,
+        "position_max": 0.019187336127968035,
+        "heading_rms": 0.01581828728383298,
+        "heading_final": -0.02009935739077684,
+        "linear_mean": 0.00028807021949530374,
+        "linear_variance": 4.30904547506217e-06,
+        "angular_mean": -0.0006969081989845557,
+        "angular_variance": 0.00010450381192470787
+      },
+      "/odometry/filtered": {
+        "samples": 1540,
+        "first_time": 2.0,
+        "last_time": 32.78,
+        "position_rms": 0.052936212720973604,
+        "position_final": 0.06570668170790486,
+        "position_max": 0.1012642059340834,
+        "heading_rms": 0.0967710592163539,
+        "heading_final": 0.16211469277304247,
+        "linear_mean": 0.0002873257345921939,
+        "linear_variance": 6.51865380134268e-06,
+        "angular_mean": 0.004977689499057776,
+        "angular_variance": 1.228627653478365e-06
+      }
+    },
+    "recording": "log/accuracy-121/validation-free-before",
+    "sha256": "f840944cbe77fbabe6425c1fa723642f832e3ea30e4db3e1558f983eeb4dc11a"
+  },
+  "validation-after": {
+    "profile": {
+      "seed": 422,
+      "bias": [
+        0.015074526303029238,
+        0.00394355058378954,
+        0.004976121189318709
+      ],
+      "route": [
+        [
+          2,
+          0,
+          0
+        ],
+        [
+          4,
+          0,
+          -0.4
+        ],
+        [
+          7,
+          0.12,
+          0
+        ],
+        [
+          1,
+          0,
+          0
+        ],
+        [
+          3.8,
+          0,
+          0.4
+        ],
+        [
+          5,
+          0.1,
+          0
+        ],
+        [
+          4,
+          0.08,
+          -0.25
+        ],
+        [
+          4,
+          -0.07,
+          0
+        ],
+        [
+          2,
+          0,
+          0
+        ]
+      ],
+      "linear_variance": 7.1e-06,
+      "angular_variance": 7.9e-05,
+      "contacts": [],
+      "duration": 32.80199999999412,
+      "elapsed": 33.30767031299911
+    },
+    "metrics": {
+      "offset": [
+        -2.1,
+        -2.5,
+        1.5707963267948963
+      ],
+      "counts": {
+        "/ground_truth/odom": 1640,
+        "/wheel/odometry": 1640,
+        "/odometry/filtered": 1639
+      },
+      "/wheel/odometry": {
+        "samples": 1541,
+        "first_time": 2.0,
+        "last_time": 32.8,
+        "position_rms": 0.014218962079463838,
+        "position_final": 0.012018703983509228,
+        "position_max": 0.019187336127968035,
+        "heading_rms": 0.01581828728383298,
+        "heading_final": -0.02009935739077684,
+        "linear_mean": 0.00028807021949530374,
+        "linear_variance": 4.30904547506217e-06,
+        "angular_mean": -0.0006969081989845557,
+        "angular_variance": 0.00010450381192470787
+      },
+      "/odometry/filtered": {
+        "samples": 1540,
+        "first_time": 2.0,
+        "last_time": 32.78,
+        "position_rms": 0.05261027212516995,
+        "position_final": 0.06533525652869637,
+        "position_max": 0.10067556402117975,
+        "heading_rms": 0.09622193896015095,
+        "heading_final": 0.16118994728481273,
+        "linear_mean": 0.00028854718690579043,
+        "linear_variance": 4.471509380615879e-06,
+        "angular_mean": 0.004925090775490262,
+        "angular_variance": 1.1186589265883381e-06
+      }
+    },
+    "recording": "log/accuracy-121/validation-free-after",
+    "sha256": "f0bb5397dc7980b76272a0d0960133661519162a0b096a005202d2bf10dce15a"
+  }
+}

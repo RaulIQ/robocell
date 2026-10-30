@@ -29,11 +29,9 @@ drive = Differential(
     settings.number("wheel_radius", 0.033),
     settings.number("wheel_separation", 0.288),
 )
-# @todo #115:30min Calibrate linear_variance and angular_variance against
-#  /ground_truth/odom, since these defaults are guesses, not measurements.
 variances = (
-    settings.number("linear_variance", 0.01**2),
-    settings.number("angular_variance", 0.02**2),
+    settings.number("linear_variance", 7.1e-6),
+    settings.number("angular_variance", 7.9e-5),
 )
 counts: queue.SimpleQueue[tuple[int, int, float, Header]] = queue.SimpleQueue()
 instruments = Geared(node, wheels, resolution, frame)
