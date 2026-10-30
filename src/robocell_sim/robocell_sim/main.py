@@ -252,7 +252,11 @@ physics = Paced(
         Integrated(Physical(model, data), data, "imu_gyro", 0),
         Joined(
             (
-                Serving(data, Terminal(master), state, 65536),
+                Periodic(
+                    data,
+                    model.opt.timestep,
+                    Serving(data, Terminal(master), state, 65536),
+                ),
                 Periodic(data, 0.01, Clocked(data, bridge.clock())),
                 Periodic(
                     data,

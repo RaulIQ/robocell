@@ -43,10 +43,13 @@ def test_main_starts_and_feeds_only_requested_windows(
     )
 
 
-def test_physics_composes_lidar_servicing_explicitly() -> None:
-    """The physics reports expose the lidar service without an alias."""
+def test_physics_schedules_lidar_servicing_every_step() -> None:
+    """The lidar service follows the periodic physics report composition."""
     assert_that(
         (Path(__file__).parents[1] / "robocell_sim/main.py").read_text(),
-        matches_regexp(r"Joined\(\s*\(\s*Serving\("),
-        "physics reports did not compose the lidar service explicitly",
+        matches_regexp(
+            r"Joined\(\s*\(\s*Periodic\(\s*data,\s*"
+            r"model\.opt\.timestep,\s*Serving\("
+        ),
+        "physics reports did not schedule the lidar service every step",
     )
