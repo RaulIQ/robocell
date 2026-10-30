@@ -293,9 +293,11 @@ ros2 run tf2_ros tf2_echo odom base_scan
 Its parameters are `resolution` (4096 ticks per wheel turn), `wheel_radius`
 (0.033 m), `wheel_separation` (0.288 m), `left_joint` and `right_joint`
 (`wheel_left_joint` and `wheel_right_joint`), `odom_frame` (`odom`),
-`base_frame` (`base_footprint`), and `linear_variance` (1e-4 (m/s)²) and
-`angular_variance` (4e-4 (rad/s)²), the spread it reports for the forward speed
-and the yaw rate.
+`base_frame` (`base_footprint`), and `linear_variance` (7.1e-6 (m/s)²) and
+`angular_variance` (7.9e-5 (rad/s)²), the spread it reports for the forward speed
+and the yaw rate. These are measured on collision-free simulated routes;
+see the [covariance calibration](docs/accuracy/README.md#4-wheel-covariances-and-ekf).
+They do not compensate for gyro bias or contact-induced wheel slip.
 
 The `ekf_filter_node` from `robot_localization` fuses the forward speed and
 yaw rate of `/wheel/odometry` with the gyro yaw rate of `/imu`. It runs at
