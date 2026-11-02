@@ -1,0 +1,278 @@
+{
+  "seed": 121,
+  "domain": 40,
+  "channel": "vcan0",
+  "left_node": 17,
+  "right_node": 29,
+  "checks": [
+    {
+      "name": "one_joint_publisher",
+      "passed": true,
+      "wall": 2.7934569270000793,
+      "nodes": [
+        "motor_driver"
+      ]
+    },
+    {
+      "name": "keyboard_collision_guard",
+      "passed": true,
+      "wall": 7.002986105000673,
+      "drive_targets": [
+        0,
+        0
+      ],
+      "measured_wheel_velocities": [
+        0.0,
+        0.0
+      ],
+      "requested": -0.08
+    },
+    {
+      "name": "moving_route",
+      "passed": true,
+      "wall": 21.50957552,
+      "samples": 2849
+    },
+    {
+      "name": "stale_command_stop",
+      "passed": true,
+      "wall": 21.916215723000278,
+      "drive_targets": [
+        0,
+        0
+      ],
+      "measured_body_velocity": 1.6743752973833816e-05,
+      "state": "stopped: Body command expired after 250 ms and requires a new enable sequence"
+    },
+    {
+      "name": "fresh_input_reenables",
+      "passed": true,
+      "wall": 23.02876081500017,
+      "state": "enabled",
+      "measured_body_velocity": 0.04874664328829177
+    },
+    {
+      "name": "pause_services_can_without_motion",
+      "passed": true,
+      "wall": 23.546769814000072,
+      "clock_before": 20610000000,
+      "clock_after": 20610000000,
+      "drive_targets": [
+        0,
+        0
+      ],
+      "state": "enabled"
+    },
+    {
+      "name": "resume_reenables",
+      "passed": true,
+      "wall": 24.30863475700062,
+      "state": "enabled"
+    },
+    {
+      "name": "command_watchdog_fault",
+      "passed": true,
+      "wall": 24.649676072000148,
+      "faults": [
+        65281,
+        65281
+      ],
+      "drive_targets": [
+        0,
+        0
+      ],
+      "watchdog_delay_ms": {
+        "17": 200.090022999575,
+        "29": 200.10094400004164
+      },
+      "measured_wheel_velocities": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "retry_does_not_clear_fault",
+      "passed": true,
+      "wall": 24.79887871200026,
+      "faults": [
+        65281,
+        65281
+      ]
+    },
+    {
+      "name": "recovery_discards_cached_motion",
+      "passed": true,
+      "wall": 25.42644531699989,
+      "faults": [
+        0,
+        0
+      ],
+      "drive_targets": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "recovery_accepts_fresh_motion",
+      "passed": true,
+      "wall": 26.132189287000074,
+      "state": "enabled",
+      "measured_body_velocity": 0.04957817594542671
+    },
+    {
+      "name": "drive_restart_stops_both",
+      "passed": true,
+      "wall": 26.197116758999982,
+      "drive_targets": [
+        0,
+        0
+      ],
+      "state": "stopped: Drive 17 rebooted and invalidated its feedback epoch"
+    },
+    {
+      "name": "restart_discards_cached_motion",
+      "passed": true,
+      "wall": 26.724386871000206,
+      "state": "enabled"
+    },
+    {
+      "name": "all_required_topics_recorded",
+      "passed": true,
+      "wall": 27.124619606000124,
+      "counts": {
+        "/tf_static": 2,
+        "/motor_driver/state": 16,
+        "/clock": 2419,
+        "/imu": 2419,
+        "/ground_truth/odom": 1209,
+        "/odometry/filtered": 1209,
+        "/tf": 1579,
+        "/joint_states": 1103,
+        "/wheel/odometry": 1103,
+        "/scan": 132,
+        "/cmd_vel": 362,
+        "/keyboard/cmd_vel": 79
+      }
+    },
+    {
+      "name": "clean_shutdown_zero_disable",
+      "passed": true,
+      "wall": 27.64313491499979,
+      "controlwords": {
+        "17": [
+          15,
+          2,
+          0
+        ],
+        "29": [
+          15,
+          2,
+          0
+        ]
+      }
+    }
+  ],
+  "states": [
+    [
+      1.613654914000108,
+      "starting"
+    ],
+    [
+      2.7415685860005397,
+      "enabled"
+    ],
+    [
+      21.75652465300027,
+      "stopped: Body command expired after 250 ms and requires a new enable sequence"
+    ],
+    [
+      21.935530468000252,
+      "starting"
+    ],
+    [
+      22.370939327000087,
+      "enabled"
+    ],
+    [
+      23.567795754000144,
+      "starting"
+    ],
+    [
+      24.007425683999827,
+      "enabled"
+    ],
+    [
+      24.553156896000473,
+      "stopped: Drive 17 reported emergency 01ff"
+    ],
+    [
+      24.665740106000158,
+      "starting"
+    ],
+    [
+      24.783626684999945,
+      "stopped: Drive 17 rejected profile verification at 606000 with 8060600022000008"
+    ],
+    [
+      24.794622075000007,
+      "stopped: Drive 29 rejected profile verification at 606000 with 8060600022000008"
+    ],
+    [
+      24.814443229000062,
+      "starting"
+    ],
+    [
+      25.35629201000029,
+      "enabled"
+    ],
+    [
+      26.136174872000083,
+      "stopped: Drive 17 rebooted and invalidated its feedback epoch"
+    ],
+    [
+      26.212691446000463,
+      "starting"
+    ],
+    [
+      26.651591231000566,
+      "enabled"
+    ]
+  ],
+  "counts": {
+    "/tf_static": 2,
+    "/motor_driver/state": 16,
+    "/clock": 2419,
+    "/imu": 2419,
+    "/ground_truth/odom": 1209,
+    "/odometry/filtered": 1209,
+    "/tf": 1579,
+    "/joint_states": 1103,
+    "/wheel/odometry": 1103,
+    "/scan": 132,
+    "/cmd_vel": 362,
+    "/keyboard/cmd_vel": 79
+  },
+  "emergencies": [
+    [
+      24.504387854000015,
+      17,
+      65281
+    ],
+    [
+      24.50445568000032,
+      29,
+      65281
+    ],
+    [
+      25.024277452000206,
+      17,
+      0
+    ],
+    [
+      25.024291298000207,
+      29,
+      0
+    ]
+  ],
+  "wall_duration": 27.655424966999817
+}

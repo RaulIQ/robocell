@@ -8,21 +8,26 @@ import os
 import pty
 import queue
 import secrets
-import sys
 import termios
 import threading
 import time
 import tty
 from argparse import ArgumentParser
+from contextlib import ExitStack, closing, suppress
 from pathlib import Path
 
 import can
+import glfw
 import mujoco
 import mujoco.viewer
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from rclpy.utilities import remove_ros_args
+from geometry_msgs.msg import TwistStamped  # type: ignore[import-untyped]  # ROS generates message modules without types
+from rclpy.executors import ExternalShutdownException
+from rclpy.utilities import remove_ros_args, try_shutdown
+from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
+from std_srvs.srv import SetBool  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.display.implementations.camera.screen import Screen
 from robocell_sim.display.implementations.lidar.beams import Beams
@@ -44,17 +49,19 @@ from robocell_sim.hardware.implementations.lidar.directed import Directed
 from robocell_sim.hardware.implementations.lidar.raycast import Raycast
 from robocell_sim.hardware.implementations.lidar.rplidar import Rplidar
 from robocell_sim.hardware.implementations.lidar.serving import Serving
+from robocell_sim.hardware.implementations.motor.actuated import Actuated
+from robocell_sim.hardware.implementations.motor.attached import Attached
+from robocell_sim.hardware.implementations.motor.polled import Polled
 from robocell_sim.hardware.implementations.physics.joined import Joined
-from robocell_sim.hardware.implementations.physics.paced import Paced
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
 from robocell_sim.hardware.implementations.physics.reported import Reported
+from robocell_sim.hardware.implementations.physics.running import Running
+from robocell_sim.hardware.implementations.physics.serviced import Serviced
 from robocell_sim.hardware.implementations.uart.named import Named
 from robocell_sim.hardware.implementations.uart.terminal import Terminal
-from robocell_sim.hardware.implementations.wheels.simulated import Simulated
 from robocell_sim.hardware.interfaces.device import Device
 from robocell_sim.robot.implementations.command.arrows import Arrows
-from robocell_sim.robot.implementations.command.guarded import Guarded
 from robocell_sim.robot.implementations.drive.differential import Differential
 from robocell_sim.robot.implementations.drive.limited import Limited
 from robocell_sim.robot.implementations.drive.stepped import Stepped
@@ -67,14 +74,25 @@ from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
+from robocell_sim.ros.implementations.command.keyed import Keyed
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
-from robocell_sim.ros.implementations.wheels.jointed import Jointed
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
+from robocell_sim.ros.implementations.wiring.geared import Geared
 from robocell_sim.ros.implementations.wiring.wired import Wired
+
+_KEYS = {
+    glfw.KEY_UP,
+    glfw.KEY_DOWN,
+    glfw.KEY_LEFT,
+    glfw.KEY_RIGHT,
+    glfw.KEY_ENTER,
+}
+_HOST = 127
 
 arguments = ArgumentParser(description="Run the workshop simulator")
 for name, description in (
+    ("headless", "Run without a MuJoCo viewer"),
     ("route", "Show the robot route"),
     ("camera", "Show the robot camera in a separate window"),
     ("radar", "Show the lidar scan"),
@@ -88,7 +106,15 @@ for name, description in (
         choices=("true", "false"),
         help=description,
     )
+arguments.add_argument(
+    "--duration",
+    type=float,
+    default=0.0,
+    help="Wall duration in seconds, zero runs until interrupted",
+)
 options = arguments.parse_args(remove_ros_args()[1:])
+if not math.isfinite(options.duration) or options.duration < 0:
+    arguments.error("Duration must be finite and nonnegative")
 model = mujoco.MjModel.from_xml_path(
     f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
 )
@@ -96,15 +122,14 @@ data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
 beams = threading.Event()
-keys: queue.SimpleQueue[int] = queue.SimpleQueue()
-twists: queue.SimpleQueue[tuple[float, float]] = queue.SimpleQueue()
+keys: queue.SimpleQueue[tuple[int, int]] = queue.SimpleQueue()
 
 
 def key(keycode: int) -> None:
     """Toggle the pause on space and the lidar lines on 9, queue other keys."""
     toggle = {ord(" "): pause, ord("9"): beams}.get(keycode)
     if toggle is None:
-        keys.put(keycode)
+        keys.put((keycode, time.time_ns()))
         return
     if toggle.is_set():
         toggle.clear()
@@ -112,22 +137,24 @@ def key(keycode: int) -> None:
         toggle.set()
 
 
+def freeze(
+    request: SetBool.Request, response: SetBool.Response
+) -> SetBool.Response:
+    """Toggle physics while the CAN protection continues on wall time."""
+    pause.set() if request.data else pause.clear()
+    response.success = True
+    response.message = (
+        "Simulation paused" if request.data else "Simulation resumed"
+    )
+    return response
+
+
 drive = Limited(Differential(0.033, 0.288), 7.88)
 command: Command = Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0))
-left = Simulated(data, "wheel_left_encoder", 4096)
-right = Simulated(data, "wheel_right_encoder", 4096)
+encoders = (0, 0)
 gyro = Accumulated(data, 0)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("robocell")
-try:
-    bus = can.Bus(interface="socketcan", channel="vcan0")
-except OSError:
-    log.critical(
-        "CAN interface vcan0 is missing, so bring it up on the host with "
-        "sudo modprobe vcan && sudo ip link add dev vcan0 type vcan && "
-        "sudo ip link set up vcan0"
-    )
-    sys.exit(1)
 moment = 0.0
 clock = 0.0
 odometry: Odometry = Gyroscopic(
@@ -192,153 +219,211 @@ survey = 0.0
 ranges = tuple(math.inf for _ in range(360))
 
 rclpy.init()
-node = rclpy.create_node("sim")
-bridge = Advertised(node)
-harness = Wired(node)
-settings = Declared(node)
-harness.listen(twists)
-seed = settings.whole("seed", -1)
-if seed < 0:
-    seed = secrets.randbits(31)
-generator = np.random.default_rng(seed)
-x, y, z = generator.normal(0.0, settings.number("gyro_bias", 0.0075), 3)
-log.info(
-    "Gyro of the IMU board is biased by %.5f, %.5f and %.5f rad/s about "
-    "x, y and z with the seed %d",
-    x,
-    y,
-    z,
-    seed,
-)
-imu = Noisy(
-    Sensed(data, "imu_gyro", "imu_accelerometer"),
-    Gaussian(
-        (float(x), float(y), float(z)),
-        settings.number("gyro_noise", 0.001),
-        generator,
-    ),
-    Gaussian(
-        (0.0, 0.0, 0.0),
-        settings.number("accelerometer_noise", 0.02),
-        generator,
-    ),
-)
-renderer = mujoco.Renderer(model, size[1], size[0])
-master, slave = pty.openpty()
-tty.setraw(slave)
-attributes = termios.tcgetattr(slave)
-attributes[4] = termios.B115200
-attributes[5] = termios.B115200
-termios.tcsetattr(slave, termios.TCSANOW, attributes)
-os.set_blocking(master, False)
-state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
-state.put(
-    (
-        Rplidar(
-            Directed(data, "base_scan", (0.15, 12.0)),
-            (False, 0.0, 0),
-            (b"", data.time),
-        ),
-        b"",
-        time.monotonic(),
+with (
+    suppress(KeyboardInterrupt, ExternalShutdownException),
+    ExitStack() as resources,
+):
+    node = rclpy.create_node("sim")
+    bridge = Advertised(node)
+    harness = Wired(node)
+    settings = Declared(node)
+    transport = (
+        settings.text("interface", "socketcan"),
+        settings.text("channel", "vcan0"),
     )
-)
-log.info(
-    "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
-    os.ttyname(slave),
-)
-physics = Paced(
-    Reported(
-        Integrated(Physical(model, data), data, "imu_gyro", 0),
-        Joined(
+    numbers = (settings.whole("left_node", 1), settings.whole("right_node", 2))
+    if numbers[0] == numbers[1] or not all(
+        1 <= number < _HOST for number in numbers
+    ):
+        error = "Wheel nodes must be distinct and between 1 and 126"
+        raise ValueError(error)
+    bus = resources.enter_context(
+        can.Bus(interface=transport[0], channel=transport[1])
+    )
+    keyboard = node.create_publisher(TwistStamped, "/keyboard/cmd_vel", 1)
+    counts: queue.SimpleQueue[tuple[int, int, float, Header]] = (
+        queue.SimpleQueue()
+    )
+    Geared(node, ("wheel_left_joint", "wheel_right_joint"), 4096, "odom").count(
+        counts
+    )
+    node.create_service(SetBool, "~/pause", freeze)
+    seed = settings.whole("seed", -1)
+    if seed < 0:
+        seed = secrets.randbits(31)
+    generator = np.random.default_rng(seed)
+    x, y, z = generator.normal(0.0, settings.number("gyro_bias", 0.0075), 3)
+    log.info(
+        "Gyro of the IMU board is biased by %.5f, %.5f and %.5f rad/s about "
+        "x, y and z with the seed %d",
+        x,
+        y,
+        z,
+        seed,
+    )
+    imu = Noisy(
+        Sensed(data, "imu_gyro", "imu_accelerometer"),
+        Gaussian(
+            (float(x), float(y), float(z)),
+            settings.number("gyro_noise", 0.001),
+            generator,
+        ),
+        Gaussian(
+            (0.0, 0.0, 0.0),
+            settings.number("accelerometer_noise", 0.02),
+            generator,
+        ),
+    )
+    renderer = resources.enter_context(
+        closing(mujoco.Renderer(model, size[1], size[0]))
+    )
+    master, slave = pty.openpty()
+    tty.setraw(slave)
+    attributes = termios.tcgetattr(slave)
+    attributes[4] = termios.B115200
+    attributes[5] = termios.B115200
+    termios.tcsetattr(slave, termios.TCSANOW, attributes)
+    os.set_blocking(master, False)
+    state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+    state.put(
+        (
+            Rplidar(
+                Directed(data, "base_scan", (0.15, 12.0)),
+                (False, 0.0, 0),
+                (b"", data.time),
+            ),
+            b"",
+            time.monotonic(),
+        )
+    )
+    log.info(
+        "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
+        os.ttyname(slave),
+    )
+
+    resources.enter_context(os.fdopen(master, "rb+", buffering=0))
+    resources.enter_context(os.fdopen(slave, "rb+", buffering=0))
+    resources.enter_context(
+        Named(
+            Path(
+                settings.text(
+                    "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
+                )
+            ),
+            os.ttyname(slave),
+        ).binding()
+    )
+    viewer = (
+        resources.enter_context(
+            mujoco.viewer.launch_passive(model, data, key_callback=key)
+        )
+        if options.headless == "false"
+        else None
+    )
+    if viewer is not None:
+        viewer.set_texts(
             (
-                Periodic(
-                    data,
-                    model.opt.timestep,
-                    Serving(data, Terminal(master), state, 65536),
+                None,
+                mujoco.mjtGridPos.mjGRID_BOTTOMLEFT.value,
+                "9",
+                "Lidar lines",
+            )
+        )
+    devices = tuple(
+        resources.enter_context(
+            Attached(
+                resources.enter_context(
+                    can.Bus(interface=transport[0], channel=transport[1])
                 ),
-                Periodic(data, 0.01, Clocked(data, bridge.clock())),
-                Periodic(
-                    data,
-                    0.01,
-                    Emulated(
-                        imu,
+                number,
+                Actuated(data, f"wheel_{side}", f"wheel_{side}_joint", pause),
+            ).connection()
+        )
+        for side, number in zip(("left", "right"), numbers, strict=True)
+    )
+    service = Polled(devices)
+    step = Serviced(
+        Reported(
+            Integrated(Physical(model, data), data, "imu_gyro", 0),
+            Joined(
+                (
+                    Periodic(
+                        data,
+                        model.opt.timestep,
+                        Serving(data, Terminal(master), state, 65536),
+                    ),
+                    Periodic(data, 0.01, Clocked(data, bridge.clock())),
+                    Periodic(
                         data,
                         0.01,
-                        Transmitted(bus),
+                        Emulated(
+                            imu,
+                            data,
+                            0.01,
+                            Transmitted(bus),
+                        ),
                     ),
-                ),
-                Periodic(
-                    data, 1 / 50, Tracked(data, "base_link", bridge.truth())
-                ),
-                Periodic(
-                    data,
-                    1 / 50,
-                    Jointed(
+                    Periodic(
                         data,
-                        {"wheel_left_joint": left, "wheel_right_joint": right},
-                        harness.joints(),
+                        1 / 50,
+                        Tracked(data, "base_link", bridge.truth()),
                     ),
-                ),
-                Periodic(
-                    data,
-                    1 / 30,
-                    Filmed(
+                    Periodic(
                         data,
-                        Rendered(renderer, data, "camera_rgb"),
-                        harness.picture(),
+                        1 / 30,
+                        Filmed(
+                            data,
+                            Rendered(renderer, data, "camera_rgb"),
+                            harness.picture(),
+                        ),
                     ),
-                ),
-                Periodic(
-                    data,
-                    1 / 30,
-                    Calibrated(data, lens, size, harness.calibration()),
-                ),
-            )
+                    Periodic(
+                        data,
+                        1 / 30,
+                        Calibrated(data, lens, size, harness.calibration()),
+                    ),
+                )
+            ),
         ),
-    ),
-    data,
-)
-
-with (
-    os.fdopen(master, "rb+", buffering=0),
-    os.fdopen(slave, "rb+", buffering=0),
-    Named(
-        Path(
-            settings.text(
-                "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
-            )
-        ),
-        os.ttyname(slave),
-    ).binding(),
-    mujoco.viewer.launch_passive(model, data, key_callback=key) as viewer,
-):
-    viewer.set_texts(
-        (None, mujoco.mjtGridPos.mjGRID_BOTTOMLEFT.value, "9", "Lidar lines")
+        service,
+        pause,
     )
-    frame = time.time()
-    while viewer.is_running():
-        now = time.time()
+    physics = Running(
+        step,
+        data,
+        pause,
+        service,
+    )
+
+    frame = time.monotonic()
+    beginning = frame
+    while (
+        node.context.ok()
+        and (viewer is None or viewer.is_running())
+        and (
+            options.duration == 0
+            or time.monotonic() - beginning < options.duration
+        )
+    ):
+        now = time.monotonic()
         rclpy.spin_once(node, timeout_sec=0)
         Serving(data, Terminal(master), state, 65536).publish()
         while not keys.empty():
-            command = command.press(keys.get())
-        while not twists.empty():
-            command = command.steer(*twists.get())
+            code, instant = keys.get()
+            if code in _KEYS:
+                command = command.press(code)
+                Keyed(command, instant, keyboard).publish()
+        while not counts.empty():
+            left, right, _, _ = counts.get()
+            encoders = (left, right)
+            odometry = odometry.read(left, right, gyro.angle())
+        clock = data.time if pause.is_set() else clock + now - frame
+        physics.advance(clock)
         if not pause.is_set():
-            data.ctrl[
-                [
-                    model.actuator("wheel_left").id,
-                    model.actuator("wheel_right").id,
-                ]
-            ] = drive.wheels(*Guarded(command, ranges, 0.3, 0.2).velocity())
-            clock += now - frame
-            physics.advance(clock)
-            odometry = odometry.read(left.ticks(), right.ticks(), gyro.angle())
             if data.time >= sample:
                 slipped = slip.slipping()
                 slip = slip.read(
-                    left.ticks(), right.ticks(), gyro.angle(), data.time
+                    encoders[0], encoders[1], gyro.angle(), data.time
                 )
                 if slip.slipping() and not slipped:
                     log.warning(
@@ -383,15 +468,17 @@ with (
                         ).points(),
                     )
                     survey += 1.0
-                with viewer.lock():
-                    viewer.user_scn.ngeom = 0
-                    if beams.is_set():
-                        Beams(Scanned(data, "base_scan", ranges)).paint(
+                if viewer is not None:
+                    with viewer.lock():
+                        viewer.user_scn.ngeom = 0
+                        if beams.is_set():
+                            Beams(Scanned(data, "base_scan", ranges)).paint(
+                                viewer.user_scn
+                            )
+                        Dots(Scanned(data, "base_scan", ranges)).paint(
                             viewer.user_scn
                         )
-                    Dots(Scanned(data, "base_scan", ranges)).paint(
-                        viewer.user_scn
-                    )
+
                 scan += 0.2
             if camera is not None and data.time >= shot:
                 camera.record(data.qpos)
@@ -399,13 +486,13 @@ with (
             if data.time >= moment:
                 log.info(
                     "Encoders read %d ticks on the left and %d on the right",
-                    left.ticks(),
-                    right.ticks(),
+                    encoders[0],
+                    encoders[1],
                 )
                 moment += 0.5
         frame = now
-        viewer.sync()
-        time.sleep(max(0.0, model.opt.timestep - (time.time() - now)))
+        if viewer is not None:
+            viewer.sync()
+        time.sleep(max(0.0, model.opt.timestep - (time.monotonic() - now)))
 
-rclpy.shutdown()
-bus.shutdown()
+try_shutdown()

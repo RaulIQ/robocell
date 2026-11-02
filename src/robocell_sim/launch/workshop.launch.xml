@@ -1,5 +1,12 @@
 <launch>
-  <!-- Simulator with its ROS 2 bridge, the IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
+  <!-- Simulator with its ROS 2 bridge, the CANopen motor, IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
+  <arg name="rviz" default="true" description="Show the RViz view"/>
+  <arg name="headless" default="false" description="Run the simulator without its MuJoCo viewer"/>
+  <arg name="duration" default="0" description="Wall duration in seconds, zero runs until interrupted"/>
+  <arg name="can_interface" default="socketcan" description="Shared python-can backend"/>
+  <arg name="can_channel" default="vcan0" description="Shared CAN channel"/>
+  <arg name="left_node" default="1" description="CANopen left wheel node ID"/>
+  <arg name="right_node" default="2" description="CANopen right wheel node ID"/>
   <arg name="route" default="false" description="Show the robot route window"/>
   <arg name="camera" default="false" description="Show the robot camera in a separate window"/>
   <arg name="radar" default="false" description="Show the lidar scan window"/>
@@ -11,18 +18,32 @@
   <arg name="seed" default="-1" description="Seed of the noise generator of the IMU board, a fresh random one when negative"/>
   <arg name="gyro_variance" default="$(eval '$(var gyro_noise) ** 2')" description="Gyro variance the IMU driver reports, the square of the gyro noise unless set"/>
   <arg name="accelerometer_variance" default="$(eval '$(var accelerometer_noise) ** 2')" description="Accelerometer variance the IMU driver reports, the square of the accelerometer noise unless set"/>
-  <node pkg="robocell_sim" exec="main.py" args="--route=$(var route) --camera=$(var camera) --radar=$(var radar) --survey=$(var survey)" output="screen">
+  <node pkg="robocell_sim" exec="main.py" args="--headless=$(var headless) --duration=$(var duration) --route=$(var route) --camera=$(var camera) --radar=$(var radar) --survey=$(var survey)" output="screen">
+    <param name="interface" value="$(var can_interface)"/>
+    <param name="channel" value="$(var can_channel)"/>
+    <param name="left_node" value="$(var left_node)"/>
+    <param name="right_node" value="$(var right_node)"/>
     <param name="lidar_port" value="$(var lidar_port)"/>
     <param name="gyro_bias" value="$(var gyro_bias)"/>
     <param name="gyro_noise" value="$(var gyro_noise)"/>
     <param name="accelerometer_noise" value="$(var accelerometer_noise)"/>
     <param name="seed" value="$(var seed)"/>
   </node>
+  <node pkg="robocell_sim" exec="motor_driver.py" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="interface" value="$(var can_interface)"/>
+    <param name="channel" value="$(var can_channel)"/>
+    <param name="left_node" value="$(var left_node)"/>
+    <param name="right_node" value="$(var right_node)"/>
+    <param name="collision_guard" value="true"/>
+  </node>
   <node pkg="robocell_sim" exec="lidar.py" output="screen">
     <param name="use_sim_time" value="true"/>
     <param name="port" value="$(var lidar_port)"/>
   </node>
   <node pkg="robocell_sim" exec="imu.py" output="screen">
+    <param name="interface" value="$(var can_interface)"/>
+    <param name="channel" value="$(var can_channel)"/>
     <param name="use_sim_time" value="true"/>
     <param name="gyro_variance" value="$(var gyro_variance)"/>
     <param name="accelerometer_variance" value="$(var accelerometer_variance)"/>
@@ -38,7 +59,7 @@
     <param name="robot_description" value="$(command 'cat $(find-pkg-share robocell_sim)/models/waffle_pi/waffle_pi.urdf')"/>
     <param name="use_sim_time" value="true"/>
   </node>
-  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share robocell_sim)/rviz/workshop.rviz">
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share robocell_sim)/rviz/workshop.rviz">
     <param name="use_sim_time" value="true"/>
   </node>
 </launch>

@@ -25,6 +25,7 @@ log = logging.getLogger("imu")
 rclpy.init()
 node = rclpy.create_node("imu")
 settings = Declared(node)
+interface = settings.text("interface", "socketcan")
 channel = settings.text("channel", "vcan0")
 period = settings.number("period", 0.005)
 frame = settings.text("frame_id", "imu_link")
@@ -34,7 +35,7 @@ variances = (
 )
 topic = Plugged(node).imu()
 try:
-    bus = can.Bus(interface="socketcan", channel=channel, can_filters=FILTERS)
+    bus = can.Bus(interface=interface, channel=channel, can_filters=FILTERS)
 except OSError:
     log.critical(
         "CAN interface %s is missing, so bring it up on the host with "
