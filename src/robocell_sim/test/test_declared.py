@@ -102,3 +102,19 @@ def test_declared_reads_the_overridden_text() -> None:
         equal_to(value),
         "settings did not read the overridden text",
     )
+
+
+def test_declared_reads_a_boolean_override() -> None:
+    """A launch flag retains its boolean meaning."""
+    context = Context()
+    context.init(
+        args=["--ros-args", "-p", "guard:=true"],
+        domain_id=secrets.SystemRandom().randint(0, 101),
+    )
+    assert_that(
+        Declared(Node(f"declared{secrets.token_hex(4)}", context=context)).flag(
+            "guard", default=False
+        ),
+        equal_to(obj=True),
+        "settings did not read the overridden boolean flag",
+    )

@@ -45,7 +45,7 @@ class Timed(Transmission):
     def renew(self, moment: float) -> Progress:
         identifier, request, _ = self._steps[0]
         _, beginning, retries = self._pending
-        if retries > _RETRIES:
+        if request and retries > _RETRIES:
             error = f"Drive {self._number} did not answer its startup request"
             raise TimeoutError(error)
         if request:
@@ -59,5 +59,9 @@ class Timed(Transmission):
             )
         return (
             self._steps,
-            (moment, moment if beginning < 0 else beginning, retries + 1),
+            (
+                moment,
+                moment if beginning < 0 else beginning,
+                retries + bool(request),
+            ),
         )

@@ -33,3 +33,7 @@ class Declared(Settings):
     @override
     def text(self, name: str, default: str) -> str:
         return str(self._node.declare_parameter(name, default).value)
+
+    @override
+    def flag(self, name: str, *, default: bool) -> bool:
+        return str(self._node.declare_parameter(name, default).value) == "True"

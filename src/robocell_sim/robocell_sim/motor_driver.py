@@ -9,18 +9,25 @@ from contextlib import ExitStack
 
 import can
 import rclpy
-from geometry_msgs.msg import Twist  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.executors import ExternalShutdownException
+from rclpy.qos import qos_profile_action_status_default
 from rosgraph_msgs.msg import Clock  # type: ignore[import-untyped]  # ROS generates message modules without types
 from sensor_msgs.msg import JointState  # type: ignore[import-untyped]  # ROS generates message modules without types
+from std_msgs.msg import String  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_srvs.srv import Trigger  # type: ignore[import-untyped]  # ROS generates message modules without types
 
+from robocell_sim.robot.implementations.command.arrows import Arrows
+from robocell_sim.robot.implementations.command.filtered import Filtered
+from robocell_sim.robot.implementations.drive.stepped import Stepped
 from robocell_sim.robot.implementations.motor.hosted import Hosted
-from robocell_sim.robot.interfaces.pilot import Command, Pilot, Session
+from robocell_sim.robot.interfaces.control import Control
+from robocell_sim.robot.interfaces.pilot import Pilot, Session
+from robocell_sim.ros.implementations.command.steered import Steered
 from robocell_sim.ros.implementations.motor.reported import Reported
 from robocell_sim.ros.implementations.settings.declared import Declared
 
 _BACKOFF = 0.1
+_EXPIRED = "stopped: Body command expired"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("motor_driver")
@@ -43,16 +50,23 @@ names = (
     settings.text("right_joint", "wheel_right_joint"),
 )
 state: queue.SimpleQueue[Session] = queue.SimpleQueue()
-commands: queue.SimpleQueue[Command] = queue.SimpleQueue()
+controls: queue.SimpleQueue[Control] = queue.SimpleQueue()
+controls.put(
+    Filtered(
+        Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0)),
+        -1.0,
+        ((), -1),
+        (0.3, 0.2, 500000000),
+    )
+)
+steering = Steered(
+    node, controls, _protected=settings.flag("collision_guard", default=False)
+)
+steering.listen()
 retries: queue.SimpleQueue[bool] = queue.SimpleQueue()
 clocks: queue.SimpleQueue[int] = queue.SimpleQueue()
 pilots: list[Pilot] = []
 retries.put(item=False)
-
-
-def command(message: Twist) -> None:
-    """Preserve the original wall time of the latest application input."""
-    commands.put((message.linear.x, message.angular.z, time.monotonic()))
 
 
 def clock(message: Clock) -> None:
@@ -80,12 +94,17 @@ def recover(
     return response
 
 
-node.create_subscription(Twist, "/cmd_vel", command, 1)
 node.create_subscription(Clock, "/clock", clock, 10)
 node.create_service(Trigger, "~/retry", retry)
 node.create_service(Trigger, "~/recover", recover)
 topic = node.create_publisher(JointState, "/joint_states", 10)
+announcements = node.create_publisher(
+    String,
+    "~/state",
+    qos_profile_action_status_default,
+)
 status = ""
+stopped = -1.0
 stamp = -1
 simulation = -1
 attempt = -1.0
@@ -106,8 +125,7 @@ with (
             attempt = -1.0
             status = "starting"
             stamp = -1
-            while not commands.empty():
-                commands.get_nowait()
+            announcements.publish(String(data="starting"))
         if (
             not pilots
             and beginning < deadline
@@ -135,18 +153,22 @@ with (
                 )
         if not pilots and beginning >= deadline and status == "starting":
             status = "stopped"
+            announcements.publish(String(data=status))
             log.error(
                 "CANopen connection exceeded five seconds and requires ~/retry"
             )
         while not clocks.empty():
             simulation = clocks.get_nowait()
-        while not commands.empty():
-            linear, angular, moment = commands.get_nowait()
-            if pilots:
-                try:
-                    pilots[0].command((linear, angular), moment)
-                except ValueError:
-                    log.exception("CANopen input rejected a nonfinite command")
+        linear, angular, moment = steering.reading(simulation)
+        if pilots:
+            if status.startswith(_EXPIRED) and moment > stopped:
+                pilots[0].retry(beginning, recovery=False)
+                status = "starting"
+                announcements.publish(String(data=status))
+            try:
+                pilots[0].command((linear, angular), moment)
+            except ValueError:
+                log.exception("CANopen input rejected a nonfinite command")
         if pilots:
             condition, measurements = pilots[0].advance(
                 time.monotonic(), simulation
@@ -154,6 +176,8 @@ with (
             if condition != status:
                 log.info("CANopen host is %s", condition)
                 status = condition
+                stopped = beginning
+                announcements.publish(String(data=condition))
             for sample in measurements:
                 if sample[0] != stamp:
                     Reported(sample, names, topic).publish()

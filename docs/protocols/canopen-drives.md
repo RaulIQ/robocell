@@ -4,7 +4,7 @@ This is the implementation contract for issue [#135](https://github.com/RaulIQ/r
 It specifies two synthetic wheel drives on classic CAN, with a bounded subset
 of CANopen CC and CiA 402. It is not a physical drive datasheet or a claim of complete CANopen or
 CiA 402 conformance. The standalone emulator described below implements the
-device side; host integration remains part of #135.
+device side; the host and workshop integration are described below.
 
 Each emulator receives CAN frames, controls one MuJoCo wheel actuator, and
 acquires that wheel's encoder and velocity. The emulators contain no ROS.
@@ -543,11 +543,9 @@ This validates library-client interoperability and the physical boundary,
 not complete device conformance or electrical CAN behavior. SocketCAN and
 the GUI require a configured host and are not covered by that virtual-bus run.
 
-The regular workshop launch still uses its existing control path. Connecting
-its collision guard and keyboard commands, switching its `/joint_states` to CAN feedback remain subsequent #135 work.
-The standalone host below does not change that launch. Do
-not run this standalone world expecting it to move a separate workshop
-process's MuJoCo model.
+The regular workshop launch runs these endpoints in its own MuJoCo world.
+`motors.py` remains a separate world for standalone clients; it does not
+control a different workshop process's model.
 
 ## Standalone host driver
 
@@ -579,6 +577,7 @@ mode is written and read back; the default supervision values must match.
 | `wheel_limit` | `7.88` | Maximum wheel speed in rad/s, at most 7.88 |
 | `physics_step` | `0.002` | Maximum paired acquisition skew in seconds |
 | `left_joint`, `right_joint` | `wheel_left_joint`, `wheel_right_joint` | JointState names |
+| `collision_guard` | `false` | Require fresh `/scan` and apply the existing 0.3 m by 0.2 m corridor guard |
 
 Geometry values must be finite and positive. Node identities and geometry
 are checked before opening CAN. The physics-step parameter must match the
@@ -586,7 +585,10 @@ selected model. Source commands must arrive after successful enable, and
 must continue at more than 4 Hz to stay within the 250 ms command timeout.
 Stopping the command source sends zero/quick-stop to both nodes and leaves
 the host stopped. Ordinary transport or feedback failures behave the same
-way; restored traffic cannot replay a cached velocity. Producer and host
+way; restored traffic cannot replay a cached velocity. A new application
+command after an input timeout requests a verified enable, and motion still
+requires a later command after enable completes. Other failures require
+explicit retry or recovery. Producer and host
 heartbeat continue while a connected host is stopped.
 
 The driver uses `/clock` when it is available to supervise feedback gaps in
@@ -599,7 +601,9 @@ is available; request a verified retry after resuming. A frozen external
 application-command supervision always remain on monotonic wall time.
 
 Each startup or retry has a five-second wall-time budget, including CAN-open
-retries with 100 ms backoff. A request gets at most two expedited-SDO retries.
+retries with 100 ms backoff and discovery of devices that start after the host.
+Heartbeat discovery uses that overall budget; each expedited SDO request gets
+at most two retries.
 Once an attempt fails, the node stays alive for an explicit operator request:
 
 ```console
@@ -610,7 +614,8 @@ ros2 service call /motor_driver/recover std_srvs/srv/Trigger '{}'
 `retry` opens a new verified session without clearing faults. `recover`
 explicitly authorizes zero-target fault reset before configuration and enable.
 Fix the fault cause first; a local `FF02` still requires emulator restart.
-The services acknowledge acceptance, and the log reports enable or failure.
+The services acknowledge acceptance, and the log and transient-local
+`/motor_driver/state` report enable or failure.
 Both requests discard earlier commands and partial feedback, preserve already
 observed encoder travel and establish fresh position baselines. Shutdown
 sends zero/quick-stop and disable voltage to both nodes before closing CAN;
@@ -625,10 +630,9 @@ PYTHONPATH=src/robocell_sim:$PYTHONPATH python -m robocell_sim.motor_driver \
 ```
 
 Use a shared SocketCAN interface for separate processes. The `virtual` backend
-is for isolated same-process tests. Do not run the standalone driver alongside
-the regular workshop's `/joint_states` publisher. The separate world accepts
-body commands directly; workshop keyboard control and collision-guard wiring
-remain outside this standalone-driver step.
+is for isolated same-process tests. Run one motor driver per shared CAN bus.
+The standalone world accepts body commands directly; the normal workshop
+uses the guarded integration below.
 
 Host tests cover independent node startup, fresh commands, forward/reverse
 and turning, measured CAN feedback, command expiry at both physical actuators,
@@ -640,3 +644,44 @@ Waffle Pi scene on an isolated virtual CAN channel: motion reached both
 actuators, joint messages arrived through DDS, the ROS graph had one joint
 publisher, and stopping command publication zeroed both actuator targets.
 This is not an electrical-CAN or separate-process SocketCAN validation.
+
+
+## Workshop integration
+
+`workshop.launch.xml` starts the integrated emulators in `main.py` and one
+`motor_driver.py` with `collision_guard=true`. `can_interface`, `can_channel`,
+`left_node` and `right_node` are shared launch arguments. Defaults remain
+SocketCAN `vcan0`, left 1 and right 2. The simulator has no direct velocity
+command subscription, actuator assignment or joint-feedback publisher.
+Its optional route windows and encoder log consume the CAN-derived
+`/joint_states` instead of reading wheel sensors directly.
+
+All command sources enter one driver-owned `Filtered` control. `/cmd_vel`
+uses its monotonic ROS arrival time; `/keyboard/cmd_vel` is a
+`geometry_msgs/TwistStamped` stamped at the original key event with system
+wall time. The driver maps that age into monotonic time once. The keyboard
+publisher emits only actual arrow/Enter events, and a delayed older source
+cannot supersede newer input. Periodic guard reevaluation preserves the
+original input time, so a fresh scan cannot renew an abandoned command.
+Hold an arrow for key repeat or send a continuous ROS command stream.
+
+The existing corridor geometry remains 0.3 m front/rear by 0.2 m half-width.
+The ROS scan adapter bins the nearest valid return at each degree, accounting
+for `angle_min` and either sign of `angle_increment`. An obstacle blocks the
+relevant translation while leaving turning available. Before a scan arrives,
+with a backwards scan time, or more than 500 ms after its acquisition while
+simulation time advances, all motion is inhibited.
+
+Drive service brackets every physics step, including each individual catch-up
+step. A pause interrupts catch-up and continues protective CAN service on wall
+time. The simulator's `/sim/pause` service uses `std_srvs/SetBool`; space in
+the viewer toggles the same pause event. On exit, emulator contexts zero their
+actuators before releasing the viewer and transport resources. Normal launch
+runs odometry, IMU, lidar, robot-state publication and EKF on their existing
+ROS paths, with one `/joint_states` publisher named `motor_driver`.
+
+The repeatable headless recording, measured results, CAN traffic and compressed
+ROS bag are under [docs/canopen](../canopen/README.md). The run verifies
+keyboard guarding against a wall, stale commands, pause/resume, command-watchdog
+faults, explicit fault recovery, drive restart, fresh-input requirements and
+clean host shutdown through the actual workshop launch.

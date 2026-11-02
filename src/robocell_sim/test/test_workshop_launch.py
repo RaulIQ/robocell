@@ -42,6 +42,7 @@ def test_workshop_launch_passes_window_flags_to_the_simulator() -> None:
         equal_to(
             [
                 (
+                    "--headless=$(var headless) --duration=$(var duration) "
                     "--route=$(var route) --camera=$(var camera) "
                     "--radar=$(var radar) --survey=$(var survey)"
                 )
@@ -133,6 +134,8 @@ def test_workshop_launch_runs_the_imu_driver_on_simulated_time() -> None:
             [
                 {
                     "use_sim_time": "true",
+                    "interface": "$(var can_interface)",
+                    "channel": "$(var can_channel)",
                     "gyro_variance": "$(var gyro_variance)",
                     "accelerometer_variance": "$(var accelerometer_variance)",
                 }
@@ -159,6 +162,10 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
         equal_to(
             [
                 {
+                    "interface": "$(var can_interface)",
+                    "channel": "$(var can_channel)",
+                    "left_node": "$(var left_node)",
+                    "right_node": "$(var right_node)",
                     "lidar_port": "$(var lidar_port)",
                     "gyro_bias": "$(var gyro_bias)",
                     "gyro_noise": "$(var gyro_noise)",
@@ -241,4 +248,33 @@ def test_workshop_launch_shares_the_named_lidar_endpoint() -> None:
         ],
         equal_to([{"use_sim_time": "true", "port": "$(var lidar_port)"}]),
         "launch did not share the named UART endpoint with the lidar driver",
+    )
+
+
+def test_workshop_launch_starts_one_guarded_canopen_joint_publisher() -> None:
+    """The normal launch enables the CAN driver and its collision guard."""
+    assert_that(
+        [
+            {
+                param.get("name"): param.get("value")
+                for param in node.iter("param")
+            }
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "motor_driver.py"
+        ],
+        equal_to(
+            [
+                {
+                    "use_sim_time": "true",
+                    "interface": "$(var can_interface)",
+                    "channel": "$(var can_channel)",
+                    "left_node": "$(var left_node)",
+                    "right_node": "$(var right_node)",
+                    "collision_guard": "true",
+                }
+            ]
+        ),
+        "workshop did not start one guarded CANopen joint-feedback driver",
     )

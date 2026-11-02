@@ -21,3 +21,7 @@ class Settings(Protocol):
     def text(self, name: str, default: str) -> str:
         """Text the launch set under the name, or the default."""
         ...
+
+    def flag(self, name: str, *, default: bool) -> bool:
+        """Boolean switch declared with an explicit default."""
+        ...

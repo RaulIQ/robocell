@@ -43,8 +43,8 @@ folder per device or subject:
 
 | Package    | Role                                       | Implementations                                        |
 | ---------- | ------------------------------------------ | ------------------------------------------------------ |
-| `hardware` | stands in for the real TurtleBot3          | `physics`, `imu`, `can`, `wheels`, `lidar`, `camera`   |
-| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `command`, `odometry`, `lidar`                |
+| `hardware` | stands in for the real TurtleBot3          | `physics`, `imu`, `can`, `motor`, `wheels`, `lidar`, `camera` |
+| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `motor`, `command`, `odometry`, `lidar` |
 | `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`                     |
 | `ros`      | carries the simulation to ROS 2            | `wiring`, `clock`, `pose`, `wheels`, `lidar`, `camera` |
 
@@ -105,22 +105,24 @@ workspace root, then start the TurtleBot3 Waffle Pi in the MuJoCo viewer:
 cd /ws
 python -m colcon build --symlink-install
 source install/setup.bash
-ros2 run robocell_sim main.py
+ros2 launch robocell_sim workshop.launch.xml
 ```
 
-Only the MuJoCo viewer opens by default. Request any of the four extra
-windows with `--route`, `--camera`, `--radar` or `--survey`, independently
-or together:
+The normal launch starts the MuJoCo viewer, RViz, the emulated drives and
+the motor, IMU and lidar drivers, wheel odometry and EKF. Request extra
+windows independently or together:
 
 ```console
-ros2 run robocell_sim main.py --route --survey
-ros2 run robocell_sim main.py --route --camera --radar --survey
+ros2 launch robocell_sim workshop.launch.xml route:=true survey:=true
+ros2 launch robocell_sim workshop.launch.xml route:=true camera:=true radar:=true survey:=true
 ```
 
 Disabled windows create no processes or queues and receive no data. The
 ROS camera image, lidar scan and other topics still work without the extra
-windows. Use `ros2 run robocell_sim main.py --help` to list the flags; they
-can be combined with the usual `--ros-args` options.
+windows. Use `ros2 launch robocell_sim workshop.launch.xml --show-args`
+to list the launch settings. `headless:=true rviz:=false` disables both
+main windows; `duration:=30` bounds the simulator to 30 wall seconds.
+A headless host without an X display can select `MUJOCO_GL=egl`.
 
 Run colcon through `python -m` so it uses the virtual environment that holds
 MuJoCo; the plain `colcon` command runs the system Python, which does not.
@@ -142,6 +144,9 @@ facing north.
 
 Steer the robot with the keyboard while the viewer window has focus.
 Every press changes the speed by one step, up to the robot limits.
+Hold an arrow for key repeat to keep sending fresh intent. Input older than
+250 ms stops both drives. Fresh input requests a new verified enable, which
+requires another fresh command after it finishes.
 
 | Key            | Action                              |
 | -------------- | ----------------------------------- |
@@ -266,9 +271,13 @@ ros2 topic echo --once /clock
 ros2 topic echo --once /ground_truth/odom
 ```
 
-The `/joint_states` topic carries the wheel angles as `sensor_msgs/JointState`.
-It counts them from whole encoder ticks, the way the motor driver will report
-them over CAN, rather than from the exact MuJoCo joints.
+The `motor_driver` node alone publishes `/joint_states`, with wheel positions
+in radians, measured velocities in rad/s and CAN acquisition time. It commits
+only complete, matched PDO snapshots from the two drive emulators. Only
+those emulators write wheel targets or acquire encoder feedback; `/cmd_vel`
+and stamped `/keyboard/cmd_vel` both enter the driver's collision guard before
+kinematics and CAN transmission. Before the first `/scan` or after a 500 ms
+scan gap in simulation time, the guard inhibits motion.
 
 The odometry is a node of its own named `odometry`, which the launch file
 starts next to the simulator. It knows the robot only through ROS: it turns
@@ -440,8 +449,6 @@ or an estimator. Each bridge stays until its successor lands:
 
 | Bridge today                                    | Replaced by                               |
 | ----------------------------------------------- | ----------------------------------------- |
-| `/cmd_vel` straight into `data.ctrl`            | `motor_driver` over CANopen (week 4)      |
-| `/joint_states` from the simulator              | `motor_driver` (week 4)                   |
 | the camera straight from `Rendered`             | stays, as a simplification of the project |
 
 `/clock` and `/ground_truth/odom` are no bridges: they exist only in the
@@ -484,13 +491,18 @@ After stopping the command source, both drives quick-stop. Request a new
 verified enable with `ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
 and then send fresh commands. A latched drive fault requires explicit reset
 permission through `/motor_driver/recover`, using the same service type.
-These services acknowledge the request; the driver log reports the outcome.
+Fresh input after a command timeout also requests a verified enable, followed
+by another fresh command before motion. Other failures require the service.
+These services acknowledge the request; `/motor_driver/state` and the driver
+log report the outcome.
 
 The driver parameters, recovery behavior and current integration boundary
 are described in [the CANopen protocol](docs/protocols/canopen-drives.md#standalone-host-driver).
-This standalone world has no collision guard or lidar. Connecting the driver
-to the workshop keyboard and guard remains separate work; the workshop launch
-still owns its current joint feedback.
+The standalone world has no lidar and uses `collision_guard:=false`, the
+driver default. The workshop launch sets `collision_guard:=true`, shares CAN
+parameters with its emulators and runs one driver as the sole joint-feedback
+publisher. [Recorded route and recovery checks](docs/canopen/README.md) cover
+the complete workshop, odometry and EKF chain.
 
 ## Emulated RPLIDAR A1
 

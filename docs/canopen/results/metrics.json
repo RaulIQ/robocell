@@ -1,0 +1,17 @@
+{
+  "/wheel/odometry": {
+    "samples": 1103,
+    "rmse_mm": 3.251850129385145,
+    "maximum_mm": 5.729419331942363,
+    "final_mm": 5.043923390532479
+  },
+  "/odometry/filtered": {
+    "samples": 1209,
+    "rmse_mm": 9.393859257058562,
+    "maximum_mm": 38.71197222152139,
+    "final_mm": 28.046446864356067
+  },
+  "truth_distance_m": 0.8539225472506016,
+  "simulation_duration_s": 24.16,
+  "coordinate_transform": "World wheel/EKF position = (-2.1 - odom_y, -2.5 + odom_x)"
+}
