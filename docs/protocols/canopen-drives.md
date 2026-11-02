@@ -544,7 +544,99 @@ not complete device conformance or electrical CAN behavior. SocketCAN and
 the GUI require a configured host and are not covered by that virtual-bus run.
 
 The regular workshop launch still uses its existing control path. Connecting
-its collision guard and keyboard commands, adding `motor_driver`, and
-switching `/joint_states` to CAN feedback remain subsequent #135 work. Do
+its collision guard and keyboard commands, switching its `/joint_states` to CAN feedback remain subsequent #135 work.
+The standalone host below does not change that launch. Do
 not run this standalone world expecting it to move a separate workshop
 process's MuJoCo model.
+
+## Standalone host driver
+
+`motor_driver.py` is the ROS executable for the standalone `motors.py` world.
+Its host protocol lives under `robot/implementations/motor` and imports neither
+MuJoCo nor ROS. `Hosted.connection` also exposes that host as a non-ROS
+context; its `Pilot` accepts body commands with their original monotonic
+arrival time, services the bus and returns paired joint measurements.
+
+The ROS node is `motor_driver`. It subscribes to `/cmd_vel` as
+`geometry_msgs/Twist` with depth one and publishes `/joint_states` as
+`sensor_msgs/JointState`. Feedback contains encoder angles, measured wheel
+velocities and the CAN acquisition timestamp, rather than ROS reception time.
+It services CAN every 5 ms of wall time, sends host heartbeat every 100 ms
+and renews enabled PDO targets every 20 ms. Startup verifies profile revision,
+mode, encoder units, all fixed PDO mappings and all supervision values through
+expedited SDO before walking the zero-target enable sequence. Both drives
+finish configuration before one broadcast NMT-start, so their asynchronous
+PDO acquisition periods begin together. The configured
+mode is written and read back; the default supervision values must match.
+
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `interface` | `socketcan` | python-can backend |
+| `channel` | `vcan0` | Shared CAN interface |
+| `left_node`, `right_node` | `1`, `2` | Distinct wheel IDs in 1..126 |
+| `wheel_radius` | `0.033` | Wheel radius in meters |
+| `wheel_separation` | `0.288` | Wheel track in meters |
+| `wheel_limit` | `7.88` | Maximum wheel speed in rad/s, at most 7.88 |
+| `physics_step` | `0.002` | Maximum paired acquisition skew in seconds |
+| `left_joint`, `right_joint` | `wheel_left_joint`, `wheel_right_joint` | JointState names |
+
+Geometry values must be finite and positive. Node identities and geometry
+are checked before opening CAN. The physics-step parameter must match the
+selected model. Source commands must arrive after successful enable, and
+must continue at more than 4 Hz to stay within the 250 ms command timeout.
+Stopping the command source sends zero/quick-stop to both nodes and leaves
+the host stopped. Ordinary transport or feedback failures behave the same
+way; restored traffic cannot replay a cached velocity. Producer and host
+heartbeat continue while a connected host is stopped.
+
+The driver uses `/clock` when it is available to supervise feedback gaps in
+simulated time. The non-ROS standalone emulator does not publish `/clock`,
+so without that topic the driver infers progress from the latest complete
+acquisition of either wheel and also requires feedback within 300 ms of
+wall time. This conservatively stops on a long pause when no external clock
+is available; request a verified retry after resuming. A frozen external
+`/clock` suspends only the simulated-time feedback alarm. Heartbeat and
+application-command supervision always remain on monotonic wall time.
+
+Each startup or retry has a five-second wall-time budget, including CAN-open
+retries with 100 ms backoff. A request gets at most two expedited-SDO retries.
+Once an attempt fails, the node stays alive for an explicit operator request:
+
+```console
+ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'
+ros2 service call /motor_driver/recover std_srvs/srv/Trigger '{}'
+```
+
+`retry` opens a new verified session without clearing faults. `recover`
+explicitly authorizes zero-target fault reset before configuration and enable.
+Fix the fault cause first; a local `FF02` still requires emulator restart.
+The services acknowledge acceptance, and the log reports enable or failure.
+Both requests discard earlier commands and partial feedback, preserve already
+observed encoder travel and establish fresh position baselines. Shutdown
+sends zero/quick-stop and disable voltage to both nodes before closing CAN;
+it does not wait indefinitely for an acknowledgement.
+
+For an installed package, use `ros2 run robocell_sim motor_driver.py`. From
+the source tree with ROS sourced, the equivalent command is:
+
+```console
+PYTHONPATH=src/robocell_sim:$PYTHONPATH python -m robocell_sim.motor_driver \
+  --ros-args -p channel:=vcan0 -p left_node:=1 -p right_node:=2
+```
+
+Use a shared SocketCAN interface for separate processes. The `virtual` backend
+is for isolated same-process tests. Do not run the standalone driver alongside
+the regular workshop's `/joint_states` publisher. The separate world accepts
+body commands directly; workshop keyboard control and collision-guard wiring
+remain outside this standalone-driver step.
+
+Host tests cover independent node startup, fresh commands, forward/reverse
+and turning, measured CAN feedback, command expiry at both physical actuators,
+non-operational heartbeat, feedback loss with an advancing clock, nonfinite
+input, pause/resume, explicit watchdog-fault recovery, PDO assembly and
+expiry, pairing skew, signed encoder rollover and baseline discontinuities.
+A same-process smoke check also ran the actual ROS entry point against the
+Waffle Pi scene on an isolated virtual CAN channel: motion reached both
+actuators, joint messages arrived through DDS, the ROS graph had one joint
+publisher, and stopping command publication zeroed both actuator targets.
+This is not an electrical-CAN or separate-process SocketCAN validation.

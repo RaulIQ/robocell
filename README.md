@@ -455,7 +455,42 @@ in [docs/protocols](docs/protocols):
 | Board | Bus                     | Document                                       |
 | ----- | ----------------------- | ---------------------------------------------- |
 | IMU   | classic CAN, 500 kbit/s | [docs/protocols/imu.md](docs/protocols/imu.md) |
+| Wheel drives | classic CAN, synthetic CANopen/CiA 402 | [docs/protocols/canopen-drives.md](docs/protocols/canopen-drives.md) |
 | RPLIDAR A1 | UART, 115200 baud | [docs/protocols/rplidar-a1.md](docs/protocols/rplidar-a1.md) |
+
+## Standalone CANopen wheel driver
+
+`motor_driver.py` controls the two wheel endpoints of `motors.py` over CAN
+and publishes measured positions and velocities on `/joint_states`. It
+accepts `/cmd_vel`, verifies the synthetic profile and enables both drives
+with zero targets before accepting fresh motion. Commands expire after
+250 ms, so send them continuously, for example at 20 Hz.
+
+Build with `python -m colcon build --symlink-install` and source
+`install/setup.bash` in each terminal. With `vcan0` available, start the
+standalone world, the driver and a command source in separate terminals:
+
+```console
+PYTHONPATH=src/robocell_sim python -m robocell_sim.motors \
+  --model src/robocell_sim/models/waffle_pi/scene.xml --viewer
+
+ros2 run robocell_sim motor_driver.py
+
+ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist \
+  '{linear: {x: 0.06}, angular: {z: 0.15}}'
+```
+
+After stopping the command source, both drives quick-stop. Request a new
+verified enable with `ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
+and then send fresh commands. A latched drive fault requires explicit reset
+permission through `/motor_driver/recover`, using the same service type.
+These services acknowledge the request; the driver log reports the outcome.
+
+The driver parameters, recovery behavior and current integration boundary
+are described in [the CANopen protocol](docs/protocols/canopen-drives.md#standalone-host-driver).
+This standalone world has no collision guard or lidar. Connecting the driver
+to the workshop keyboard and guard remains separate work; the workshop launch
+still owns its current joint feedback.
 
 ## Emulated RPLIDAR A1
 
