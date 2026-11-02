@@ -33,7 +33,7 @@ setup(
             )
         ],
     ],
-    install_requires=["setuptools"],
+    install_requires=["setuptools", "canopen==2.4.1"],
     zip_safe=True,
     maintainer="RaulIQ",
     maintainer_email="raulalimbekov@gmail.com",
@@ -42,6 +42,7 @@ setup(
     tests_require=["pytest"],
     scripts=[
         "robocell_sim/main.py",
+        "robocell_sim/motors.py",
         "robocell_sim/imu.py",
         "robocell_sim/lidar.py",
         "robocell_sim/odometry.py",

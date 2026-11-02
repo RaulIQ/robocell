@@ -1,9 +1,10 @@
 # CANopen protocol of the wheel drives
 
-This is the proposed implementation contract for issue [#135](https://github.com/RaulIQ/robocell/issues/135).
+This is the implementation contract for issue [#135](https://github.com/RaulIQ/robocell/issues/135).
 It specifies two synthetic wheel drives on classic CAN, with a bounded subset
-of CANopen CC and CiA 402. It is not an implemented-device report, a physical
-drive datasheet, or a claim of complete CANopen or CiA 402 conformance.
+of CANopen CC and CiA 402. It is not a physical drive datasheet or a claim of complete CANopen or
+CiA 402 conformance. The standalone emulator described below implements the
+device side; host integration remains part of #135.
 
 Each emulator receives CAN frames, controls one MuJoCo wheel actuator, and
 acquires that wheel's encoder and velocity. The emulators contain no ROS.
@@ -22,9 +23,10 @@ heartbeat. The units, mappings, timing limits and manufacturer objects below
 are choices for this synthetic profile, not requirements inferred from those
 overviews. They must be checked against the selected stack during implementation.
 
-Only cyclic synchronous velocity (CSV, mode 9) is supported. Here cyclic
-means periodically refreshed velocity commands; PDOs are asynchronous and
-SYNC is not used. Position, torque, homing, CAN FD, dynamic PDO remapping,
+Only the synthetic profile-velocity subset (PV, mode 3) is supported.
+PDOs are asynchronous and SYNC is not used. The existing MuJoCo velocity
+actuator handles physical response; configurable profile acceleration and
+deceleration objects are not implemented. This is not a complete PV model. Position, torque, homing, CAN FD, dynamic PDO remapping,
 segmented or block SDO, LSS, node guarding, persistent configuration and
 CANopen Safety are outside this profile. Quick-stop is a simulated stop,
 not a certified E-STOP or STO function. Wheel geometry, collision-guard
@@ -137,15 +139,15 @@ cyclic commands; SDO writes of controlword or target velocity are unsupported.
 | `603F:00` | UNSIGNED16 | RO | Latched fault code, zero when healthy |
 | `6040:00` | UNSIGNED16 | RO | Last accepted RPDO controlword |
 | `6041:00` | UNSIGNED16 | RO | Statusword |
-| `6060:00` | INTEGER8 | RW | Requested mode, only 9 accepted, default 9 |
-| `6061:00` | INTEGER8 | RO | Active mode, 9 |
+| `6060:00` | INTEGER8 | RW | Requested mode, only 3 accepted, default 3 |
+| `6061:00` | INTEGER8 | RO | Active mode, 3 |
 | `6064:00` | INTEGER32 | RO | Encoder position |
 | `606C:00` | INTEGER32 | RO | Actual shaft velocity |
 | `608F:00` | UNSIGNED8 | RO | Two encoder resolution entries |
 | `608F:01` | UNSIGNED32 | RO | 4096 encoder increments |
 | `608F:02` | UNSIGNED32 | RO | 1 wheel revolution |
 | `60FF:00` | INTEGER32 | RO | Last accepted target; cleared on inhibition |
-| `6502:00` | UNSIGNED32 | RO | `0x00000100`, mode 9 supported |
+| `6502:00` | UNSIGNED32 | RO | `0x00000004`, mode 3 supported |
 
 Mapping entries are shown as hexadecimal without the `0x` prefix. Unlisted
 subindices, including holes in communication records, are unsupported.
@@ -310,7 +312,8 @@ Send once per new latched fault when NMT permits. Successful fault reset
 sends error code zero and clears the register. The command-timeout cause
 becomes inactive when valid zero-target RPDOs arrive; heartbeat-timeout cause
 requires restored operational host heartbeat. Clearing a local failure needs
-an explicit simulator-side action fixing its cause. Ordinary commands and
+its cause fixed and the standalone emulator restarted; CAN fault reset cannot
+clear the local fault latch. Ordinary commands and
 NMT start do not clear faults.
 
 A drive loss, a feedback gap exceeding 300 ms of simulated time while that
@@ -403,7 +406,7 @@ hardware traffic. Spaces separate bytes; identifiers are hexadecimal.
 77F  05                         host heartbeat
 601  40 03 20 00 00 00 00 00    read profile revision 2003:00
 581  43 03 20 00 01 00 00 00    revision 1
-601  2F 60 60 00 09 00 00 00    set mode 9 in pre-operational
+601  2F 60 60 00 03 00 00 00    set mode 3 in pre-operational
 581  60 60 60 00 00 00 00 00    successful download
 000  01 01                      start node 1, still disabled
 201  06 00 00 00 00 00          shutdown, zero target
@@ -453,5 +456,95 @@ record a repeatable route with CAN traffic and `/cmd_vel`, `/joint_states`,
 `/wheel/odometry`, `/odometry/filtered`, `/ground_truth/odom` and `/clock`, and
 check that the ROS graph has one joint-feedback publisher. Record watchdog
 and quick-stop outcomes, pause behavior and startup/recovery commands.
-This document alone does not establish those results or claim the protocol
-path is already enabled.
+The standalone checks below do not establish those ROS integration results
+or claim that the workshop protocol path is already enabled.
+
+
+## Standalone emulator
+
+`robocell_sim.motors` runs the two wheel endpoints and MuJoCo on one physics
+thread, with no ROS initialization or ROS imports. Each drive opens its own
+CAN connection. The implementation uses `canopen==2.4.1` for typed object
+storage, SDO responses, NMT state and periodic heartbeat, and `python-can`
+for the transport. Drive permission, fault latching, fixed PDO payloads and
+physics acquisition belong to the emulator. No notifier thread accesses
+MuJoCo. A service call processes at most 256 queued frames; overflow fails
+explicitly with zero output. The context closes heartbeat tasks and zeroes
+its actuator even if startup or service raises an exception.
+
+In the development environment, bring up `vcan0` on the host if it does not
+already exist:
+
+```bash
+sudo modprobe vcan
+sudo ip link add dev vcan0 type vcan
+sudo ip link set dev vcan0 up
+```
+
+From the repository root, start the model and monitor its bus in another
+terminal:
+
+```bash
+PYTHONPATH=src/robocell_sim python -m robocell_sim.motors \
+  --model src/robocell_sim/models/waffle_pi/scene.xml \
+  --channel vcan0 --left-node 1 --right-node 2 --viewer
+
+candump vcan0
+```
+
+Omit `--viewer` for headless operation. `--duration 10` bounds the run to ten
+wall seconds. Space toggles pause in the viewer. The model argument is
+explicit so the same command works for source and installed scripts; the
+model must contain `wheel_left`/`wheel_right` velocity actuators and
+`wheel_left_joint`/`wheel_right_joint` joints with forward-positive axes.
+
+A non-ROS host must send its heartbeat, start NMT, verify the state after
+each zero-target enable command, and then refresh command PDOs every 20 ms.
+The reference frames above define the startup exchange; merely starting
+this executable never moves the robot. Stop command renewal to exercise the
+200 ms watchdog, or stop host heartbeat to exercise the 300 ms consumer
+limit. Read `603F` for the latched fault. Restore heartbeat, explicitly reset
+with zero target, clear reset bit 7, repeat the enable walk, and send a fresh
+velocity to recover. Local acquisition faults require fixing the cause and
+restarting the executable.
+
+For an offline process smoke check without a configured SocketCAN interface:
+
+```bash
+PYTHONPATH=src/robocell_sim python -m robocell_sim.motors \
+  --model src/robocell_sim/models/waffle_pi/scene.xml \
+  --interface virtual --channel isolated-smoke --duration 1
+```
+
+The python-can virtual backend shares traffic only within one process;
+separate host and emulator processes require SocketCAN `vcan0`. Unit and
+integration tests allocate unique in-process virtual channels and use
+independent bus endpoints rather than loopback commands or mocked sockets.
+
+Run emulator tests and the repository's strict gate in the configured
+ROS development environment:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+PYTHONPATH=src/robocell_sim:$PYTHONPATH python -m pytest \
+  src/robocell_sim/test/test_controlled.py \
+  src/robocell_sim/test/test_actuated.py \
+  src/robocell_sim/test/test_described.py \
+  src/robocell_sim/test/test_motor_emulated.py --eo -q
+```
+
+A separate `canopen.RemoteNode` client was exercised against both emulator
+endpoints and the actual Waffle Pi scene without ROS. It read profile revision
+1, selected mode 3 over SDO, verified all three enable transitions, commanded
+opposite wheel velocities, and read negative left and positive right encoder
+positions and measured velocities. Stopping command renewal with heartbeat
+still active produced `FF01` on both drives and zero target velocities.
+This validates library-client interoperability and the physical boundary,
+not complete device conformance or electrical CAN behavior. SocketCAN and
+the GUI require a configured host and are not covered by that virtual-bus run.
+
+The regular workshop launch still uses its existing control path. Connecting
+its collision guard and keyboard commands, adding `motor_driver`, and
+switching `/joint_states` to CAN feedback remain subsequent #135 work. Do
+not run this standalone world expecting it to move a separate workshop
+process's MuJoCo model.
