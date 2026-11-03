@@ -7,8 +7,8 @@ from defusedxml import ElementTree
 from hamcrest import assert_that, close_to, equal_to
 
 
-def test_workshop_launch_enables_terminal_control_by_default() -> None:
-    """The workshop offers terminal control at modest initial speeds."""
+def test_workshop_launch_enables_graphical_control_by_default() -> None:
+    """The workshop offers graphical control at modest initial speeds."""
     assert_that(
         {
             argument.get("name"): argument.get("default")
@@ -18,12 +18,12 @@ def test_workshop_launch_enables_terminal_control_by_default() -> None:
             if argument.get("name") in {"teleop", "speed", "turn"}
         },
         equal_to({"teleop": "true", "speed": "0.06", "turn": "0.3"}),
-        "launch did not enable terminal control at the selected speeds",
+        "launch did not enable graphical control at the selected speeds",
     )
 
 
-def test_workshop_launch_opens_an_optional_teleop_terminal() -> None:
-    """Keyboard control needs its own terminal and an explicit off switch."""
+def test_workshop_launch_opens_an_optional_control_panel() -> None:
+    """Keyboard control opens our panel directly with an explicit off switch."""
     assert_that(
         [
             (
@@ -38,24 +38,24 @@ def test_workshop_launch_opens_an_optional_teleop_terminal() -> None:
             for node in ElementTree.parse(
                 Path(__file__).parents[1] / "launch/workshop.launch.xml"
             ).iter("node")
-            if node.get("exec") == "teleop_twist_keyboard"
+            if node.get("exec") == "panel.py"
         ],
         equal_to(
             [
                 (
-                    "teleop_twist_keyboard",
+                    "robocell_sim",
                     "$(var teleop)",
-                    "xterm -T 'Robocell teleop' -e",
+                    None,
                     {"speed": "$(var speed)", "turn": "$(var turn)"},
                 )
             ]
         ),
-        "launch did not give optional teleop a terminal and selected speeds",
+        "launch did not open the panel directly with selected speeds",
     )
 
 
 def test_workshop_launch_disables_extra_windows_by_default() -> None:
-    """The plots remain opt-in alongside the viewer, RViz and terminal."""
+    """The plots remain opt-in alongside the viewer, RViz and panel."""
     assert_that(
         {
             argument.get("name"): argument.get("default")
