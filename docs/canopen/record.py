@@ -274,6 +274,7 @@ with (
         "robocell_sim",
         "workshop.launch.xml",
         "headless:=true",
+        "teleop:=false",
         "rviz:=false",
         f"can_channel:={options.channel}",
         "left_node:=17",
