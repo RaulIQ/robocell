@@ -402,13 +402,29 @@ is copied to intensities. Binning is an angular approximation, not motion
 distortion compensation.
 
 `scan_time` is the point count times the reported standard sample period,
-and `time_increment` is that period. Within a received chunk, first-ray
-arrival estimates are backdated by the number of later packets and their
-period. The completed turn's first stamp is no later than its closing
-marker minus the estimated turn duration. These estimates cannot remove
-unknown UART/USB buffering latency or variable motor/sample timing. They
-retain temporal direction instead of reversing points with an unchanged
-start stamp. No device timestamps are invented or added to the wire.
+and `time_increment` is that period. The first complete turn anchors an
+acquisition timeline using the backdated arrival estimates of its opening
+and closing markers. Subsequent turns advance that timeline by the number
+of acquired samples, rather than obtaining a new timestamp from each UART
+read. Fragmented reads and changes in delivery latency therefore cannot
+move an established sample interval backwards.
+
+A turn is published only when its entire estimated interval, including the
+closing boundary, fits at or before the current ROS clock. If queued bytes
+cannot fit during a pause, the driver discards the turn with a warning and
+requires a fresh arrival anchor for the next turn. Malformed packets also
+invalidate the anchor. Reanchoring retains the end of the last published
+interval as a lower bound, so neither recovery path can reuse published
+time. Queued turns whose intervals do fit may still be delivered during a
+pause; resuming does not stamp old rays with the resume time. A discarded
+turn can make the gap between publications longer than `scan_time`.
+
+These are estimates from the reported sample period, not device timestamps.
+Unknown UART/USB buffering latency, sample-clock error and variable motor
+speed remain limitations. Angular binning also approximates each ray's
+angle and acquisition position within the turn. No device timestamps are
+invented or added to the wire. See the [pause and fragmented-read
+verification](../lidar/README.md) for the regression and recorded checks.
 
 The liveness check uses monotonic wall time but observes ROS clock
 progress. A two-second data gap triggers recovery while ROS time advances;

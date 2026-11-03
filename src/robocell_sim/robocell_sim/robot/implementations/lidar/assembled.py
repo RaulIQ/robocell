@@ -5,6 +5,7 @@ from typing import final, override
 
 from robocell_sim.robot.implementations.lidar.circular import Circular
 from robocell_sim.robot.interfaces.assembly import Assembly
+from robocell_sim.robot.interfaces.chronology import Chronology
 from robocell_sim.robot.interfaces.sweep import Sweep
 
 _LIMIT = 4096
@@ -18,45 +19,60 @@ class Assembled(Assembly):
 
     _rays: tuple[tuple[float, float, int], ...]
     _phase: tuple[int, int]
-    _period: int
-    _limits: tuple[float, float]
+    _profile: tuple[int, tuple[float, float]]
+    _chronology: Chronology
 
     @override
     def accept(
-        self, echo: tuple[bool, bool, float, float, int], stamp: int
+        self,
+        echo: tuple[bool, bool, float, float, int],
+        stamp: int,
+        ceiling: int,
     ) -> tuple[Assembly, tuple[Sweep, ...]]:
-        scans: tuple[Sweep, ...] = ()
-        rays, phase = (
-            (*self._rays, (echo[2], echo[3], echo[4]))
-            if self._phase[0]
-            else (),
-            self._phase,
-        )
-        if not echo[0]:
-            rays, phase = (), (0, 0)
-        elif echo[1]:
-            scans = (
-                (
-                    Circular(
-                        self._rays,
-                        min(
-                            self._phase[1],
-                            max(
-                                0, stamp - len(self._rays) * self._period * 1000
-                            ),
+        if echo[0] and echo[1]:
+            chronology, stamps = (
+                self._chronology.read(
+                    min(
+                        self._phase[1],
+                        max(
+                            0,
+                            stamp - len(self._rays) * self._profile[0] * 1000,
                         ),
-                        len(self._rays) * self._period / 1e6,
-                        self._limits,
                     ),
+                    len(self._rays) * self._profile[0] * 1000,
+                    ceiling,
                 )
                 if self._phase[0] == _READY and self._rays
-                else ()
+                else (self._chronology, ())
             )
-            rays, phase = (
-                ((echo[2], echo[3], echo[4]),),
-                (min(_READY, self._phase[0] + 1), stamp),
+            return (
+                Assembled(
+                    ((echo[2], echo[3], echo[4]),),
+                    (min(_READY, self._phase[0] + 1), stamp),
+                    self._profile,
+                    chronology,
+                ),
+                tuple(
+                    Circular(
+                        self._rays,
+                        beginning,
+                        len(self._rays) * self._profile[0] / 1e6,
+                        self._profile[1],
+                    )
+                    for beginning in stamps
+                ),
             )
-        if len(rays) > _LIMIT:
+        if echo[0] and len(self._rays) >= _LIMIT:
             message = "RPLIDAR rotation exceeded its measurement limit"
             raise BufferError(message)
-        return (Assembled(rays, phase, self._period, self._limits), scans)
+        return (
+            Assembled(
+                (*self._rays, (echo[2], echo[3], echo[4]))
+                if echo[0] and self._phase[0]
+                else (),
+                self._phase if echo[0] else (0, 0),
+                self._profile,
+                self._chronology if echo[0] else self._chronology.reset(),
+            ),
+            (),
+        )

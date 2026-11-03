@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, final, override
 
 from robocell_sim.hardware.implementations.uart.terminal import Terminal
 from robocell_sim.robot.implementations.lidar.assembled import Assembled
+from robocell_sim.robot.implementations.lidar.chronological import Chronological
 from robocell_sim.robot.implementations.lidar.listening import Listening
 from robocell_sim.robot.implementations.uart.configured import Configured
 from robocell_sim.ros.implementations.lidar.forwarded import Forwarded
@@ -39,7 +40,12 @@ class Delivered(Publications):
         state.put(
             Listening(
                 (b"", True),
-                Assembled((), (0, 0), self._period, self._limits),
+                Assembled(
+                    (),
+                    (0, 0),
+                    (self._period, self._limits),
+                    Chronological(-1, 0),
+                ),
                 (self._period, *self._limits),
                 (time.monotonic(), 10_000_000_000, time.monotonic()),
             )

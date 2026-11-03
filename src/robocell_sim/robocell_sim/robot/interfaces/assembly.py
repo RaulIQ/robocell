@@ -12,7 +12,10 @@ class Assembly(Protocol):
     """Assembly that discards damaged and incomplete startup turns."""
 
     def accept(
-        self, echo: tuple[bool, bool, float, float, int], stamp: int
+        self,
+        echo: tuple[bool, bool, float, float, int],
+        stamp: int,
+        ceiling: int,
     ) -> tuple[Assembly, tuple[Sweep, ...]]:
-        """Consume a checked measurement and return completed turns."""
+        """Consume a ray with its estimated time and current ROS nanoseconds."""
         ...
