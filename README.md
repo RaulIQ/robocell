@@ -108,8 +108,8 @@ source install/setup.bash
 ros2 launch robocell_sim workshop.launch.xml
 ```
 
-The normal launch starts the MuJoCo viewer, RViz, an xterm keyboard-control
-window, the emulated drives and the motor, IMU and lidar drivers, wheel
+The normal launch starts the MuJoCo viewer, RViz, the graphical control
+panel, the emulated drives and the motor, IMU and lidar drivers, wheel
 odometry and EKF. Request extra windows independently or together:
 
 ```console
@@ -143,23 +143,34 @@ four cabinets, three columns, a charging dock on the west wall and a low
 pallet that stays under the lidar scan plane. It starts beside the dock,
 facing north.
 
-Use the xterm window for `teleop_twist_keyboard` control with an English
-keyboard layout: `i` drives forward, `,` reverses, `j` and `l` turn, and `k`
-stops. The terminal displays the current linear and angular settings.
-`w`/`x` increase/decrease linear speed, `e`/`c` change angular speed, and
-`q`/`z` change both, each by ten percent. Set initial speeds at launch:
+The control panel drives with held arrow keys: Up/Down move forward/backward,
+Left/Right turn, and combinations move and turn together. Release a direction
+to stop it. Escape, Space, `k` or the STOP button stop all movement. Leaving
+or closing the panel sends zero immediately. After losing focus, release
+movement keys and press them again to resume; old held input cannot restart
+motion. The panel sends held intent at 20 Hz without relying on keyboard
+character repeat, while the driver retains its 250 ms stale-input stop.
+
+The panel displays linear and angular speed settings. With an English layout,
+`w`/`x` or the +/- buttons adjust linear speed by 0.01 m/s; `e`/`c` adjust
+angular speed by 0.1 rad/s. Each real press changes a setting once, within
+0.01–0.26 m/s and 0.1–1.8 rad/s. Set initial values at launch:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml speed:=0.06 turn:=0.3
 ```
 
-Use `teleop:=false` to skip the terminal when controlling `/cmd_vel` from
-another source. The container includes xterm after rebuilding with
-**Dev Containers: Rebuild and Reopen in Container**. Standard terminal teleop
-does not report key releases or loss of focus. The driver's 250 ms command
-expiry remains active: expired commands produce zero wheel targets while
-the drives stay enabled, so the first fresh input after idle can move them
-without another enable sequence.
+Use `teleop:=false` to skip the panel when controlling `/cmd_vel` from another
+source. Terminal control remains available manually in a second terminal:
+
+```console
+source /ws/install/setup.bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+  --ros-args -p speed:=0.06 -p turn:=0.3
+```
+
+Terminal teleop relies on system character repeat and cannot report releases
+or focus loss. The workshop launch no longer starts a terminal window.
 
 The MuJoCo window does not send movement commands. It retains two display
 and simulation shortcuts:
@@ -375,7 +386,7 @@ view, all on simulated time:
 ros2 launch robocell_sim workshop.launch.xml
 ```
 
-The launch opens the MuJoCo viewer, RViz and an xterm teleop window by
+The launch opens the MuJoCo viewer, RViz and the control panel by
 default. Enable extra plots with the matching launch arguments, all `false`
 unless requested:
 
@@ -388,7 +399,7 @@ turn along with the wheels in MuJoCo. A red arrow marks the true pose from
 `/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, one
 panel shows the picture from `/camera/image_raw`, and another draws the lidar,
 the frames and the robot over that picture at half opacity, so the echoes land
-on the walls the camera sees. Steer it from the teleop terminal on `/cmd_vel`.
+on the walls the camera sees. Steer it from the control panel on `/cmd_vel`.
 
 The launch file sets the errors of the IMU board and the variances the driver
 reports from one place. Its arguments `gyro_bias` (0.0075 rad/s), `gyro_noise`
