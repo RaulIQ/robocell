@@ -7,8 +7,55 @@ from defusedxml import ElementTree
 from hamcrest import assert_that, close_to, equal_to
 
 
+def test_workshop_launch_enables_terminal_control_by_default() -> None:
+    """The workshop offers terminal control at modest initial speeds."""
+    assert_that(
+        {
+            argument.get("name"): argument.get("default")
+            for argument in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("arg")
+            if argument.get("name") in {"teleop", "speed", "turn"}
+        },
+        equal_to({"teleop": "true", "speed": "0.06", "turn": "0.3"}),
+        "launch did not enable terminal control at the selected speeds",
+    )
+
+
+def test_workshop_launch_opens_an_optional_teleop_terminal() -> None:
+    """Keyboard control needs its own terminal and an explicit off switch."""
+    assert_that(
+        [
+            (
+                node.get("pkg"),
+                node.get("if"),
+                node.get("launch-prefix"),
+                {
+                    param.get("name"): param.get("value")
+                    for param in node.iter("param")
+                },
+            )
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "teleop_twist_keyboard"
+        ],
+        equal_to(
+            [
+                (
+                    "teleop_twist_keyboard",
+                    "$(var teleop)",
+                    "xterm -T 'Robocell teleop' -e",
+                    {"speed": "$(var speed)", "turn": "$(var turn)"},
+                )
+            ]
+        ),
+        "launch did not give optional teleop a terminal and selected speeds",
+    )
+
+
 def test_workshop_launch_disables_extra_windows_by_default() -> None:
-    """The launch opens only the MuJoCo viewer and RViz unless requested."""
+    """The plots remain opt-in alongside the viewer, RViz and terminal."""
     assert_that(
         {
             argument.get("name"): argument.get("default")

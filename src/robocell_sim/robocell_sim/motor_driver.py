@@ -27,7 +27,6 @@ from robocell_sim.ros.implementations.motor.reported import Reported
 from robocell_sim.ros.implementations.settings.declared import Declared
 
 _BACKOFF = 0.1
-_EXPIRED = "stopped: Body command expired"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("motor_driver")
@@ -104,7 +103,6 @@ announcements = node.create_publisher(
     qos_profile_action_status_default,
 )
 status = ""
-stopped = -1.0
 stamp = -1
 simulation = -1
 attempt = -1.0
@@ -161,10 +159,6 @@ with (
             simulation = clocks.get_nowait()
         linear, angular, moment = steering.reading(simulation)
         if pilots:
-            if status.startswith(_EXPIRED) and moment > stopped:
-                pilots[0].retry(beginning, recovery=False)
-                status = "starting"
-                announcements.publish(String(data=status))
             try:
                 pilots[0].command((linear, angular), moment)
             except ValueError:
@@ -176,7 +170,6 @@ with (
             if condition != status:
                 log.info("CANopen host is %s", condition)
                 status = condition
-                stopped = beginning
                 announcements.publish(String(data=condition))
             for sample in measurements:
                 if sample[0] != stamp:

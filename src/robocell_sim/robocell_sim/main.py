@@ -17,13 +17,11 @@ from contextlib import ExitStack, closing, suppress
 from pathlib import Path
 
 import can
-import glfw
 import mujoco
 import mujoco.viewer
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import TwistStamped  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import remove_ros_args, try_shutdown
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
@@ -61,33 +59,22 @@ from robocell_sim.hardware.implementations.physics.serviced import Serviced
 from robocell_sim.hardware.implementations.uart.named import Named
 from robocell_sim.hardware.implementations.uart.terminal import Terminal
 from robocell_sim.hardware.interfaces.device import Device
-from robocell_sim.robot.implementations.command.arrows import Arrows
 from robocell_sim.robot.implementations.drive.differential import Differential
 from robocell_sim.robot.implementations.drive.limited import Limited
-from robocell_sim.robot.implementations.drive.stepped import Stepped
 from robocell_sim.robot.implementations.lidar.placed import Placed
 from robocell_sim.robot.implementations.odometry.compared import Compared
 from robocell_sim.robot.implementations.odometry.gyroscopic import Gyroscopic
-from robocell_sim.robot.interfaces.command import Command
 from robocell_sim.robot.interfaces.odometry import Odometry
 from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
-from robocell_sim.ros.implementations.command.keyed import Keyed
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
 from robocell_sim.ros.implementations.wiring.geared import Geared
 from robocell_sim.ros.implementations.wiring.wired import Wired
 
-_KEYS = {
-    glfw.KEY_UP,
-    glfw.KEY_DOWN,
-    glfw.KEY_LEFT,
-    glfw.KEY_RIGHT,
-    glfw.KEY_ENTER,
-}
 _HOST = 127
 
 arguments = ArgumentParser(description="Run the workshop simulator")
@@ -122,14 +109,12 @@ data = mujoco.MjData(model)
 mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
 pause = threading.Event()
 beams = threading.Event()
-keys: queue.SimpleQueue[tuple[int, int]] = queue.SimpleQueue()
 
 
 def key(keycode: int) -> None:
-    """Toggle the pause on space and the lidar lines on 9, queue other keys."""
+    """Toggle the pause on space and the lidar lines on 9."""
     toggle = {ord(" "): pause, ord("9"): beams}.get(keycode)
     if toggle is None:
-        keys.put((keycode, time.time_ns()))
         return
     if toggle.is_set():
         toggle.clear()
@@ -150,7 +135,6 @@ def freeze(
 
 
 drive = Limited(Differential(0.033, 0.288), 7.88)
-command: Command = Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0))
 encoders = (0, 0)
 gyro = Accumulated(data, 0)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
@@ -240,7 +224,6 @@ with (
     bus = resources.enter_context(
         can.Bus(interface=transport[0], channel=transport[1])
     )
-    keyboard = node.create_publisher(TwistStamped, "/keyboard/cmd_vel", 1)
     counts: queue.SimpleQueue[tuple[int, int, float, Header]] = (
         queue.SimpleQueue()
     )
@@ -408,11 +391,6 @@ with (
         now = time.monotonic()
         rclpy.spin_once(node, timeout_sec=0)
         Serving(data, Terminal(master), state, 65536).publish()
-        while not keys.empty():
-            code, instant = keys.get()
-            if code in _KEYS:
-                command = command.press(code)
-                Keyed(command, instant, keyboard).publish()
         while not counts.empty():
             left, right, _, _ = counts.get()
             encoders = (left, right)

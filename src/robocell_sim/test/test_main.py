@@ -53,3 +53,14 @@ def test_physics_schedules_lidar_servicing_every_step() -> None:
         ),
         "physics reports did not schedule the lidar service every step",
     )
+
+
+def test_main_cannot_publish_viewer_movement_commands() -> None:
+    """The simulation cannot provide a second source of driving intent."""
+    assert_that(
+        (Path(__file__).parents[1] / "robocell_sim/main.py")
+        .read_text()
+        .count("/keyboard/cmd_vel"),
+        equal_to(0),
+        "simulator did not remove the viewer movement command publisher",
+    )

@@ -108,9 +108,9 @@ source install/setup.bash
 ros2 launch robocell_sim workshop.launch.xml
 ```
 
-The normal launch starts the MuJoCo viewer, RViz, the emulated drives and
-the motor, IMU and lidar drivers, wheel odometry and EKF. Request extra
-windows independently or together:
+The normal launch starts the MuJoCo viewer, RViz, an xterm keyboard-control
+window, the emulated drives and the motor, IMU and lidar drivers, wheel
+odometry and EKF. Request extra windows independently or together:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml route:=true survey:=true
@@ -120,8 +120,9 @@ ros2 launch robocell_sim workshop.launch.xml route:=true camera:=true radar:=tru
 Disabled windows create no processes or queues and receive no data. The
 ROS camera image, lidar scan and other topics still work without the extra
 windows. Use `ros2 launch robocell_sim workshop.launch.xml --show-args`
-to list the launch settings. `headless:=true rviz:=false` disables both
-main windows; `duration:=30` bounds the simulator to 30 wall seconds.
+to list the launch settings. `headless:=true rviz:=false teleop:=false`
+disables all three default windows; `duration:=30` bounds the simulator to
+30 wall seconds.
 A headless host without an X display can select `MUJOCO_GL=egl`.
 
 Run colcon through `python -m` so it uses the virtual environment that holds
@@ -142,17 +143,29 @@ four cabinets, three columns, a charging dock on the west wall and a low
 pallet that stays under the lidar scan plane. It starts beside the dock,
 facing north.
 
-Steer the robot with the keyboard while the viewer window has focus.
-Every press changes the speed by one step, up to the robot limits.
-Hold an arrow for key repeat to keep sending fresh intent. Input older than
-250 ms stops both drives. Fresh input requests a new verified enable, which
-requires another fresh command after it finishes.
+Use the xterm window for `teleop_twist_keyboard` control with an English
+keyboard layout: `i` drives forward, `,` reverses, `j` and `l` turn, and `k`
+stops. The terminal displays the current linear and angular settings.
+`w`/`x` increase/decrease linear speed, `e`/`c` change angular speed, and
+`q`/`z` change both, each by ten percent. Set initial speeds at launch:
+
+```console
+ros2 launch robocell_sim workshop.launch.xml speed:=0.06 turn:=0.3
+```
+
+Use `teleop:=false` to skip the terminal when controlling `/cmd_vel` from
+another source. The container includes xterm after rebuilding with
+**Dev Containers: Rebuild and Reopen in Container**. Standard terminal teleop
+does not report key releases or loss of focus. The driver's 250 ms command
+expiry remains active: expired commands produce zero wheel targets while
+the drives stay enabled, so the first fresh input after idle can move them
+without another enable sequence.
+
+The MuJoCo window does not send movement commands. It retains two display
+and simulation shortcuts:
 
 | Key            | Action                              |
 | -------------- | ----------------------------------- |
-| Up / Down      | forward speed one step up or down   |
-| Left / Right   | turn one step to the left or right  |
-| Enter          | stop                                |
 | Space          | pause or resume the simulation      |
 | 9              | show or hide the lidar lines        |
 
@@ -274,9 +287,10 @@ ros2 topic echo --once /ground_truth/odom
 The `motor_driver` node alone publishes `/joint_states`, with wheel positions
 in radians, measured velocities in rad/s and CAN acquisition time. It commits
 only complete, matched PDO snapshots from the two drive emulators. Only
-those emulators write wheel targets or acquire encoder feedback; `/cmd_vel`
-and stamped `/keyboard/cmd_vel` both enter the driver's collision guard before
-kinematics and CAN transmission. Before the first `/scan` or after a 500 ms
+those emulators write wheel targets or acquire encoder feedback. Teleop sends
+`/cmd_vel` through the driver's collision guard before kinematics and CAN
+transmission. The driver also accepts external stamped commands on
+`/keyboard/cmd_vel`. Before the first `/scan` or after a 500 ms
 scan gap in simulation time, the guard inhibits motion.
 
 The odometry is a node of its own named `odometry`, which the launch file
@@ -361,8 +375,9 @@ view, all on simulated time:
 ros2 launch robocell_sim workshop.launch.xml
 ```
 
-The launch opens the MuJoCo viewer and RViz by default. Enable extra windows
-with the matching launch arguments, all `false` unless requested:
+The launch opens the MuJoCo viewer, RViz and an xterm teleop window by
+default. Enable extra plots with the matching launch arguments, all `false`
+unless requested:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml route:=true survey:=true
@@ -373,8 +388,7 @@ turn along with the wheels in MuJoCo. A red arrow marks the true pose from
 `/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, one
 panel shows the picture from `/camera/image_raw`, and another draws the lidar,
 the frames and the robot over that picture at half opacity, so the echoes land
-on the walls the camera sees. Steer it with the arrow keys in the viewer, or
-from a second terminal with `teleop_twist_keyboard` on `/cmd_vel`.
+on the walls the camera sees. Steer it from the teleop terminal on `/cmd_vel`.
 
 The launch file sets the errors of the IMU board and the variances the driver
 reports from one place. Its arguments `gyro_bias` (0.0075 rad/s), `gyro_noise`
@@ -487,12 +501,13 @@ ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist \
   '{linear: {x: 0.06}, angular: {z: 0.15}}'
 ```
 
-After stopping the command source, both drives quick-stop. Request a new
-verified enable with `ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
+After stopping the command source, both drives receive zero targets while
+remaining enabled. The first fresh command resumes motion without another
+enable sequence. Transport or feedback failures still quick-stop both drives;
+request a verified enable with
+`ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
 and then send fresh commands. A latched drive fault requires explicit reset
 permission through `/motor_driver/recover`, using the same service type.
-Fresh input after a command timeout also requests a verified enable, followed
-by another fresh command before motion. Other failures require the service.
 These services acknowledge the request; `/motor_driver/state` and the driver
 log report the outcome.
 
