@@ -54,6 +54,11 @@ recorded routes, the current biased gyro makes the filtered pose worse.
 
 ### Acquisition and alignment
 
+This historical experiment explicitly overrides the EKF input to raw `/imu`
+so its before/after covariance comparison remains reproducible after the
+addition of stationary gyro compensation. The normal workshop now fuses
+`/imu/calibrated`; see [gyro verification](../gyro/README.md).
+
 The headless experiment uses the workshop model, its `start` keyframe,
 2 ms physics steps, 4096-tick encoders and the production `Jointed` and
 `Tracked` publishers. The real `odometry.py` and `ekf_node` run as separate

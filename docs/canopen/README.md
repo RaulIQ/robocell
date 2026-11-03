@@ -137,7 +137,9 @@ Errors use interpolated ground-truth positions at each acquisition time.
 
 This run includes feedback gaps during verified reconfiguration. The EKF
 continues predicting across those gaps, so its error grows during recovery;
-it also retains the existing gyro-bias limitation. These measurements verify
+this capture predates stationary gyro compensation and retains its
+gyro-bias limitation. The current workshop uses `/imu/calibrated`; see
+[gyro verification](../gyro/README.md). These measurements verify
 integration and expose that behavior. A separate localization task should
 choose the estimator policy for feedback outages before changing its tuning.
 They are not a new covariance calibration.

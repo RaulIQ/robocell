@@ -39,7 +39,7 @@ def test_ekf_uses_the_gyro_without_orientation_or_acceleration() -> None:
                 if value
             ],
         ),
-        equal_to(("/imu", [11])),
+        equal_to(("/imu/calibrated", [11])),
         "filter did not select only the yaw rate from the IMU",
     )
 

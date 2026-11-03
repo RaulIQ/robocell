@@ -193,6 +193,8 @@ commands = [
         "__node:=ekf_filter_node",
         "--params-file",
         str(args.output / "ekf.yaml"),
+        "-p",
+        "imu0:=/imu",
     ],
 ]
 try:

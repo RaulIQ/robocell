@@ -1,0 +1,82 @@
+{
+  "422": {
+    "metrics": {
+      "seed": 422,
+      "stationary_duration_s": 10,
+      "route": [
+        [
+          4,
+          -0.4
+        ],
+        [
+          4,
+          0.0
+        ],
+        [
+          4,
+          0.4
+        ],
+        [
+          4,
+          0.0
+        ]
+      ],
+      "/odometry/filtered": {
+        "heading_rms_deg": 0.09322713302918363,
+        "heading_final_deg": 0.0065544228650619984,
+        "stationary_final_deg": 0.02946295265530568
+      },
+      "/odometry/uncompensated": {
+        "heading_rms_deg": 4.123630753722559,
+        "heading_final_deg": 6.765507141076257,
+        "stationary_final_deg": 2.63382297158073
+      },
+      "first_corrected_stamp": 2.76,
+      "estimated_z_bias": 0.00493934782608695,
+      "truth_heading_range_deg": 89.79293601178415,
+      "passed": true
+    },
+    "recording": "/tmp/gyro-143-seed422",
+    "bag_sha256": "c938c394e3f9b85ddb52f629fc68ad7424cbd5570e2b22bc0ef3665ec3385a4a"
+  },
+  "121": {
+    "metrics": {
+      "seed": 121,
+      "stationary_duration_s": 10,
+      "route": [
+        [
+          4,
+          -0.4
+        ],
+        [
+          4,
+          0.0
+        ],
+        [
+          4,
+          0.4
+        ],
+        [
+          4,
+          0.0
+        ]
+      ],
+      "/odometry/filtered": {
+        "heading_rms_deg": 0.11845332660891159,
+        "heading_final_deg": -0.05461891331374448,
+        "stationary_final_deg": -0.00574139673373063
+      },
+      "/odometry/uncompensated": {
+        "heading_rms_deg": 1.551808203621241,
+        "heading_final_deg": 2.5990596401156214,
+        "stationary_final_deg": 1.0200330237671944
+      },
+      "first_corrected_stamp": 2.75,
+      "estimated_z_bias": 0.0019353233830845687,
+      "truth_heading_range_deg": 89.79293601178415,
+      "passed": true
+    },
+    "recording": "/tmp/gyro-143-seed121",
+    "bag_sha256": "17d61957661af7c17f46376b941e3b724b1b5f378ef629ad0e64a3e14d310de5"
+  }
+}

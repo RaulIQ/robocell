@@ -325,3 +325,28 @@ def test_workshop_launch_starts_one_guarded_canopen_joint_publisher() -> None:
         ),
         "workshop did not start one guarded CANopen joint-feedback driver",
     )
+
+
+def test_workshop_launch_starts_gyro_calibration_on_simulated_time() -> None:
+    """The filter receives gyro measurements after stationary calibration."""
+    assert_that(
+        [
+            {
+                param.get("name"): param.get("value")
+                for param in node.iter("param")
+            }
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "gyro.py"
+        ],
+        equal_to(
+            [
+                {
+                    "use_sim_time": "true",
+                    "duration": "$(var gyro_calibration_duration)",
+                }
+            ]
+        ),
+        "workshop did not start gyro calibration on simulated time",
+    )
