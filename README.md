@@ -157,9 +157,9 @@ Use `teleop:=false` to skip the terminal when controlling `/cmd_vel` from
 another source. The container includes xterm after rebuilding with
 **Dev Containers: Rebuild and Reopen in Container**. Standard terminal teleop
 does not report key releases or loss of focus. The driver's 250 ms command
-expiry remains active; after idle, another movement input may be needed
-once the drives finish enabling, as tracked in
-[#139](https://github.com/RaulIQ/robocell/issues/139).
+expiry remains active: expired commands produce zero wheel targets while
+the drives stay enabled, so the first fresh input after idle can move them
+without another enable sequence.
 
 The MuJoCo window does not send movement commands. It retains two display
 and simulation shortcuts:
@@ -501,12 +501,13 @@ ros2 topic pub -r 20 /cmd_vel geometry_msgs/msg/Twist \
   '{linear: {x: 0.06}, angular: {z: 0.15}}'
 ```
 
-After stopping the command source, both drives quick-stop. Request a new
-verified enable with `ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
+After stopping the command source, both drives receive zero targets while
+remaining enabled. The first fresh command resumes motion without another
+enable sequence. Transport or feedback failures still quick-stop both drives;
+request a verified enable with
+`ros2 service call /motor_driver/retry std_srvs/srv/Trigger '{}'`
 and then send fresh commands. A latched drive fault requires explicit reset
 permission through `/motor_driver/recover`, using the same service type.
-Fresh input after a command timeout also requests a verified enable, followed
-by another fresh command before motion. Other failures require the service.
 These services acknowledge the request; `/motor_driver/state` and the driver
 log report the outcome.
 

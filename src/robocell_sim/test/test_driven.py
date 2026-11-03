@@ -242,3 +242,44 @@ def test_driven_supervises_feedback_without_an_external_clock() -> None:
         starts_with("stopped: Drive feedback exceeded"),
         "missing feedback without an external clock did not stop the driver",
     )
+
+
+def test_driven_remains_enabled_after_body_commands_expire() -> None:
+    """Idle input cannot force a complete drive negotiation on the next key."""
+    with Piloted((17, 29), _external=True).connection() as (
+        flight,
+        _,
+        _,
+        _,
+        _,
+    ):
+        flight.enable()
+        flight.advance(0.05, ((0.073, -0.137),))
+        result, _ = flight.advance(0.34, ())
+    assert_that(
+        result,
+        equal_to("enabled"),
+        "expired body commands did not preserve drive readiness",
+    )
+
+
+def test_driven_accepts_the_first_fresh_command_after_idle() -> None:
+    """The first new direction reaches both wheels without another enable."""
+    with Piloted((17, 29), _external=True).connection() as (
+        flight,
+        pilot,
+        data,
+        _,
+        _,
+    ):
+        flight.enable()
+        flight.advance(0.05, ((0.073, -0.137),))
+        flight.advance(0.34, ())
+        pilot.command((-0.061, 0.0), time.monotonic())
+        flight.advance(0.06, ())
+        result = tuple(data.ctrl)
+    assert_that(
+        result,
+        equal_to((-1.848, -1.848)),
+        "the first fresh command after idle did not reach both wheels",
+    )

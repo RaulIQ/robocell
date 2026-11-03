@@ -296,9 +296,11 @@ leaving that state; heartbeat supervision remains active. Expiry at the
 configured interval without a valid RPDO1 immediately writes zero and latches
 fault `FF01`. A driver's continued retransmission of its last command must
 not conceal stale application input: the host independently expires body
-commands after 250 ms monotonic time, sends zero plus quick-stop to both
-wheels, and stops renewing enabled nonzero targets. Stale input requires a
-new application command and a new enable sequence, not automatic replay.
+commands after 250 ms monotonic time and renews zero targets at both wheels
+while keeping the drives enabled. The first fresh application command can
+resume motion without a new enable sequence; an expired command cannot be
+replayed. Transport, heartbeat, feedback and drive faults still trigger the
+protective stop and require verified enable before fresh motion.
 
 Host heartbeat loss latches `8130`; a local acquisition, actuator or stop
 failure latches `FF02`. On a fault, output is zero before any further physics
@@ -583,13 +585,13 @@ Geometry values must be finite and positive. Node identities and geometry
 are checked before opening CAN. The physics-step parameter must match the
 selected model. Source commands must arrive after successful enable, and
 must continue at more than 4 Hz to stay within the 250 ms command timeout.
-Stopping the command source sends zero/quick-stop to both nodes and leaves
-the host stopped. Ordinary transport or feedback failures behave the same
-way; restored traffic cannot replay a cached velocity. A new application
-command after an input timeout requests a verified enable, and motion still
-requires a later command after enable completes. Other failures require
-explicit retry or recovery. Producer and host
-heartbeat continue while a connected host is stopped.
+Stopping the command source sends zero targets to both nodes and keeps the
+host enabled. A fresh command after input expiry resumes motion immediately.
+Transport or feedback failures instead quick-stop both nodes and leave the
+host stopped; restored traffic cannot replay a cached velocity. Such failures
+require explicit retry or recovery, followed by a command received after
+enable completes. Producer and host heartbeat continue while a connected
+host is stopped.
 
 The driver uses `/clock` when it is available to supervise feedback gaps in
 simulated time. The non-ROS standalone emulator does not publish `/clock`,

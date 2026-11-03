@@ -355,9 +355,9 @@ with (
         )
         advance(0.4, None)
         wait(
-            lambda: state().startswith("stopped: Body command expired"),
+            lambda: state() == "enabled" and targets() == [0, 0],
             1.0,
-            "Stale body commands did not stop the host",
+            "Stale body commands did not zero the enabled drives",
         )
         stopped = targets()
         check(
@@ -372,7 +372,7 @@ with (
         )
         advance(1.1, ("ros", 0.05, 0.0))
         check(
-            "fresh_input_reenables",
+            "fresh_input_resumes",
             state() == "enabled"
             and any(targets())
             and latest["/ground_truth/odom"].twist.twist.linear.x > 0.02,
