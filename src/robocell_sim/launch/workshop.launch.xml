@@ -1,5 +1,7 @@
 <launch>
   <!-- Simulator with its ROS 2 bridge, the CANopen motor, IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
+  <arg name="fixed_odom" default="true" description="Attach odom to world when no map-based estimator owns it"/>
+  <arg name="rviz_config" default="$(find-pkg-share robocell_sim)/rviz/workshop.rviz" description="RViz configuration"/>
   <arg name="rviz" default="true" description="Show the RViz view"/>
   <arg name="headless" default="false" description="Run the simulator without its MuJoCo viewer"/>
   <arg name="teleop" default="true" description="Open the graphical keyboard control panel"/>
@@ -66,12 +68,12 @@
   <node pkg="robot_localization" exec="ekf_node" name="ekf_filter_node" output="screen">
     <param from="$(find-pkg-share robocell_sim)/config/ekf.yaml"/>
   </node>
-  <node pkg="tf2_ros" exec="static_transform_publisher" args="--x -2.1 --y -2.5 --yaw 1.5707963267948966 --frame-id world --child-frame-id odom"/>
+  <node if="$(var fixed_odom)" pkg="tf2_ros" exec="static_transform_publisher" args="--x -2.1 --y -2.5 --yaw 1.5707963267948966 --frame-id world --child-frame-id odom"/>
   <node pkg="robot_state_publisher" exec="robot_state_publisher">
     <param name="robot_description" value="$(command 'cat $(find-pkg-share robocell_sim)/models/waffle_pi/waffle_pi.urdf')"/>
     <param name="use_sim_time" value="true"/>
   </node>
-  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share robocell_sim)/rviz/workshop.rviz">
+  <node if="$(var rviz)" pkg="rviz2" exec="rviz2" args="-d $(var rviz_config)">
     <param name="use_sim_time" value="true"/>
   </node>
 </launch>

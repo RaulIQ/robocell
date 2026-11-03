@@ -114,6 +114,21 @@ def test_workshop_launch_fixes_odom_in_the_world() -> None:
     )
 
 
+def test_workshop_launch_allows_slam_to_own_odom() -> None:
+    """The static parent can be disabled when SLAM publishes map to odom."""
+    assert_that(
+        [
+            node.get("if")
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/workshop.launch.xml"
+            ).iter("node")
+            if node.get("exec") == "static_transform_publisher"
+        ],
+        equal_to(["$(var fixed_odom)"]),
+        "workshop did not allow SLAM to own the odom parent",
+    )
+
+
 def test_workshop_launch_starts_odom_where_the_robot_starts() -> None:
     """Odom sits at the start keyframe of the workshop, x, y and heading."""
     qpos = [

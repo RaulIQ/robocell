@@ -1,0 +1,32 @@
+<launch>
+  <arg name="rviz" default="true" description="Show the occupancy map in RViz"/>
+  <arg name="headless" default="false" description="Run without the MuJoCo viewer"/>
+  <arg name="teleop" default="true" description="Open the graphical control panel"/>
+  <arg name="duration" default="0" description="Wall duration in seconds, zero runs until interrupted"/>
+  <arg name="can_interface" default="socketcan" description="Shared python-can backend"/>
+  <arg name="can_channel" default="vcan0" description="Shared CAN channel"/>
+  <arg name="left_node" default="1" description="CANopen left wheel node ID"/>
+  <arg name="right_node" default="2" description="CANopen right wheel node ID"/>
+  <arg name="lidar_port" default="$(env HOME)/.ros/robocell-lidar" description="Shared UART endpoint"/>
+  <arg name="seed" default="-1" description="IMU noise seed, negative selects a fresh seed"/>
+  <include file="$(find-pkg-share robocell_sim)/launch/workshop.launch.xml">
+    <arg name="fixed_odom" value="false"/>
+    <arg name="rviz_config" value="$(find-pkg-share robocell_sim)/rviz/mapping.rviz"/>
+    <arg name="rviz" value="$(var rviz)"/>
+    <arg name="headless" value="$(var headless)"/>
+    <arg name="teleop" value="$(var teleop)"/>
+    <arg name="duration" value="$(var duration)"/>
+    <arg name="can_interface" value="$(var can_interface)"/>
+    <arg name="can_channel" value="$(var can_channel)"/>
+    <arg name="left_node" value="$(var left_node)"/>
+    <arg name="right_node" value="$(var right_node)"/>
+    <arg name="lidar_port" value="$(var lidar_port)"/>
+    <arg name="seed" value="$(var seed)"/>
+  </include>
+  <include file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py">
+    <arg name="autostart" value="true"/>
+    <arg name="use_lifecycle_manager" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="slam_params_file" value="$(find-pkg-share robocell_sim)/config/slam.yaml"/>
+  </include>
+</launch>
