@@ -161,17 +161,11 @@ expiry remains active; after idle, another movement input may be needed
 once the drives finish enabling, as tracked in
 [#139](https://github.com/RaulIQ/robocell/issues/139).
 
-The viewer's arrow-key controls remain available while its window has focus.
-Every press changes the speed by one step, up to the robot limits.
-Hold an arrow for key repeat to keep sending fresh intent. Input older than
-250 ms stops both drives. Fresh input requests a new verified enable, which
-requires another fresh command after it finishes.
+The MuJoCo window does not send movement commands. It retains two display
+and simulation shortcuts:
 
 | Key            | Action                              |
 | -------------- | ----------------------------------- |
-| Up / Down      | forward speed one step up or down   |
-| Left / Right   | turn one step to the left or right  |
-| Enter          | stop                                |
 | Space          | pause or resume the simulation      |
 | 9              | show or hide the lidar lines        |
 
@@ -293,9 +287,10 @@ ros2 topic echo --once /ground_truth/odom
 The `motor_driver` node alone publishes `/joint_states`, with wheel positions
 in radians, measured velocities in rad/s and CAN acquisition time. It commits
 only complete, matched PDO snapshots from the two drive emulators. Only
-those emulators write wheel targets or acquire encoder feedback; `/cmd_vel`
-and stamped `/keyboard/cmd_vel` both enter the driver's collision guard before
-kinematics and CAN transmission. Before the first `/scan` or after a 500 ms
+those emulators write wheel targets or acquire encoder feedback. Teleop sends
+`/cmd_vel` through the driver's collision guard before kinematics and CAN
+transmission. The driver also accepts external stamped commands on
+`/keyboard/cmd_vel`. Before the first `/scan` or after a 500 ms
 scan gap in simulation time, the guard inhibits motion.
 
 The odometry is a node of its own named `odometry`, which the launch file
