@@ -334,7 +334,8 @@ see the [covariance calibration](docs/accuracy/README.md#4-wheel-covariances-and
 They do not compensate for gyro bias or contact-induced wheel slip.
 
 The `ekf_filter_node` from `robot_localization` fuses the forward speed and
-yaw rate of `/wheel/odometry` with the gyro yaw rate of `/imu`. It runs at
+yaw rate of `/wheel/odometry` with the corrected gyro yaw rate of
+`/imu/calibrated`. It runs at
 50 Hz on simulated time in planar mode, publishes `nav_msgs/Odometry` on
 `/odometry/filtered`, and publishes `odom → base_footprint` on `/tf`. Its
 configuration lives in `src/robocell_sim/config/ekf.yaml`. It uses neither
@@ -342,7 +343,30 @@ the pose derived from the same wheels nor the IMU acceleration or orientation.
 The IMU reports no orientation, and its acceleration still includes gravity.
 The filter weights both yaw rates by their reported variances; it does not
 estimate the gyro bias or correct drift against an external position source.
+The separate `gyro.py` node estimates the constant offset before fusion.
 The v0 route and map windows keep their original encoder and clean-gyro estimate.
+
+Keep the robot still after startup until `/gyro/state` reports `ready`.
+Calibration requires two continuous seconds of simulated time, at least 100
+unique IMU timestamps, fresh stationary wheel feedback and stable gyro
+readings. Motion or a gap above 50 ms restarts the window. Until calibration
+finishes, the EKF uses the wheels alone; raw `/imu` stays available, and
+`/imu/calibrated` publishes nothing. The estimated offset is then fixed during
+motion, so real turns are preserved. Corrected messages retain the original
+header and acceleration and add the offset estimate's uncertainty to the
+angular covariance. A backwards IMU clock or a changed IMU frame requires
+calibration again; restarting `gyro.py` also starts a new calibration.
+
+```console
+ros2 topic echo --once /gyro/state
+ros2 launch robocell_sim workshop.launch.xml gyro_calibration_duration:=3.0
+```
+
+This compensates constant bias; temperature-dependent bias, wheel slip and
+external motion while calibrating remain outside this estimate. The robot
+must actually be stationary: stopped wheel encoders cannot detect every case
+of sliding or being carried. See the [gyro verification](docs/gyro/README.md)
+for parameters, a repeatable comparison and measured heading errors.
 
 ```console
 ros2 topic echo --once /odometry/filtered
@@ -437,6 +461,8 @@ the publisher, or for the subscription on `/cmd_vel`.
 | `/ground_truth/odom`  | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | It is the reference that estimates are judged against, so a gap would skew the error.                         |
 | `/tf`                 | `tf2_msgs/TFMessage`     | 50 Hz, ≤ 20 Hz | reliable, keep last 10 and 100   | TF buffers interpolate between transforms, and a missing one breaks lookups; the footprint comes from the EKF at 50 Hz, the wheels from `robot_state_publisher` at its own 20 Hz cap. |
 | `/wheel/odometry`     | `nav_msgs/Odometry`      | 50 Hz         | reliable, keep last 10           | Each pose builds on the one before, and estimators that fuse it expect every one; it is small.                |
+| `/imu/calibrated` | `sensor_msgs/Imu` | up to 100 Hz after calibration | best effort, keep last 5 | Raw acquisition stamps and acceleration, with the stationary gyro offset removed. |
+| `/gyro/state` | `std_msgs/String` | on change | reliable, transient local | Reports `calibrating` or `ready`, including to late subscribers. |
 | `/odometry/filtered` | `nav_msgs/Odometry` | 50 Hz | reliable, keep last 10 | The EKF pose and velocity after fusing wheel and gyro measurements. |
 | `/tf_static`          | `tf2_msgs/TFMessage`     | once          | reliable, transient local        | Fixed frames go out once, so a node that starts late must still get them.                                     |
 | `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |

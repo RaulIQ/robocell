@@ -46,6 +46,7 @@ setup(
         "robocell_sim/motors.py",
         "robocell_sim/motor_driver.py",
         "robocell_sim/imu.py",
+        "robocell_sim/gyro.py",
         "robocell_sim/lidar.py",
         "robocell_sim/odometry.py",
     ],
