@@ -11,6 +11,7 @@ from rclpy.node import Node
 from robocell_sim.hardware.interfaces.port import Port
 from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.robot.implementations.lidar.assembled import Assembled
+from robocell_sim.robot.implementations.lidar.chronological import Chronological
 from robocell_sim.robot.implementations.lidar.listening import Listening
 from robocell_sim.robot.implementations.lidar.questioned import Questioned
 from robocell_sim.ros.implementations.lidar.polling import Polling
@@ -38,7 +39,12 @@ class Operating(Report):
             state.put(
                 Listening(
                     (b"", True),
-                    Assembled((), (0, 0), period, self._output[2]),
+                    Assembled(
+                        (),
+                        (0, 0),
+                        (period, self._output[2]),
+                        Chronological(-1, 0),
+                    ),
                     (period, *self._output[2]),
                     (
                         time.monotonic(),

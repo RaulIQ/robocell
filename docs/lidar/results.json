@@ -1,0 +1,138 @@
+{
+  "issue": 147,
+  "period_ns": 476000,
+  "recordings": [
+    {
+      "directory": "log/lidar-147/verification-2",
+      "ros_domain": 86,
+      "checks": [
+        {
+          "name": "pause_0",
+          "passed": true,
+          "clock": 2820000000,
+          "drained": 0,
+          "reader_suspended": false
+        },
+        {
+          "name": "resume_0",
+          "passed": true,
+          "latency": 2.027065850999861,
+          "scans": 6
+        },
+        {
+          "name": "pause_1",
+          "passed": true,
+          "clock": 4690000000,
+          "drained": 2,
+          "reader_suspended": true
+        },
+        {
+          "name": "resume_1",
+          "passed": true,
+          "latency": 1.8906625899999199,
+          "scans": 6
+        },
+        {
+          "name": "pause_2",
+          "passed": true,
+          "clock": 5880000000,
+          "drained": 0,
+          "reader_suspended": false
+        },
+        {
+          "name": "resume_2",
+          "passed": true,
+          "latency": 2.0645966140000382,
+          "scans": 6
+        },
+        {
+          "name": "acquisition_order",
+          "passed": true,
+          "scans": 35
+        },
+        {
+          "name": "wire_geometry_and_period",
+          "passed": true,
+          "points": [
+            381,
+            382
+          ]
+        },
+        {
+          "name": "one_scan_publisher",
+          "passed": true
+        }
+      ],
+      "scans": 35,
+      "duration": 19.90850100699936,
+      "bag_sha256": "402ac3b85f2bdf7e31689a94a833f9e674e28b4ba1a1c3b9e8e503e451e0ea46"
+    },
+    {
+      "directory": "log/lidar-147/verification-3",
+      "ros_domain": 88,
+      "checks": [
+        {
+          "name": "pause_0",
+          "passed": true,
+          "clock": 2850000000,
+          "drained": 0,
+          "reader_suspended": false
+        },
+        {
+          "name": "resume_0",
+          "passed": true,
+          "latency": 2.4050193980001495,
+          "scans": 6
+        },
+        {
+          "name": "pause_1",
+          "passed": true,
+          "clock": 4860000000,
+          "drained": 2,
+          "reader_suspended": true
+        },
+        {
+          "name": "resume_1",
+          "passed": true,
+          "latency": 1.9554946990001554,
+          "scans": 6
+        },
+        {
+          "name": "pause_2",
+          "passed": true,
+          "clock": 6080000000,
+          "drained": 0,
+          "reader_suspended": false
+        },
+        {
+          "name": "resume_2",
+          "passed": true,
+          "latency": 2.055701752999994,
+          "scans": 6
+        },
+        {
+          "name": "acquisition_order",
+          "passed": true,
+          "scans": 35
+        },
+        {
+          "name": "wire_geometry_and_period",
+          "passed": true,
+          "points": [
+            381,
+            382
+          ]
+        },
+        {
+          "name": "one_scan_publisher",
+          "passed": true
+        }
+      ],
+      "scans": 35,
+      "duration": 18.49492206099967,
+      "launch_returncode": 0,
+      "bag_sha256": "e4134fd676a153f0f22767d64bf221cca4a72d1a3e6d213cb0150bc0f121ec2f"
+    }
+  ],
+  "scope": "Acquisition interval consistency and pause recovery, without a physical acquisition-time accuracy claim"
+}

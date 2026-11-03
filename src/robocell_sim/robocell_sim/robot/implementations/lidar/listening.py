@@ -39,6 +39,7 @@ class Listening(Reception):
                     0,
                     stamp - (len(events) - index - 1) * self._profile[0] * 1000,
                 ),
+                stamp,
             )
             scans.extend(ready)
         return (
