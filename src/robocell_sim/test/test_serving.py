@@ -1,8 +1,21 @@
 """Tests for an A1 device reached through a real pseudo-terminal."""
 
+import queue
+import time
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import mujoco
 from hamcrest import assert_that, close_to, equal_to
+from robocell_sim.hardware.implementations.lidar.directed import Directed
+from robocell_sim.hardware.implementations.lidar.rplidar import Rplidar
+from robocell_sim.hardware.implementations.lidar.serving import Serving
 
 from test.exchanged import Exchanged
+from test.narrow import Narrow
+
+if TYPE_CHECKING:
+    from robocell_sim.hardware.interfaces.device import Device
 
 
 def test_serving_starts_and_stops_the_measurement_stream() -> None:
@@ -217,4 +230,32 @@ def test_serving_restarts_a_scan_without_old_measurements() -> None:
         ),
         equal_to((7, 20, 7, 0, 5)),
         "restarted scan did not reset its descriptor and acquisition count",
+    )
+
+
+def test_serving_preserves_wire_time_for_already_pending_bytes() -> None:
+    """A slow physics step cannot discard UART time owed to its backlog."""
+    data = mujoco.MjData(
+        mujoco.MjModel.from_xml_path(
+            str(Path(__file__).parents[1] / "models/waffle_pi/walls.xml")
+        )
+    )
+    port = Narrow(bytearray(), 4096)
+    state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+    state.put(
+        (
+            Rplidar(
+                Directed(data, "base_scan", (0.15, 12.0)),
+                (False, 0.0, 0),
+                (b"", 0.0),
+            ),
+            b"x" * 800,
+            time.monotonic() - 0.1,
+        )
+    )
+    Serving(data, port, state, 65536).publish()
+    assert_that(
+        len(port.receive()),
+        equal_to(800),
+        "slow physics step did not preserve wire time for pending bytes",
     )

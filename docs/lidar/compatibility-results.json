@@ -1,0 +1,346 @@
+{
+  "issue": 148,
+  "base_revision": "6e8db671a63ab197b7ef85a4f2cf32e83aaf2b07",
+  "source_sha256": "447c93044479b3398e513adf8deb3f25b70cd94920f059dfc6a34001b37b1c5d",
+  "slam_toolbox_version": "2.8.5-1noble.20260915.204151",
+  "grid": {
+    "topic": "/scan/slam",
+    "frame": "base_scan",
+    "bins": 360,
+    "reference": "last acquired ray",
+    "time_increment": 0.0,
+    "fixed_frame": "odom"
+  },
+  "initial_blocker": {
+    "directory": "log/lidar-148/verification",
+    "raw_age_first_s": 0.240952,
+    "raw_age_last_s": 1.557996,
+    "movement_check_passed": false,
+    "cause": "UART idle credit cap also discarded wire time for already queued bytes"
+  },
+  "isolated": {
+    "directory": "log/lidar-148/isolated-2",
+    "ros_domain": 86,
+    "checks": [
+      {
+        "name": "waits_for_delayed_tf",
+        "passed": true
+      },
+      {
+        "name": "recovers_delayed_tf_with_frozen_clock",
+        "passed": true
+      },
+      {
+        "name": "expired_scan_cannot_reappear_after_late_tf",
+        "passed": true
+      },
+      {
+        "name": "fresh_scan_recovers_after_expiry",
+        "passed": true
+      },
+      {
+        "name": "variable_turns_keep_one_grid",
+        "passed": true
+      },
+      {
+        "name": "no_raw_republication",
+        "passed": true
+      }
+    ],
+    "output_stamps": [
+      1180879995,
+      3181355995,
+      4180879995
+    ]
+  },
+  "recordings": [
+    {
+      "directory": "log/lidar-148/verification-2",
+      "ros_domain": 90,
+      "checks": [
+        {
+          "name": "bounded_startup",
+          "passed": true,
+          "seconds": 6.299753125998905
+        },
+        {
+          "name": "robot_turned",
+          "passed": true,
+          "final_orientation": [
+            0.5464589908991051,
+            -0.0005682090030473037,
+            0.00037082295788687505,
+            0.837485588469674
+          ]
+        },
+        {
+          "name": "tf_recovery_0.2",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "tf_recovery_1.0",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "pause_0",
+          "passed": true,
+          "drained": 0
+        },
+        {
+          "name": "resume_0",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "pause_1",
+          "passed": true,
+          "drained": 0
+        },
+        {
+          "name": "resume_1",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "raw_scan_preserved",
+          "passed": true,
+          "counts": [
+            381,
+            382
+          ],
+          "scans": 83
+        },
+        {
+          "name": "fixed_snapshot_grid",
+          "passed": true,
+          "grids": [
+            [
+              360,
+              -3.1415927410125732,
+              3.1241393089294434,
+              0.01745329238474369,
+              0.0,
+              "base_scan"
+            ]
+          ],
+          "scans": 78
+        },
+        {
+          "name": "monotonic_reference",
+          "passed": true
+        },
+        {
+          "name": "one_raw_publisher",
+          "passed": true
+        },
+        {
+          "name": "slam_subscribed_to_adapter",
+          "passed": true
+        },
+        {
+          "name": "map_received",
+          "passed": true,
+          "width": 120,
+          "height": 120
+        },
+        {
+          "name": "fresh_raw_scans",
+          "passed": true,
+          "minimum_s": 0.18233200000000002,
+          "maximum_s": 0.227412,
+          "first_s": 0.19332400000000002,
+          "last_s": 0.20275600000000002
+        },
+        {
+          "name": "slam_processed_successive_snapshots",
+          "passed": true,
+          "poses": 12,
+          "matched_references": 12
+        },
+        {
+          "name": "map_updated",
+          "passed": true,
+          "updates": 27
+        },
+        {
+          "name": "asymmetric_scene_rest",
+          "passed": true,
+          "points": 3240,
+          "median_m": 0.0016308071469656876,
+          "p95_m": 0.016992694884461448
+        },
+        {
+          "name": "asymmetric_scene_turn",
+          "passed": true,
+          "points": 5712,
+          "median_m": 0.0018808198952549038,
+          "p95_m": 0.021416721278524693
+        },
+        {
+          "name": "asymmetric_scene_arc",
+          "passed": true,
+          "points": 4677,
+          "median_m": 0.001857921882869193,
+          "p95_m": 0.01903617007756588
+        },
+        {
+          "name": "no_slam_count_rejections",
+          "passed": true
+        }
+      ],
+      "raw_scans": 83,
+      "adapted_scans": 78,
+      "duration": 36.572382024000035,
+      "bag_sha256": "1c2949c3702ad105c075a743d1554009e57f7b2d9e4d0f4075fd2b4516df25b3"
+    },
+    {
+      "directory": "log/lidar-148/verification-3",
+      "ros_domain": 90,
+      "checks": [
+        {
+          "name": "bounded_startup",
+          "passed": true,
+          "seconds": 6.118010668000352
+        },
+        {
+          "name": "robot_turned",
+          "passed": true,
+          "final_orientation": [
+            0.5396087348845512,
+            -0.0005712151725975517,
+            0.0003661753042535817,
+            0.8419156447442743
+          ]
+        },
+        {
+          "name": "tf_recovery_0.2",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "tf_recovery_1.0",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "pause_0",
+          "passed": true,
+          "drained": 0
+        },
+        {
+          "name": "resume_0",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "pause_1",
+          "passed": true,
+          "drained": 0
+        },
+        {
+          "name": "resume_1",
+          "passed": true,
+          "scans": 6
+        },
+        {
+          "name": "raw_scan_preserved",
+          "passed": true,
+          "counts": [
+            381,
+            382
+          ],
+          "scans": 86
+        },
+        {
+          "name": "fixed_snapshot_grid",
+          "passed": true,
+          "grids": [
+            [
+              360,
+              -3.1415927410125732,
+              3.1241393089294434,
+              0.01745329238474369,
+              0.0,
+              "base_scan"
+            ]
+          ],
+          "scans": 81
+        },
+        {
+          "name": "monotonic_reference",
+          "passed": true
+        },
+        {
+          "name": "one_raw_publisher",
+          "passed": true
+        },
+        {
+          "name": "slam_subscribed_to_adapter",
+          "passed": true
+        },
+        {
+          "name": "map_received",
+          "passed": true,
+          "width": 120,
+          "height": 120
+        },
+        {
+          "name": "fresh_raw_scans",
+          "passed": true,
+          "minimum_s": 0.18962800000000002,
+          "maximum_s": 0.23262400000000003,
+          "first_s": 0.20142000000000002,
+          "last_s": 0.21712800000000002
+        },
+        {
+          "name": "slam_processed_successive_snapshots",
+          "passed": true,
+          "poses": 12,
+          "matched_references": 12
+        },
+        {
+          "name": "map_updated",
+          "passed": true,
+          "updates": 27
+        },
+        {
+          "name": "asymmetric_scene_rest",
+          "passed": true,
+          "points": 3600,
+          "median_m": 0.0016052544250066553,
+          "p95_m": 0.019249187335703452
+        },
+        {
+          "name": "asymmetric_scene_turn",
+          "passed": true,
+          "points": 6071,
+          "median_m": 0.0017396591593382,
+          "p95_m": 0.019276338655608606
+        },
+        {
+          "name": "asymmetric_scene_arc",
+          "passed": true,
+          "points": 5035,
+          "median_m": 0.001770763468462458,
+          "p95_m": 0.018905511804952237
+        },
+        {
+          "name": "no_slam_count_rejections",
+          "passed": true
+        }
+      ],
+      "raw_scans": 86,
+      "adapted_scans": 81,
+      "duration": 36.52607519900084,
+      "bag_sha256": "53d0b275e42f493b167438905bf7aba91f6b44eec2be8138ebe4e2b615c69d81"
+    }
+  ],
+  "limitations": [
+    "Planar projection and nearest angular binning",
+    "Estimated acquisition timestamps and imperfect odometry TF",
+    "Surface residuals use the next ground-truth report within 20 ms",
+    "Map accuracy, loop closure and a saved map remain in issue 136"
+  ]
+}
