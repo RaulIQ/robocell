@@ -58,6 +58,20 @@ generates its message modules without types, so `ros` alone suppresses those
 type checks, line by line for mypy and by folder for Pylance.
 `main.py` wires objects from all four worlds together.
 
+## Build a workshop map
+
+Start the SLAM mapping mode with the normal simulator and control panel:
+
+```console
+ros2 launch robocell_sim mapping.launch.xml
+```
+
+RViz displays `/map`; SLAM owns `map -> odom` while the EKF supplies
+`odom -> base_footprint`. The package includes a recorded occupancy map in
+`maps/workshop.yaml` and `maps/workshop.pgm`. See the [mapping guide](docs/mapping/README.md)
+for map-saving and loading commands, the repeatable route, fixed-frame
+accuracy measurements and evidence of loop closure.
+
 ## Work with Codex
 
 Rebuild and reopen the workspace with **Dev Containers: Rebuild and Reopen in

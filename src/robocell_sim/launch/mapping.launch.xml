@@ -1,4 +1,5 @@
 <launch>
+  <arg name="slam_params_file" default="$(find-pkg-share robocell_sim)/config/slam.yaml" description="SLAM configuration for this mapping session"/>
   <arg name="rviz" default="true" description="Show the occupancy map in RViz"/>
   <arg name="headless" default="false" description="Run without the MuJoCo viewer"/>
   <arg name="teleop" default="true" description="Open the graphical control panel"/>
@@ -30,6 +31,6 @@
     <arg name="autostart" value="true"/>
     <arg name="use_lifecycle_manager" value="false"/>
     <arg name="use_sim_time" value="true"/>
-    <arg name="slam_params_file" value="$(find-pkg-share robocell_sim)/config/slam.yaml"/>
+    <arg name="slam_params_file" value="$(var slam_params_file)"/>
   </include>
 </launch>

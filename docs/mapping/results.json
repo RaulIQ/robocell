@@ -1,0 +1,859 @@
+{
+  "issue": 136,
+  "base_revision": "cb1acc9c38eb9cfa7a19b4a669d178588c3b9da7",
+  "versions": [
+    "ros-jazzy-nav2-map-server 1.3.13-1noble.20260921.024942",
+    "ros-jazzy-robot-localization 3.8.3-1noble.20260915.182602",
+    "ros-jazzy-slam-toolbox 2.8.5-1noble.20260915.204151"
+  ],
+  "recording": {
+    "directory": "log/mapping-136/route-4",
+    "ros_domain": 91,
+    "checks": [
+      {
+        "name": "bounded_startup",
+        "passed": true,
+        "seconds": 6.322911785000542
+      },
+      {
+        "name": "route_completed",
+        "passed": true,
+        "simulated_seconds": 122.16000000000001,
+        "segments": 8
+      },
+      {
+        "name": "pause_service",
+        "passed": true
+      },
+      {
+        "name": "clock_paused",
+        "passed": true,
+        "clock": 122.23
+      },
+      {
+        "name": "resume_service",
+        "passed": true
+      },
+      {
+        "name": "mapping_resumed",
+        "passed": true
+      },
+      {
+        "name": "map_saved",
+        "passed": true
+      },
+      {
+        "name": "graph_saved_separately",
+        "passed": true
+      },
+      {
+        "name": "nonlocal_loop_constraints",
+        "passed": true,
+        "nodes": 193,
+        "edges": 219,
+        "links": [
+          [
+            41,
+            140
+          ],
+          [
+            18,
+            176
+          ],
+          [
+            17,
+            177
+          ],
+          [
+            15,
+            179
+          ],
+          [
+            14,
+            180
+          ],
+          [
+            14,
+            181
+          ],
+          [
+            14,
+            182
+          ],
+          [
+            14,
+            183
+          ],
+          [
+            14,
+            184
+          ],
+          [
+            14,
+            185
+          ],
+          [
+            13,
+            186
+          ],
+          [
+            13,
+            187
+          ],
+          [
+            13,
+            188
+          ],
+          [
+            13,
+            189
+          ],
+          [
+            13,
+            190
+          ],
+          [
+            0,
+            191
+          ],
+          [
+            0,
+            192
+          ]
+        ]
+      },
+      {
+        "name": "map_server_configured",
+        "passed": true
+      },
+      {
+        "name": "map_server_activated",
+        "passed": true
+      },
+      {
+        "name": "map_server_reloaded",
+        "passed": true,
+        "width": 120,
+        "height": 121
+      },
+      {
+        "name": "reloaded_cells_match_saved_map",
+        "passed": true,
+        "cells": 14520
+      },
+      {
+        "name": "reloaded_origin_matches_saved_map",
+        "passed": true,
+        "origin": [
+          -0.479,
+          -5.087,
+          0
+        ]
+      },
+      {
+        "name": "exclusive_tf_parents",
+        "passed": true,
+        "parents": {
+          "base_link": [
+            "base_footprint"
+          ],
+          "camera_link": [
+            "base_link"
+          ],
+          "camera_rgb_frame": [
+            "camera_link"
+          ],
+          "camera_rgb_optical_frame": [
+            "camera_rgb_frame"
+          ],
+          "caster_back_left_link": [
+            "base_link"
+          ],
+          "caster_back_right_link": [
+            "base_link"
+          ],
+          "imu_link": [
+            "base_link"
+          ],
+          "base_scan": [
+            "base_link"
+          ],
+          "wheel_left_link": [
+            "base_link"
+          ],
+          "wheel_right_link": [
+            "base_link"
+          ],
+          "base_footprint": [
+            "odom"
+          ],
+          "odom": [
+            "map"
+          ]
+        }
+      },
+      {
+        "name": "tf_publishers",
+        "passed": true,
+        "publishers": [
+          "robot_state_publisher",
+          "slam_toolbox",
+          "slam_toolbox",
+          "ekf_filter_node"
+        ]
+      },
+      {
+        "name": "amcl_absent",
+        "passed": true
+      }
+    ],
+    "counts": {
+      "/scan": 689,
+      "/scan/slam": 685,
+      "/map": 203,
+      "/tf": 18162,
+      "/tf_static": 1,
+      "/clock": 12501,
+      "/ground_truth/odom": 6253,
+      "/wheel/odometry": 4765,
+      "/odometry/filtered": 6178,
+      "/pose": 193,
+      "/slam_toolbox/graph_visualization": 207,
+      "/rosout": 13,
+      "/cmd_vel": 30699,
+      "/motor_driver/state": 4,
+      "/gyro/state": 2,
+      "/verification/map": 1
+    },
+    "segments": [
+      {
+        "goal": [
+          0.0,
+          -1.0
+        ],
+        "heading": false,
+        "start": 4.180000000000001,
+        "finish": 15.360000000000001,
+        "odom": [
+          0.0013074594846235416,
+          -0.9420112587376067,
+          -1.5925697967739514
+        ]
+      },
+      {
+        "goal": [
+          2.7,
+          -1.0
+        ],
+        "heading": false,
+        "start": 15.360000000000001,
+        "finish": 37.190000000000005,
+        "odom": [
+          2.64317728906994,
+          -0.9990880036990543,
+          -0.015986554837997602
+        ]
+      },
+      {
+        "goal": [
+          2.7,
+          -3.4
+        ],
+        "heading": false,
+        "start": 37.190000000000005,
+        "finish": 57.010000000000005,
+        "odom": [
+          2.699052391515705,
+          -3.3435366144750174,
+          -1.5540437049680904
+        ]
+      },
+      {
+        "goal": [
+          1.0,
+          -3.4
+        ],
+        "heading": false,
+        "start": 57.010000000000005,
+        "finish": 72.52000000000001,
+        "odom": [
+          1.0574357270020993,
+          -3.3986365044957534,
+          -3.1179631499678933
+        ]
+      },
+      {
+        "goal": [
+          1.0,
+          -1.0
+        ],
+        "heading": false,
+        "start": 72.52000000000001,
+        "finish": 92.41000000000001,
+        "odom": [
+          1.000991462197446,
+          -1.0574320586555546,
+          1.5878953758509091
+        ]
+      },
+      {
+        "goal": [
+          0.0,
+          -1.0
+        ],
+        "heading": false,
+        "start": 92.41000000000001,
+        "finish": 103.39,
+        "odom": [
+          0.057398999694873394,
+          -1.0021102939676358,
+          3.104650816842197
+        ]
+      },
+      {
+        "goal": [
+          0.0,
+          0.0
+        ],
+        "heading": false,
+        "start": 103.39,
+        "finish": 114.27000000000001,
+        "odom": [
+          0.0020120805148157142,
+          -0.05743186780126971,
+          1.6059965903561697
+        ]
+      },
+      {
+        "goal": 0.0,
+        "heading": true,
+        "start": 114.27000000000001,
+        "finish": 120.32000000000001,
+        "odom": [
+          0.0018431299718015182,
+          -0.057307694498130564,
+          0.024237021385923093
+        ]
+      }
+    ],
+    "duration": 212.0849572999996,
+    "bag_sha256": "d1c38d51539fd7a468690409da898ded546bde23d41914e91309f7574d097dca"
+  },
+  "analysis": {
+    "scan_age": {
+      "scope": "startup and driving, before map export",
+      "minimum_s": 0.18680799999999997,
+      "maximum_s": 0.23866400000000054,
+      "samples": 658
+    },
+    "alignment": {
+      "world_x": "-2.1 - map_y",
+      "world_y": "-2.5 + map_x",
+      "world_yaw": "map_yaw + pi/2",
+      "source": "fixed initial workshop pose, no trajectory fitting"
+    },
+    "ekf": {
+      "samples": 6178,
+      "position_rmse_m": 0.016572340334893517,
+      "position_p95_m": 0.02830049898896629,
+      "position_max_m": 0.030345656394156588,
+      "position_final_m": 0.009621179670626062,
+      "heading_rmse_deg": 0.1211853925230155,
+      "heading_final_deg": -0.14800714254313485
+    },
+    "slam_online": {
+      "samples": 193,
+      "position_rmse_m": 0.019848985126486956,
+      "position_p95_m": 0.033899251620403345,
+      "position_max_m": 0.03444492650311639,
+      "position_final_m": 0.003591370515030087,
+      "heading_rmse_deg": 0.3653352819394871,
+      "heading_final_deg": 0.11824218640676212
+    },
+    "optimized_graph": {
+      "samples": 193,
+      "position_rmse_m": 0.020676727304684193,
+      "position_p95_m": 0.034766378786225516,
+      "position_max_m": 0.03602471462059988,
+      "position_final_m": 0.003591370515030087,
+      "heading_rmse_deg": 0.33059167940216194,
+      "heading_final_deg": 0.11824218640676212
+    },
+    "loop_graph": {
+      "historical_pose_revisions": [
+        {
+          "stamp": 90.81,
+          "nodes": 139,
+          "maximum_m": 0.011990223706690542,
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132,
+            133,
+            134,
+            135,
+            136,
+            137,
+            138,
+            139
+          ]
+        },
+        {
+          "stamp": 110.73,
+          "nodes": 175,
+          "maximum_m": 0.008144426825644228,
+          "ids": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76,
+            77,
+            78,
+            79,
+            80,
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125,
+            126,
+            127,
+            128,
+            129,
+            130,
+            131,
+            132,
+            133,
+            134,
+            135,
+            136,
+            137,
+            138,
+            139,
+            140,
+            141,
+            142,
+            143,
+            144,
+            145,
+            146,
+            147,
+            148,
+            149,
+            150,
+            151,
+            152,
+            153,
+            154,
+            155,
+            156,
+            157,
+            158,
+            159,
+            160,
+            161,
+            162,
+            163,
+            164,
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173,
+            174,
+            175
+          ]
+        }
+      ],
+      "final_correction_maximum_m": 0.011285114881944806,
+      "online_graph_stamp_matches": 193,
+      "nodes": 193,
+      "edges": 219,
+      "long_constraint_snapshots": 62,
+      "first": {
+        "stamp": 90.81,
+        "nodes": 141,
+        "edges": 148,
+        "constraints": [
+          [
+            41,
+            140
+          ]
+        ]
+      },
+      "last": {
+        "stamp": 128.21,
+        "nodes": 193,
+        "edges": 219,
+        "constraints": [
+          [
+            41,
+            140
+          ],
+          [
+            18,
+            176
+          ],
+          [
+            17,
+            177
+          ],
+          [
+            15,
+            179
+          ],
+          [
+            14,
+            180
+          ],
+          [
+            14,
+            181
+          ],
+          [
+            14,
+            182
+          ],
+          [
+            14,
+            183
+          ],
+          [
+            14,
+            184
+          ],
+          [
+            14,
+            185
+          ],
+          [
+            13,
+            186
+          ],
+          [
+            13,
+            187
+          ],
+          [
+            13,
+            188
+          ],
+          [
+            13,
+            189
+          ],
+          [
+            13,
+            190
+          ],
+          [
+            0,
+            191
+          ],
+          [
+            0,
+            192
+          ]
+        ]
+      }
+    },
+    "route": {
+      "truth_length_m": 11.73482329648604,
+      "truth_return_distance_m": 0.0626193866184732,
+      "truth_return_heading_deg": 1.5604707771051853
+    },
+    "map": {
+      "width": 120,
+      "height": 121,
+      "resolution": 0.05,
+      "occupied_cells": 823,
+      "surface_median_m": 0.03800000000000088,
+      "surface_p95_m": 0.08800000000000034,
+      "within_10cm_fraction": 1.0,
+      "image_sha256": "49cc8840e74aaa62d8c0bdc2a45725b3678490fa0f454f536596e4674ffbf860"
+    },
+    "limitations": [
+      "Online SLAM poses are not retrospectively corrected after loop constraints",
+      "Nearest-surface occupancy residuals do not measure unobserved map completeness",
+      "Fixed initial alignment, no fitting to ground truth"
+    ],
+    "validation": {
+      "loop_constraints_and_optimization": true,
+      "raw_scans_remain_fresh": true,
+      "pose_rmse_below_10cm": true,
+      "map_surface_p95_below_15cm": true
+    }
+  },
+  "baseline": {
+    "directory": "log/mapping-136/route-1",
+    "purpose": "Exploratory configuration before separating local links and loop search, not a map reload acceptance run",
+    "use_scan_barycenter": true,
+    "link_scan_maximum_distance": 1.5,
+    "loop_search_maximum_distance": 3.0,
+    "historical_pose_revisions": 0,
+    "online_position_rmse_m": 0.013454513963146484,
+    "optimized_position_rmse_m": 0.013454513963146484
+  },
+  "artifacts": {
+    "src/robocell_sim/maps/workshop.yaml": "d62fad992c32b02fc63b0fed9a6738e1f4696f836ed98636cbfd0272cc7b2b55",
+    "src/robocell_sim/maps/workshop.pgm": "49cc8840e74aaa62d8c0bdc2a45725b3678490fa0f454f536596e4674ffbf860",
+    "docs/mapping/graph.json": "57df1743f57917f17391933822b6f1214b38a4d4bceb60b577e3c25bf284148b",
+    "docs/mapping/comparison.png": "e5685441103570fb50c6b28dce8639c0e759e24cd8830a06cb00efa48f1041cc"
+  },
+  "validation": {
+    "command": "python -m pytest --eo",
+    "passed": 544
+  },
+  "notes": [
+    "Map and pose-graph files are separate artifacts",
+    "Ground truth is used only by offline analysis, never by route commands, adapter or SLAM",
+    "The accepted recording used the same route, SLAM settings and node code; exporter compilation was subsequently moved before launch to keep recording callbacks responsive",
+    "Exploratory route-2 used the original loop parameters; route-3 was interrupted by a diagnostic SQLite reader, and neither is acceptance evidence",
+    "Shutdown intentionally sends SIGINT to launch process groups; some Python child exits are reported as signal -2"
+  ]
+}
