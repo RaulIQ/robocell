@@ -14,7 +14,8 @@ class Queued(Delivery):
 
     The port accepts bytes, payload is the pending tail, stamp tracks wire
     credit in monotonic wall time, and limit bounds outstanding bytes.
-    Credit never exceeds 256 bytes, including after long idle periods.
+    Idle credit is limited to 256 bytes; previously queued bytes retain
+    the transmission time that elapsed while physics was busy.
     """
 
     _port: Port
@@ -23,12 +24,14 @@ class Queued(Delivery):
     _limit: int
 
     @override
-    def advance(self, moment: float) -> tuple[bytes, float]:
+    def advance(self, moment: float, backlog: int) -> tuple[bytes, float]:
         if len(self._payload) > self._limit:
             message = "RPLIDAR UART backlog exceeded its byte limit"
             raise BufferError(message)
-        stamp = max(self._stamp, moment - 256 / 11520)
-        budget = max(0, int((moment - stamp) * 11520))
+        stamp = max(self._stamp, moment - max(256, backlog) / 11520)
+        budget = max(
+            0, min(max(256, backlog), int((moment - self._stamp) * 11520))
+        )
         count = self._port.send(self._payload[:budget]) if budget else 0
         return (
             self._payload[count:],

@@ -27,7 +27,7 @@ def test_slam_uses_driver_scans_and_the_filtered_footprint() -> None:
             {
                 "use_sim_time": True,
                 "mode": "mapping",
-                "scan_topic": "/scan",
+                "scan_topic": "/scan/slam",
                 "map_frame": "map",
                 "odom_frame": "odom",
                 "base_frame": "base_footprint",

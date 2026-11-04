@@ -232,8 +232,12 @@ At the current 2 ms physics step, several rays share one world state; each
 measurement uses its own scheduled angle and acquisition is quantized by
 at most one physics step. No full-circle snapshot is reused.
 
-Delivery is paced by monotonic wall time at 11520 bytes/s, with at most
-256 bytes of accumulated credit. Partial writes retain their unsent tail.
+Delivery is paced by monotonic wall time at 11520 bytes/s. Unused idle
+credit is limited to 256 bytes. Bytes already pending at the previous
+service retain the wire time that elapsed while physics or rendering was
+busy, bounded by that previous backlog. This prevents repeated long steps
+from reducing effective throughput and making scan timestamps increasingly
+stale. Partial writes retain their unsent tail.
 An application backlog above 65536 bytes fails explicitly; the kernel PTY
 buffer is an additional finite queue. Commands already received can still
 leave stale output in transit after STOP, as on a buffered real link.

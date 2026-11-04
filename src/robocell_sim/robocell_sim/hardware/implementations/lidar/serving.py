@@ -36,5 +36,5 @@ class Serving(Report):
         )
         pending = Queued(
             self._port, state[1] + payload, state[2], self._limit
-        ).advance(time.monotonic())
+        ).advance(time.monotonic(), len(state[1]))
         self._state.put((device, *pending))

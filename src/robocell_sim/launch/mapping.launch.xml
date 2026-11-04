@@ -23,6 +23,9 @@
     <arg name="lidar_port" value="$(var lidar_port)"/>
     <arg name="seed" value="$(var seed)"/>
   </include>
+  <node pkg="robocell_sim" exec="scan.py" output="screen">
+    <param name="use_sim_time" value="true"/>
+  </node>
   <include file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py">
     <arg name="autostart" value="true"/>
     <arg name="use_lifecycle_manager" value="false"/>
