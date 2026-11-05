@@ -42,9 +42,7 @@ def test_mapping_launch_activates_slam_on_simulated_time() -> None:
                     "autostart": "true",
                     "use_lifecycle_manager": "false",
                     "use_sim_time": "true",
-                    "slam_params_file": (
-                        "$(find-pkg-share robocell_sim)/config/slam.yaml"
-                    ),
+                    "slam_params_file": ("$(var slam_params_file)"),
                 }
             ]
         ),
@@ -84,4 +82,21 @@ def test_mapping_launch_rectifies_driver_scans_on_simulated_time() -> None:
         ],
         equal_to([{"use_sim_time": "true"}]),
         "mapping did not start the fixed-grid adapter on simulated time",
+    )
+
+
+def test_mapping_launch_accepts_a_recorded_slam_configuration() -> None:
+    """A run can retain its exact SLAM settings without editing the package."""
+    assert_that(
+        [
+            argument.get("value")
+            for include in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/mapping.launch.xml"
+            ).iter("include")
+            if include.get("file", "").endswith("online_async_launch.py")
+            for argument in include.iter("arg")
+            if argument.get("name") == "slam_params_file"
+        ],
+        equal_to(["$(var slam_params_file)"]),
+        "mapping did not accept the recorded SLAM configuration",
     )

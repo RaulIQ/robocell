@@ -60,3 +60,19 @@ def test_slam_processes_turns_without_forward_motion() -> None:
         equal_to(obj=True),
         "SLAM did not check heading when forward travel was below its limit",
     )
+
+
+def test_slam_separates_local_links_from_workshop_loop_search() -> None:
+    """Room-wide scan centroids cannot hide a revisited robot trajectory."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/slam.yaml").read_text()
+    )["slam_toolbox"]["ros__parameters"]
+    assert_that(
+        (
+            config["use_scan_barycenter"],
+            config["link_scan_maximum_distance"],
+            config["loop_search_maximum_distance"],
+        ),
+        equal_to((False, 0.4, 1.2)),
+        "SLAM did not separate nearby links from revisited robot poses",
+    )
