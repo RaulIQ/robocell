@@ -8,7 +8,7 @@ from hamcrest import assert_that, close_to, equal_to
 
 
 def test_workshop_launch_enables_graphical_control_by_default() -> None:
-    """The workshop offers graphical control at modest initial speeds."""
+    """The workshop offers graphical control at its maximum initial speeds."""
     assert_that(
         {
             argument.get("name"): argument.get("default")
@@ -17,7 +17,7 @@ def test_workshop_launch_enables_graphical_control_by_default() -> None:
             ).iter("arg")
             if argument.get("name") in {"teleop", "speed", "turn"}
         },
-        equal_to({"teleop": "true", "speed": "0.06", "turn": "0.3"}),
+        equal_to({"teleop": "true", "speed": "0.26", "turn": "1.8"}),
         "launch did not enable graphical control at the selected speeds",
     )
 
