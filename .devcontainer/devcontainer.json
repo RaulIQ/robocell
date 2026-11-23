@@ -2,6 +2,7 @@
   "name": "robocell",
   "dockerComposeFile": "../compose.yaml",
   "service": "dev",
+  "overrideCommand": true,
   "workspaceFolder": "/ws",
   "shutdownAction": "none",
   "remoteUser": "ubuntu",

@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     image: robocell-dev
+    command: ["bash", "/ws/docker/workshop.sh"]
+    stop_signal: SIGINT
+    stop_grace_period: 20s
     network_mode: host
     ipc: host
     environment:
@@ -11,6 +14,7 @@ services:
       - XAUTHORITY=/home/ubuntu/.Xauthority
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - ROBOCELL_MODE=${ROBOCELL_MODE:-workshop}
     volumes:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix

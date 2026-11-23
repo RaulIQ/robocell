@@ -114,12 +114,28 @@ sudo ip link set up vcan0
 The dev container shares the network of the host through `network_mode: host`
 in `compose.yaml`, so it sees `vcan0` as soon as the host brings it up.
 
-`robocell_sim` is an `ament_python` package. Build it with colcon from the
-workspace root, then start the TurtleBot3 Waffle Pi in the MuJoCo viewer:
+From the repository root on the host, start the simulator with:
+
+```console
+docker compose up
+```
+
+Compose builds the image if needed, builds the ROS workspace and starts the
+workshop. Set `DISPLAY` and `XAUTHORITY` on the host to allow the container to
+open windows in your X11 session. Press Ctrl+C to stop the simulator.
+
+To start the same simulator with SLAM and the map in RViz, run:
+
+```console
+ROBOCELL_MODE=mapping docker compose up
+```
+
+Inside a development container, you can still build and launch manually to
+use custom ROS arguments:
 
 ```console
 cd /ws
-python -m colcon build --symlink-install
+python -m colcon build --symlink-install --packages-select robocell_sim
 source install/setup.bash
 ros2 launch robocell_sim workshop.launch.xml
 ```
