@@ -99,9 +99,14 @@ arguments.add_argument(
     default=0.0,
     help="Wall duration in seconds, zero runs until interrupted",
 )
+_MIN_RANGE = 0.15
+_MAX_RANGE = 12.0
+arguments.add_argument("--lidar-range-max", type=float, default=_MAX_RANGE)
 options = arguments.parse_args(remove_ros_args()[1:])
 if not math.isfinite(options.duration) or options.duration < 0:
     arguments.error("Duration must be finite and nonnegative")
+if not _MIN_RANGE < options.lidar_range_max <= _MAX_RANGE:
+    arguments.error("Maximum lidar range must be above 0.15 m and at most 12 m")
 model = mujoco.MjModel.from_xml_path(
     f"{get_package_share_directory('robocell_sim')}/models/waffle_pi/workshop.xml"
 )
@@ -178,10 +183,10 @@ lens = Pinhole(
 )
 log.info("Camera sees through the intrinsics %s", lens.matrix())
 shot = 0.0
-reach = (0.12, 3.5)
+reach = (_MIN_RANGE, options.lidar_range_max)
 lidar = Raycast(model, data, "base_scan", reach)
 radar = (
-    Polar(multiprocessing.get_context("fork").Queue(maxsize=2), 3.5)
+    Polar(multiprocessing.get_context("fork").Queue(maxsize=2), reach[1])
     if options.radar == "true"
     else None
 )
@@ -271,7 +276,7 @@ with (
     state.put(
         (
             Rplidar(
-                Directed(data, "base_scan", (0.15, 12.0)),
+                Directed(data, "base_scan", reach),
                 (False, 0.0, 0),
                 (b"", data.time),
             ),

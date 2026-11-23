@@ -91,7 +91,8 @@ def test_workshop_launch_passes_window_flags_to_the_simulator() -> None:
                 (
                     "--headless=$(var headless) --duration=$(var duration) "
                     "--route=$(var route) --camera=$(var camera) "
-                    "--radar=$(var radar) --survey=$(var survey)"
+                    "--radar=$(var radar) --survey=$(var survey) "
+                    "--lidar-range-max=$(var lidar_range_max)"
                 )
             ]
         ),
@@ -308,7 +309,15 @@ def test_workshop_launch_shares_the_named_lidar_endpoint() -> None:
             ).iter("node")
             if node.get("exec") == "lidar.py"
         ],
-        equal_to([{"use_sim_time": "true", "port": "$(var lidar_port)"}]),
+        equal_to(
+            [
+                {
+                    "use_sim_time": "true",
+                    "port": "$(var lidar_port)",
+                    "range_max": "$(var lidar_range_max)",
+                }
+            ]
+        ),
         "launch did not share the named UART endpoint with the lidar driver",
     )
 
