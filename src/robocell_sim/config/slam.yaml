@@ -6,7 +6,7 @@ slam_toolbox:
     odom_frame: odom
     map_frame: map
     base_frame: base_footprint
-    scan_topic: /scan
+    scan_topic: /scan/slam
     use_map_saver: true
     debug_logging: false
     throttle_scans: 1

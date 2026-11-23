@@ -67,6 +67,7 @@ writer.open(
 )
 types = {
     "/scan": ("sensor_msgs/msg/LaserScan", LaserScan),
+    "/scan/slam": ("sensor_msgs/msg/LaserScan", LaserScan),
     "/map": ("nav_msgs/msg/OccupancyGrid", OccupancyGrid),
     "/tf": ("tf2_msgs/msg/TFMessage", TFMessage),
     "/tf_static": ("tf2_msgs/msg/TFMessage", TFMessage),
@@ -300,7 +301,7 @@ launch(
 try:
     until(
         lambda: (
-            counts["/scan"] >= 10
+            counts["/scan/slam"] >= 10
             and "/map" in latest
             and "/odometry/filtered" in latest
             and latest.get("/gyro/state", String()).data == "ready"
@@ -326,8 +327,8 @@ try:
     advance(0.8)
     check("clock_paused", clock() == frozen, clock=frozen)
     check("resume_service", call(pause, SetBool.Request(data=False)).success)
-    count = counts["/scan"]
-    until(lambda: counts["/scan"] > count + 5 and clock() > frozen, 10)
+    count = counts["/scan/slam"]
+    until(lambda: counts["/scan/slam"] > count + 5 and clock() > frozen, 10)
     check("mapping_resumed", True)
     advance(2)
     saver = launch(

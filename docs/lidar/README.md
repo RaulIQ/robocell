@@ -1,10 +1,5 @@
 # A1 acquisition timing across UART reads
 
-The UART timing and adapter diagnostics below describe the original
-implementation. To reproduce those diagnostics, use commit `653794c`
-with the historical raw clockwise `/scan` and separate `/scan/slam`.
-The current mapping verification uses `docs/mapping/record.py`.
-
 Issue #147 exposed a timestamp regression when the ROS clock paused while
 UART bytes remained queued. Backdating each read independently could give
 later rotations earlier first-ray timestamps. The regression's three
@@ -52,7 +47,7 @@ service, resumed-stream and shutdown wait is bounded.
 
 ```console
 source /opt/ros/jazzy/setup.bash
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 python docs/lidar/record.py log/lidar-147/verification --domain 84
 ```
@@ -70,18 +65,16 @@ physical hardware.
 
 ## Fixed-grid SLAM input (issue #148)
 
-`mapping.launch.xml` starts `scan.py` alongside the original driver and
+`mapping.launch.xml` starts `robocell_scan/slam_scan` alongside the driver and
 points SLAM Toolbox at `/scan/slam`. The workshop launch and `/scan` remain
 available with the original clockwise acquisition geometry. The adapter
 never modifies or republishes the input message.
 
-The adapter transforms each finite, in-range endpoint from its individual
-acquisition time through `odom` into `base_scan` at the last ray's estimated
-acquisition time. TF supplies interpolated translations and rotations,
-including the sensor offset. This compensates motion within a turn before
-choosing angular bins; it does not obtain a new acquisition timestamp from
-the scan's arrival time. All endpoint transformations must succeed before
-the output is published.
+The adapter uses ROS Jazzy's `laser_geometry` to project a rotation into
+`odom`, interpolating motion between the first and last acquisition
+transforms. The adapter expresses the resulting points in `base_scan`
+at the last ray's estimated acquisition time and bins them. It publishes
+only after the required TF is available.
 
 The default grid has 360 bins with centers `-pi + index * 2*pi/360`, inclusive
 endpoints `-pi` and `pi - 2*pi/360`, and positive `angle_increment`. The output
@@ -135,7 +128,7 @@ angular and timestamp algorithms and the collision guard are unchanged.
 ```console
 source /opt/ros/jazzy/setup.bash
 python -m pytest --eo
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 python docs/lidar/isolated.py log/lidar-148/isolated --domain 86
 python docs/lidar/compatibility.py log/lidar-148/mapping --domain 90
@@ -154,9 +147,9 @@ odometry, ground truth, commands, SLAM poses and occupancy maps in a bag.
 The full test checks unchanged raw geometry, one raw publisher, a fixed
 adapted grid, monotonic reference stamps, raw-scan freshness, actual robot
 rotation, successive SLAM pose stamps matching adapted scans, map updates,
-and the absence of SLAM point-count rejection messages. Separate unit
-tests check asymmetric obstacle bearings, motion compensation, invalid
-returns, collisions and complete input-message preservation.
+and the absence of SLAM point-count rejection messages. The isolated test
+also checks motion compensation, invalid returns, nearest-return intensity
+and final-ray metadata.
 
 Geometry diagnostics express adapted endpoints in the workshop's world
 using the next ground-truth pose at the reference timestamp (at most one
@@ -199,6 +192,11 @@ nonlocal loop was found at 90.59 s, and the saved map reloaded with all
 15,006 cells intact. Online position RMSE was 2.98 cm and map surface p95
 was 8.00 cm, compared with 1.47 cm and 2.89 cm with the prototype adapter.
 
-The simpler driver grid is the default for `/scan`. SLAM Toolbox and RViz
-use it directly, and mapping no longer starts a separate scan adapter.
-Compare the run with `log/mapping-159/fixed-grid/analysis.json`.
+Mapping uses the motion-compensated output after the comparison. The driver
+publishes original acquisitions on `/scan` for the collision guard and
+diagnostics. RViz and SLAM subscribe to `/scan/slam`.
+
+The restored adapter passed all mapping checks on the same route. It closed
+the first nonlocal loop at 90.95 s, reloaded all 14,400 cells, and measured
+2.76 cm online position RMSE and 5.60 cm map surface p95. The run is recorded
+in `log/mapping-159/restored/analysis.json`.

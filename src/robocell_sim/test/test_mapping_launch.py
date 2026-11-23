@@ -66,6 +66,25 @@ def test_mapping_launch_selects_the_map_view() -> None:
     )
 
 
+def test_mapping_launch_rectifies_driver_scans_on_simulated_time() -> None:
+    """Mapping starts the adapter alongside its original driver."""
+    assert_that(
+        [
+            {
+                parameter.get("name"): parameter.get("value")
+                for parameter in node.iter("param")
+            }
+            for node in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/mapping.launch.xml"
+            ).iter("node")
+            if node.get("pkg") == "robocell_scan"
+            and node.get("exec") == "slam_scan"
+        ],
+        equal_to([{"use_sim_time": "true"}]),
+        "mapping did not start the fixed-grid adapter on simulated time",
+    )
+
+
 def test_mapping_launch_accepts_a_recorded_slam_configuration() -> None:
     """A run can retain its exact SLAM settings without editing the package."""
     assert_that(

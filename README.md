@@ -135,7 +135,7 @@ use custom ROS arguments:
 
 ```console
 cd /ws
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 ros2 launch robocell_sim workshop.launch.xml
 ```
@@ -159,13 +159,13 @@ A headless host without an X display can select `MUJOCO_GL=egl`.
 
 Run colcon through `python -m` so it uses the virtual environment that holds
 MuJoCo; the plain `colcon` command runs the system Python, which does not.
-With `--symlink-install`, edits to the code and the models take effect without
-a rebuild; only changes to `setup.py`, `setup.cfg` or `package.xml` need one.
+With `--symlink-install`, edits to Python code and models take effect on
+restart. Rebuild after changing the C++ scan adapter or package metadata.
 
 Run the tests the same way, or with the strict style gate from the root:
 
 ```console
-python -m colcon test --packages-select robocell_sim
+python -m colcon test --packages-up-to robocell_sim
 python -m colcon test-result --verbose
 python -m pytest --eo
 ```
@@ -408,13 +408,13 @@ ros2 run tf2_ros tf2_echo odom base_footprint
 
 The `lidar` driver reads the emulated RPLIDAR A1 standard-SCAN stream over
 UART and alone publishes `/scan` as `sensor_msgs/LaserScan` in `base_scan`.
-The A1 profile rotates at 5.5 Hz and normally acquires 381 or 382 samples
-per turn. The driver discards the initial partial rotation and publishes
-360 fixed angular bins per full turn, keeping the nearest valid return and
-its quality in each bin. Empty bins are `inf`. Each scan is stamped at the
-estimated last-ray acquisition time and published as one snapshot without
-compensating for robot motion during the turn. SLAM and RViz use this topic.
-The MuJoCo scan and map windows
+The A1 profile ranges 0.15–12 m at 5.5 rotations/s, normally 381 or 382
+points/rotation. The driver discards the initial partial rotation, bins
+each full turn onto a uniform grid, and reports `inf` for invalid returns.
+Samples keep their acquisition order: clockwise rotation becomes a negative
+ROS angular increment, with positive time between samples. The first-ray
+stamp is estimated from ROS reception time and the queried sample period;
+it is not a timestamp transmitted by the A1. The MuJoCo scan and map windows
 retain their separate 360-ray, 5 Hz, 0.12–3.5 m display/guard path.
 
 ```console

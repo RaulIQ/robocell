@@ -397,16 +397,16 @@ a rotation at 4096 measurements. Standard packets have no sequence counter
 or checksum, so silent loss of a whole valid packet or plausible corrupted
 payload cannot always be detected.
 
-The driver decodes each turn in chronological, clockwise order. At the ROS
-boundary it groups the returns into 360 fixed angular bins with a positive
-angle increment. A bin retains the closest valid return and its quality.
-Empty bins, including those with only invalid returns, are published as
-`inf` with zero intensity.
+Each completed turn uses one uniform bin per received point, anchored at
+its first angle. Clockwise points remain in chronological order. Therefore
+`angle_increment` is negative, `angle_max` is numerically below `angle_min`,
+and `time_increment` is positive. Binning absorbs Q6 angle quantization;
+empty bins and zero-quality or out-of-range returns become `inf`. Quality
+is copied to intensities. Binning is an angular approximation, not motion
+distortion compensation.
 
-The published scan is a snapshot at the estimated time of the last ray,
-with `time_increment` set to zero. The points retain their measured bearings
-without motion compensation. `scan_time` is still the acquired point count
-times the reported standard sample period. The first complete turn anchors an
+`scan_time` is the point count times the reported standard sample period,
+and `time_increment` is that period. The first complete turn anchors an
 acquisition timeline using the backdated arrival estimates of its opening
 and closing markers. Subsequent turns advance that timeline by the number
 of acquired samples, rather than obtaining a new timestamp from each UART
