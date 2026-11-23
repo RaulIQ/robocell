@@ -47,7 +47,7 @@ service, resumed-stream and shutdown wait is bounded.
 
 ```console
 source /opt/ros/jazzy/setup.bash
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 python docs/lidar/record.py log/lidar-147/verification --domain 84
 ```
@@ -65,18 +65,16 @@ physical hardware.
 
 ## Fixed-grid SLAM input (issue #148)
 
-`mapping.launch.xml` starts `scan.py` alongside the original driver and
+`mapping.launch.xml` starts `robocell_scan/slam_scan` alongside the driver and
 points SLAM Toolbox at `/scan/slam`. The workshop launch and `/scan` remain
 available with the original clockwise acquisition geometry. The adapter
 never modifies or republishes the input message.
 
-The adapter transforms each finite, in-range endpoint from its individual
-acquisition time through `odom` into `base_scan` at the last ray's estimated
-acquisition time. TF supplies interpolated translations and rotations,
-including the sensor offset. This compensates motion within a turn before
-choosing angular bins; it does not obtain a new acquisition timestamp from
-the scan's arrival time. All endpoint transformations must succeed before
-the output is published.
+The adapter uses ROS Jazzy's `laser_geometry` to project a rotation into
+`odom`, interpolating motion between the first and last acquisition
+transforms. The adapter expresses the resulting points in `base_scan`
+at the last ray's estimated acquisition time and bins them. It publishes
+only after the required TF is available.
 
 The default grid has 360 bins with centers `-pi + index * 2*pi/360`, inclusive
 endpoints `-pi` and `pi - 2*pi/360`, and positive `angle_increment`. The output
@@ -130,7 +128,7 @@ angular and timestamp algorithms and the collision guard are unchanged.
 ```console
 source /opt/ros/jazzy/setup.bash
 python -m pytest --eo
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 python docs/lidar/isolated.py log/lidar-148/isolated --domain 86
 python docs/lidar/compatibility.py log/lidar-148/mapping --domain 90
@@ -149,9 +147,9 @@ odometry, ground truth, commands, SLAM poses and occupancy maps in a bag.
 The full test checks unchanged raw geometry, one raw publisher, a fixed
 adapted grid, monotonic reference stamps, raw-scan freshness, actual robot
 rotation, successive SLAM pose stamps matching adapted scans, map updates,
-and the absence of SLAM point-count rejection messages. Separate unit
-tests check asymmetric obstacle bearings, motion compensation, invalid
-returns, collisions and complete input-message preservation.
+and the absence of SLAM point-count rejection messages. The isolated test
+also checks motion compensation, invalid returns, nearest-return intensity
+and final-ray metadata.
 
 Geometry diagnostics express adapted endpoints in the workshop's world
 using the next ground-truth pose at the reference timestamp (at most one
@@ -162,3 +160,43 @@ surface residuals, not localization or map-accuracy measurements. See
 [compatibility-results.json](compatibility-results.json) for measured
 errors, scan ages, installed SLAM version, checks and bag digests. Saved-map
 validation, route accuracy and loop closure remain in issue #136.
+
+## ROS 2 Jazzy deskew comparison
+
+Issue #159 compares two migration paths against the recorded `/scan/slam`
+from `log/mapping-136/route-4/bag`. It pairs each baseline scan with its raw
+rotation by the final-ray timestamp. The sample contains 40 stationary
+rotations and 40 with a peak yaw rate of at least 0.25 rad/s. Range error is
+measured in bins where both outputs have finite returns.
+
+The stock `laserscan_to_pointcloud_node` and
+`pointcloud_to_laserscan_node` retained the first-ray stamp, a median
+181.36 ms earlier than the baseline. Their 95th-percentile range error was
+135 mm at rest and 453 mm on turns. The cloud-to-scan node also uses
+lower-edge bins, sets `scan_time` from configuration and drops intensities.
+The scan-to-cloud node projects all rays before applying any whole-cloud TF
+transform, so changing its target frame cannot deskew a turn.
+
+A prototype using C++ `laser_geometry::transformLaserScanToPointCloud()`
+obtained transforms at both ends of each rotation from recorded odometry TF
+and projected into a frame fixed at the final lidar pose. With the existing
+nearest-angle and nearest-return binning rules, its 95th-percentile range
+error was 0.002 mm at rest and 0.074 mm on turns. The median number of bins
+with a different hit/no-hit classification was zero in both groups.
+
+The workshop rejected some variable-length raw rotations and saved a map
+without nonlocal loop closure. Publishing a fixed 360-bin grid directly from
+the Python driver, with the last-ray timestamp and no motion compensation,
+passed the same 11.73 m mapping route. All mapping checks passed, the first
+nonlocal loop was found at 90.59 s, and the saved map reloaded with all
+15,006 cells intact. Online position RMSE was 2.98 cm and map surface p95
+was 8.00 cm, compared with 1.47 cm and 2.89 cm with the prototype adapter.
+
+Mapping uses the motion-compensated output after the comparison. The driver
+publishes original acquisitions on `/scan` for the collision guard and
+diagnostics. RViz and SLAM subscribe to `/scan/slam`.
+
+The restored adapter passed all mapping checks on the same route. It closed
+the first nonlocal loop at 90.95 s, reloaded all 14,400 cells, and measured
+2.76 cm online position RMSE and 5.60 cm map surface p95. The run is recorded
+in `log/mapping-159/restored/analysis.json`.

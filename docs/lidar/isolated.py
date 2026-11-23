@@ -96,8 +96,8 @@ with (args.output / "adapter.log").open("w") as stream:
         [
             "ros2",
             "run",
-            "robocell_sim",
-            "scan.py",
+            "robocell_scan",
+            "slam_scan",
             "--ros-args",
             "-p",
             "use_sim_time:=true",
@@ -153,6 +153,56 @@ with (args.output / "adapter.log").open("w") as stream:
                 }
             )
             == 1,
+        )
+        rotation = scan(6, 2, 0.0)
+        rotation.angle_increment = -math.pi / 2
+        rotation.angle_max = rotation.angle_increment
+        rotation.time_increment = 0.125
+        rotation.scan_time = 0.25
+        rotation.ranges = [1.25, 2.5]
+        rotation.intensities = [17.0, 49.0]
+        transforms.sendTransform(
+            [
+                TransformStamped(
+                    header=Header(
+                        stamp=Time(seconds=moment).to_msg(), frame_id="odom"
+                    ),
+                    child_frame_id="base_scan",
+                    transform=Transform(rotation=quaternion),
+                )
+                for moment, quaternion in (
+                    (6.0, Quaternion(w=1.0)),
+                    (6.125, Quaternion(z=math.sqrt(0.5), w=math.sqrt(0.5))),
+                )
+            ]
+        )
+        source.publish(rotation)
+        until(lambda: len(messages) == 4, 2)
+        corrected = messages[-1]
+        check(
+            "deskews_clockwise_returns_and_keeps_nearest_intensity",
+            (corrected.ranges[90], corrected.intensities[90]) == (1.25, 17.0)
+            and sum(math.isfinite(value) for value in corrected.ranges) == 1,
+        )
+        check(
+            "preserves_final_ray_stamp_and_scan_metadata",
+            corrected.header.stamp == Time(seconds=6.125).to_msg()
+            and corrected.header.frame_id == "base_scan"
+            and corrected.time_increment == 0.0
+            and corrected.scan_time == rotation.scan_time
+            and math.isclose(
+                corrected.range_min, rotation.range_min, rel_tol=1e-7
+            )
+            and corrected.range_max == rotation.range_max,
+        )
+        history(7)
+        invalid = scan(7, 4, 0.0)
+        invalid.ranges = [math.inf, math.nan, 0.01, 13.0]
+        source.publish(invalid)
+        until(lambda: len(messages) == 5, 2)
+        check(
+            "invalid_returns_leave_all_bins_empty",
+            all(value == math.inf for value in messages[-1].ranges),
         )
         check("no_raw_republication", node.count_publishers("/scan") == 1)
     finally:

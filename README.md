@@ -135,7 +135,7 @@ use custom ROS arguments:
 
 ```console
 cd /ws
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 ros2 launch robocell_sim workshop.launch.xml
 ```
@@ -159,13 +159,13 @@ A headless host without an X display can select `MUJOCO_GL=egl`.
 
 Run colcon through `python -m` so it uses the virtual environment that holds
 MuJoCo; the plain `colcon` command runs the system Python, which does not.
-With `--symlink-install`, edits to the code and the models take effect without
-a rebuild; only changes to `setup.py`, `setup.cfg` or `package.xml` need one.
+With `--symlink-install`, edits to Python code and models take effect on
+restart. Rebuild after changing the C++ scan adapter or package metadata.
 
 Run the tests the same way, or with the strict style gate from the root:
 
 ```console
-python -m colcon test --packages-select robocell_sim
+python -m colcon test --packages-up-to robocell_sim
 python -m colcon test-result --verbose
 python -m pytest --eo
 ```

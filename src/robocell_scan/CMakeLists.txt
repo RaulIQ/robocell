@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.16)
+project(robocell_scan)
+
+find_package(ament_cmake REQUIRED)
+find_package(laser_geometry REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+
+add_executable(slam_scan scan.cpp)
+target_compile_features(slam_scan PRIVATE cxx_std_17)
+ament_target_dependencies(slam_scan laser_geometry rclcpp sensor_msgs tf2 tf2_ros)
+install(TARGETS slam_scan DESTINATION lib/${PROJECT_NAME})
+ament_package()

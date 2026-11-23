@@ -10,6 +10,6 @@ case "$mode" in
 esac
 cd /ws
 source /opt/ros/jazzy/setup.bash
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 exec ros2 launch robocell_sim "$mode.launch.xml" "$@"

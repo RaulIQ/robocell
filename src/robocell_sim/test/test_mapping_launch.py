@@ -77,8 +77,8 @@ def test_mapping_launch_rectifies_driver_scans_on_simulated_time() -> None:
             for node in ElementTree.parse(
                 Path(__file__).parents[1] / "launch/mapping.launch.xml"
             ).iter("node")
-            if node.get("pkg") == "robocell_sim"
-            and node.get("exec") == "scan.py"
+            if node.get("pkg") == "robocell_scan"
+            and node.get("exec") == "slam_scan"
         ],
         equal_to([{"use_sim_time": "true"}]),
         "mapping did not start the fixed-grid adapter on simulated time",

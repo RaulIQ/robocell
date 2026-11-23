@@ -10,7 +10,7 @@ nor the recorded route consumes ground truth.
 
 ```console
 source /opt/ros/jazzy/setup.bash
-python -m colcon build --symlink-install --packages-select robocell_sim
+python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
 ros2 launch robocell_sim mapping.launch.xml
 ```
