@@ -26,8 +26,8 @@ _ANGULAR = (0.1, 1.8)
 rclpy.init()
 node = rclpy.create_node("control_panel")
 settings = Declared(node)
-speed = settings.number("speed", 0.06)
-turn = settings.number("turn", 0.3)
+speed = settings.number("speed", _LINEAR[1])
+turn = settings.number("turn", _ANGULAR[1])
 if not math.isfinite(speed) or not _LINEAR[0] <= speed <= _LINEAR[1]:
     error = "Control panel speed must be between 0.01 and 0.26 m/s"
     raise ValueError(error)

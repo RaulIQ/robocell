@@ -186,7 +186,8 @@ character repeat, while the driver retains its 250 ms stale-input stop.
 The panel displays linear and angular speed settings. With an English layout,
 `w`/`x` or the +/- buttons adjust linear speed by 0.01 m/s; `e`/`c` adjust
 angular speed by 0.1 rad/s. Each real press changes a setting once, within
-0.01–0.26 m/s and 0.1–1.8 rad/s. Set initial values at launch:
+0.01–0.26 m/s and 0.1–1.8 rad/s. The panel starts at 0.26 m/s and
+1.8 rad/s. To start with lower values:
 
 ```console
 ros2 launch robocell_sim workshop.launch.xml speed:=0.06 turn:=0.3
