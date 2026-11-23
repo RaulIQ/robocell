@@ -9,8 +9,7 @@
     "vscode": {
       "extensions": [
         "ms-python.python",
-        "ms-python.vscode-pylance",
-        "openai.chatgpt@26.1007.21434"
+        "ms-python.vscode-pylance"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/opt/venv/bin/python",

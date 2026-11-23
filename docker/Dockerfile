@@ -7,11 +7,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-joint-state-publisher-gui ros-jazzy-robot-localization \
       ros-jazzy-slam-toolbox ros-jazzy-nav2-map-server \
       python3-pip python3-venv python3-opencv python3-numpy python3-colcon-common-extensions python3-tk \
-      can-utils socat iproute2 gh git nodejs npm \
+      can-utils socat iproute2 gh git \
       libgl1 libegl1 libglfw3 libosmesa6 \
     && rm -rf /var/lib/apt/lists/*
-
-RUN npm install -g @openai/codex && codex --version
 
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /etc/bash.bashrc
 RUN install -d -o ubuntu -g ubuntu /opt/venv

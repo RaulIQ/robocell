@@ -72,19 +72,21 @@ RViz displays `/map`; SLAM owns `map -> odom` while the EKF supplies
 for map-saving and loading commands, the repeatable route, fixed-frame
 accuracy measurements and evidence of loop closure.
 
-## Work with Codex
+## Work with Codex and Claude Code
 
-Rebuild and reopen the workspace with **Dev Containers: Rebuild and Reopen in
-Container** in VS Code. The container installs the Codex extension and CLI;
-`~/.codex` is mounted at `/home/ubuntu/.codex` to keep your configuration,
-sign-in and global `AGENTS.md` available across rebuilds.
+Run Codex or Claude Code from the repository checkout on the host. Build the
+development image and run project commands through Docker Compose:
 
-Open the Codex sidebar to chat, or run `codex` in the container terminal.
-If sign-in is required, use the extension or `codex login --device-auth`.
-Review and trust the project hooks with `/hooks` in Codex CLI, once for the
-host checkout and once for `/ws` inside the container. The shared EO gate
-runs after patches and before Codex finishes a turn; on the host it runs
-through Docker Compose, and in the container it uses the installed Python.
+```console
+docker compose build dev
+docker compose run --rm dev python -m pytest --eo
+```
+
+Compose mounts the checkout at `/ws`, so the container sees edits made on
+the host. If you have an existing VS Code dev container, use
+**Dev Containers: Rebuild and Reopen in Container** to apply the new
+configuration. Review and trust the project hooks in your host checkout.
+The shared EO gate runs its checks through Docker Compose.
 
 ## Run the simulation
 
