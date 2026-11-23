@@ -1,5 +1,10 @@
 # A1 acquisition timing across UART reads
 
+The UART timing and adapter diagnostics below describe the original
+implementation. To reproduce those diagnostics, use commit `653794c`
+with the historical raw clockwise `/scan` and separate `/scan/slam`.
+The current mapping verification uses `docs/mapping/record.py`.
+
 Issue #147 exposed a timestamp regression when the ROS clock paused while
 UART bytes remained queued. Backdating each read independently could give
 later rotations earlier first-ray timestamps. The regression's three
@@ -162,3 +167,38 @@ surface residuals, not localization or map-accuracy measurements. See
 [compatibility-results.json](compatibility-results.json) for measured
 errors, scan ages, installed SLAM version, checks and bag digests. Saved-map
 validation, route accuracy and loop closure remain in issue #136.
+
+## ROS 2 Jazzy deskew comparison
+
+Issue #159 compares two migration paths against the recorded `/scan/slam`
+from `log/mapping-136/route-4/bag`. It pairs each baseline scan with its raw
+rotation by the final-ray timestamp. The sample contains 40 stationary
+rotations and 40 with a peak yaw rate of at least 0.25 rad/s. Range error is
+measured in bins where both outputs have finite returns.
+
+The stock `laserscan_to_pointcloud_node` and
+`pointcloud_to_laserscan_node` retained the first-ray stamp, a median
+181.36 ms earlier than the baseline. Their 95th-percentile range error was
+135 mm at rest and 453 mm on turns. The cloud-to-scan node also uses
+lower-edge bins, sets `scan_time` from configuration and drops intensities.
+The scan-to-cloud node projects all rays before applying any whole-cloud TF
+transform, so changing its target frame cannot deskew a turn.
+
+A prototype using C++ `laser_geometry::transformLaserScanToPointCloud()`
+obtained transforms at both ends of each rotation from recorded odometry TF
+and projected into a frame fixed at the final lidar pose. With the existing
+nearest-angle and nearest-return binning rules, its 95th-percentile range
+error was 0.002 mm at rest and 0.074 mm on turns. The median number of bins
+with a different hit/no-hit classification was zero in both groups.
+
+The workshop rejected some variable-length raw rotations and saved a map
+without nonlocal loop closure. Publishing a fixed 360-bin grid directly from
+the Python driver, with the last-ray timestamp and no motion compensation,
+passed the same 11.73 m mapping route. All mapping checks passed, the first
+nonlocal loop was found at 90.59 s, and the saved map reloaded with all
+15,006 cells intact. Online position RMSE was 2.98 cm and map surface p95
+was 8.00 cm, compared with 1.47 cm and 2.89 cm with the prototype adapter.
+
+The simpler driver grid is the default for `/scan`. SLAM Toolbox and RViz
+use it directly, and mapping no longer starts a separate scan adapter.
+Compare the run with `log/mapping-159/fixed-grid/analysis.json`.

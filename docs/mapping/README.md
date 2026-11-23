@@ -1,9 +1,8 @@
 # Workshop mapping with SLAM Toolbox
 
 Issue #136 builds an occupancy map from the UART A1 driver, wheel encoders
-and calibrated IMU. Issue #148 supplies `/scan/slam`: a fixed angular grid
-with endpoints deskewed through odometry TF. The raw clockwise `/scan`
-remains available for diagnostics and the collision guard. Neither mapping
+and calibrated IMU. Issue #159 supplies a fixed angular grid directly on `/scan`. SLAM Toolbox,
+RViz and the collision guard share this topic. Neither mapping
 nor the recorded route consumes ground truth.
 
 ## Interactive mapping
@@ -99,7 +98,7 @@ covers about 12 m in this scene. The script then pauses and resumes the
 simulation, saves the occupancy map and the separate pose graph, and loads
 the occupancy map through the installed Nav2 map server.
 
-The recording contains `/scan`, `/scan/slam`, `/clock`, `/map`, `/tf`,
+The recording contains `/scan`, `/clock`, `/map`, `/tf`,
 `/tf_static`, wheel odometry, filtered odometry, `/pose`, ground truth,
 commands, readiness states, SLAM graph markers and the reloaded map. It
 retains launch logs, exact route/configuration, checks and a bag digest.

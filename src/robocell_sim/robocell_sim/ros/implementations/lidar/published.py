@@ -1,5 +1,6 @@
 """A received rotation published as a ROS LaserScan."""
 
+import math
 from dataclasses import dataclass
 from typing import final, override
 
@@ -15,7 +16,7 @@ from robocell_sim.ros.interfaces.topic import Topic
 @final
 @dataclass(frozen=True)
 class Published(Report):
-    """Report preserving the received scan's angular and temporal order."""
+    """Report grouping returns on a fixed angular grid."""
 
     _sweep: Sweep
     _frame: str
@@ -26,20 +27,35 @@ class Published(Report):
     def publish(self) -> None:
         geometry = self._sweep.geometry()
         timing = self._sweep.timing()
+        samples = self._sweep.ranges()
+        ranges = [math.inf] * 360
+        intensities = [0.0] * 360
+        for index, (distance, intensity) in enumerate(
+            zip(samples, self._sweep.intensities(), strict=True)
+        ):
+            slot = math.floor(
+                math.degrees(geometry[0] + index * geometry[2] + math.pi) + 0.5
+            ) % len(ranges)
+            if distance < ranges[slot]:
+                ranges[slot] = distance
+                intensities[slot] = intensity
         self._topic.publish(
             LaserScan(
                 header=Header(
-                    stamp=Time(nanoseconds=timing[0]).to_msg(),
+                    stamp=Time(
+                        nanoseconds=timing[0]
+                        + round((len(samples) - 1) * timing[2] * 1e9)
+                    ).to_msg(),
                     frame_id=self._frame,
                 ),
-                angle_min=geometry[0],
-                angle_max=geometry[1],
-                angle_increment=geometry[2],
-                time_increment=timing[2],
+                angle_min=-math.pi,
+                angle_max=math.pi - math.tau / len(ranges),
+                angle_increment=math.tau / len(ranges),
+                time_increment=0.0,
                 scan_time=timing[1],
                 range_min=self._limits[0],
                 range_max=self._limits[1],
-                ranges=list(self._sweep.ranges()),
-                intensities=list(self._sweep.intensities()),
+                ranges=ranges,
+                intensities=intensities,
             )
         )

@@ -31,7 +31,7 @@ Visualization Manager:
       Name: Lidar
       Enabled: true
       Topic:
-        Value: /scan/slam
+        Value: /scan
       Style: Flat Squares
       Size (m): 0.03
       Color Transformer: FlatColor

@@ -12,7 +12,7 @@ def test_forwarded_publishes_a_complete_rotation_from_uart() -> None:
     """The UART path discards startup data and publishes the next full turn."""
     assert_that(
         [
-            tuple(message.ranges)
+            tuple(message.ranges[index] for index in (180, 90, 0, 270))
             for message in Delivered(
                 (
                     bytes.fromhex("A5 5A 05 00 00 40 81"),
@@ -40,7 +40,7 @@ def test_forwarded_accepts_every_byte_in_a_separate_read() -> None:
     payload = bytes.fromhex("A5 5A 05 00 00 40 81") + turn * 2 + turn[:5]
     assert_that(
         [
-            tuple(message.ranges)
+            tuple(message.ranges[index] for index in (180, 90, 0, 270))
             for message in Delivered(
                 tuple(bytes([value]) for value in payload), (0.15, 12.0), 476
             ).messages()
@@ -67,7 +67,7 @@ def test_forwarded_discards_the_damaged_rotation_before_resynchronizing() -> (
     )
     assert_that(
         [
-            tuple(message.ranges)
+            tuple(message.ranges[index] for index in (180, 90, 0, 270))
             for message in Delivered((payload,), (0.15, 12.0), 476).messages()
         ],
         equal_to([(1.0, 2.0, 3.0, 4.0)]),
@@ -75,10 +75,8 @@ def test_forwarded_discards_the_damaged_rotation_before_resynchronizing() -> (
     )
 
 
-def test_forwarded_keeps_clockwise_order_and_positive_acquisition_time() -> (
-    None
-):
-    """ROS angles decrease while acquisition time advances along the array."""
+def test_forwarded_reports_a_fixed_grid_as_one_snapshot() -> None:
+    """The grid starts aft and does not imply per-bin acquisition times."""
     turn = bytes.fromhex("3D 01 00 A0 0F 3E 01 2D 40 1F") + bytes.fromhex(
         "3E 01 5A E0 2E 3E 01 87 80 3E"
     )
@@ -89,17 +87,18 @@ def test_forwarded_keeps_clockwise_order_and_positive_acquisition_time() -> (
     ).messages()[0]
     assert_that(
         (
-            message.angle_increment < 0,
-            message.time_increment > 0,
+            message.angle_min,
+            message.angle_increment,
+            message.time_increment,
             message.header.frame_id,
         ),
-        equal_to((True, True, "base_scan")),
-        "ROS scan did not preserve clockwise acquisition and its frame",
+        equal_to((-math.pi, math.tau / 360, 0.0, "base_scan")),
+        "ROS scan did not describe the fixed grid snapshot",
     )
 
 
 def test_forwarded_accepts_variable_point_counts() -> None:
-    """A scan's angular grid follows received samples rather than 360 slots."""
+    """An irregular turn still publishes 360 angular slots."""
     count = 13
     turn = b"".join(
         struct.pack(
@@ -119,8 +118,8 @@ def test_forwarded_accepts_variable_point_counts() -> None:
                 476,
             ).messages()
         ],
-        equal_to([count]),
-        "scan did not preserve the variable number of received samples",
+        equal_to([360]),
+        "scan did not keep its size with variable acquired samples",
     )
 
 
@@ -130,15 +129,17 @@ def test_forwarded_represents_invalid_returns_as_infinity() -> None:
         "3E 01 5A E0 2E 3E 01 87 80 3E"
     )
     assert_that(
-        tuple(
-            Delivered(
+        [
+            distance
+            for distance in Delivered(
                 (bytes.fromhex("A5 5A 05 00 00 40 81") + turn * 2 + turn[:5],),
                 (0.15, 2.5),
                 476,
             )
             .messages()[0]
             .ranges
-        ),
-        equal_to((1.0, math.inf, math.inf, math.inf)),
+            if math.isfinite(distance)
+        ],
+        equal_to([1.0]),
         "invalid returns did not become infinite ranges",
     )
