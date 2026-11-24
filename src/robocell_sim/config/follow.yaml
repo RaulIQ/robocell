@@ -1,6 +1,7 @@
 bt_navigator:
   ros__parameters:
     use_sim_time: true
+    always_reload_bt_xml: true
     global_frame: map
     robot_base_frame: base_footprint
     odom_topic: /odometry/filtered

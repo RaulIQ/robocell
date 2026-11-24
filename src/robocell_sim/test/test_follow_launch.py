@@ -50,3 +50,14 @@ def test_follow_sends_both_command_sources_through_the_mux() -> None:
         ),
         "following did not route manual and navigation commands safely",
     )
+
+
+def test_follow_drops_previous_goal_updates_when_restarted() -> None:
+    """A fresh behavior tree starts with an empty GoalUpdater."""
+    assert_that(
+        yaml.safe_load(
+            (Path(__file__).parents[1] / "config/follow.yaml").read_text()
+        )["bt_navigator"]["ros__parameters"].get("always_reload_bt_xml"),
+        equal_to(obj=True),
+        "following did not reset its behavior tree for a new goal",
+    )
