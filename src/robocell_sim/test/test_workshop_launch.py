@@ -322,8 +322,8 @@ def test_workshop_launch_shares_the_named_lidar_endpoint() -> None:
     )
 
 
-def test_workshop_launch_starts_one_guarded_canopen_joint_publisher() -> None:
-    """The normal launch enables the CAN driver and its collision guard."""
+def test_workshop_opens_one_driver_without_lidar_input() -> None:
+    """The CAN driver receives wheel and transport settings only."""
     assert_that(
         [
             {
@@ -343,11 +343,10 @@ def test_workshop_launch_starts_one_guarded_canopen_joint_publisher() -> None:
                     "channel": "$(var can_channel)",
                     "left_node": "$(var left_node)",
                     "right_node": "$(var right_node)",
-                    "collision_guard": "true",
                 }
             ]
         ),
-        "workshop did not start one guarded CANopen joint-feedback driver",
+        "workshop did not start one CANopen joint-feedback driver",
     )
 
 

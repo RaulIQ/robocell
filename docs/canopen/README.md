@@ -2,16 +2,14 @@
 
 The normal `workshop.launch.xml` now runs the wheel emulators in the same
 MuJoCo world as the sensors and a separate `motor_driver` ROS node. All
-keyboard and ROS body commands pass through the driver-owned collision guard.
+keyboard and ROS body commands enter the same driver command path.
 Only the emulators assign actuator targets and acquire wheel feedback, and
 only `motor_driver` publishes `/joint_states`.
 
 ```mermaid
 flowchart LR
-    Keyboard[Keyboard events] -->|stamped body intent| Guard
-    ROS[/cmd_vel] --> Guard
-    Lidar[lidar.py /scan] --> Guard
-    Guard[Collision guard and original input age] --> Host[motor_driver]
+    Keyboard[Keyboard events] -->|stamped body intent| Host
+    ROS[/cmd_vel] --> Host[motor_driver]
     Host -->|RPDO commands| Drives[CANopen wheel emulators]
     Drives -->|matched PDO snapshots| Host
     Host --> Joints[/joint_states]
@@ -32,16 +30,12 @@ ros2 launch robocell_sim workshop.launch.xml
 ```
 
 `can_interface`, `can_channel`, `left_node` and `right_node` are shared by
-simulator and driver; defaults are `socketcan`, `vcan0`, 1 and 2. The launch
-enables `collision_guard=true`. The standalone `motors.py` world still uses
-an unguarded driver by default because that world has no lidar.
+simulator and driver; defaults are `socketcan`, `vcan0`, 1 and 2.
 
 Hold an arrow for key repeat or publish `/cmd_vel` continuously, for example
 at 20 Hz. Keyboard events retain their original system-time timestamp on
 `/keyboard/cmd_vel`; the driver converts the transport age once to its
-monotonic clock. Scan updates never renew command age. Commands expire after
-250 ms, and guard measurements expire after 500 ms of simulation time.
-Before the first scan, the guard inhibits motion.
+monotonic clock. Commands expire after 250 ms.
 
 Fresh input after a command timeout requests a verified enable, and another
 fresh command after enable is required for motion. `/motor_driver/retry`
@@ -106,7 +100,7 @@ fault/recovery checks in free space. All 15 checks passed.
 | Check | Observed result |
 | --- | --- |
 | Joint feedback ownership | One publisher, `motor_driver` |
-| Keyboard collision guard | Requested reverse speed -0.08 m/s; both drive targets and measured wheel speeds reached zero before the wall |
+| Historical keyboard collision guard | Requested reverse speed -0.08 m/s; both drive targets and measured wheel speeds reached zero before the wall |
 | Application timeout | Host quick-stopped both drives after input expired; measured body speed was below 0.00002 m/s |
 | Fresh input after timeout | Full enable repeated and measured motion resumed with fresh input |
 | Pause | `/clock` held at 20.610 s, both targets stayed zero, host remained available |

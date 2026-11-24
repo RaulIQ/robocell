@@ -5,8 +5,7 @@
 v0 drives a simulated TurtleBot3 Waffle Pi through a 6 by 6 m workshop in
 MuJoCo from the keyboard. Its odometry takes the distance from the wheel
 encoders and the turn from an integrated gyro, a 360-ray lidar ranges the
-room five times a second, a camera renders what the robot sees, and a guard
-stops the robot short of anything the lidar sees. Optional windows plot the
+room five times a second, and a camera renders what the robot sees. Optional windows plot the
 route against the ground truth, the latest lidar scan, the camera image and
 two maps of the room, by the true pose and by odometry; the viewer marks
 every lidar echo, and the console warns when the wheels slip.
@@ -332,10 +331,9 @@ The `motor_driver` node alone publishes `/joint_states`, with wheel positions
 in radians, measured velocities in rad/s and CAN acquisition time. It commits
 only complete, matched PDO snapshots from the two drive emulators. Only
 those emulators write wheel targets or acquire encoder feedback. Teleop sends
-`/cmd_vel` through the driver's collision guard before kinematics and CAN
-transmission. The driver also accepts external stamped commands on
-`/keyboard/cmd_vel`. Before the first `/scan` or after a 500 ms
-scan gap in simulation time, the guard inhibits motion.
+`/cmd_vel` for kinematics and CAN transmission. The driver also accepts
+external stamped commands on `/keyboard/cmd_vel` and stops when commands expire.
+The driver does not use lidar to stop manual motion.
 
 The odometry is a node of its own named `odometry`, which the launch file
 starts next to the simulator. It knows the robot only through ROS: it turns
@@ -415,7 +413,7 @@ Samples keep their acquisition order: clockwise rotation becomes a negative
 ROS angular increment, with positive time between samples. The first-ray
 stamp is estimated from ROS reception time and the queried sample period;
 it is not a timestamp transmitted by the A1. The MuJoCo scan and map windows
-retain their separate 360-ray, 5 Hz, 0.12–3.5 m display/guard path.
+retain their separate 360-ray, 5 Hz, 0.12–3.5 m display path.
 
 ```console
 ros2 topic echo --once /scan
@@ -583,10 +581,9 @@ log report the outcome.
 
 The driver parameters, recovery behavior and current integration boundary
 are described in [the CANopen protocol](docs/protocols/canopen-drives.md#standalone-host-driver).
-The standalone world has no lidar and uses `collision_guard:=false`, the
-driver default. The workshop launch sets `collision_guard:=true`, shares CAN
-parameters with its emulators and runs one driver as the sole joint-feedback
-publisher. [Recorded route and recovery checks](docs/canopen/README.md) cover
+The workshop launch shares CAN parameters with its emulators and runs one
+driver as the sole joint-feedback publisher. The
+[recorded route and recovery checks](docs/canopen/README.md) cover
 the complete workshop, odometry and EKF chain.
 
 ## Emulated RPLIDAR A1
@@ -606,7 +603,7 @@ continue to be serviced. UART delivery is paced to 115200-baud 8N1 in wall
 time, with a bounded backlog and explicit failure if a host cannot keep up.
 
 The separate `lidar.py` driver consumes this serial path and is the sole
-ROS `/scan` publisher. The display and guard retain their direct raycasts.
+ROS `/scan` publisher. The display retains its direct raycasts.
 Express scan modes and USB adapter motor-control lines are
 outside the standard-SCAN emulator.
 
@@ -649,7 +646,9 @@ This mode shows the live SLAM map and starts Nav2. Drive with the Robocell
 panel until RViz shows the free area you intend to use. Choose **Nav2 Goal**
 to start following, then use **2D Goal Pose** to move the active target.
 Both tools set a position and heading by clicking and dragging on the map.
-Choose points in known free space. The supplied Nav2 Follow Dynamic Point
+Choose points in known free space. Nav2 uses `/scan` for obstacle avoidance
+during autonomous motion. The operator handles obstacles during manual control.
+The supplied Nav2 Follow Dynamic Point
 tree replans once a second and truncates the path about 1 m from the target.
 To use a different stand-off distance, pass a copy of the tree with a
 different `TruncatePath` distance as `follow_tree:=/path/to/tree.xml`.
@@ -659,5 +658,5 @@ the keys sends zero before the mux hands control back to Nav2 after 250 ms
 of simulation time.
 Use **Cancel** in the RViz **Navigation 2** panel to end autonomous motion,
 including before switching back to manual-only driving. The panel's STOP
-button clears manual input. The motor driver checks lidar and command
+button clears manual input. The motor driver checks command
 freshness for both sources.

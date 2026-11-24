@@ -48,7 +48,6 @@
     <param name="channel" value="$(var can_channel)"/>
     <param name="left_node" value="$(var left_node)"/>
     <param name="right_node" value="$(var right_node)"/>
-    <param name="collision_guard" value="true"/>
   </node>
   <node pkg="robocell_sim" exec="lidar.py" output="screen">
     <param name="use_sim_time" value="true"/>

@@ -324,19 +324,8 @@ with (
             "one_joint_publisher", feedback == ["motor_driver"], nodes=feedback
         )
         advance(0.2, ("ros", 0.0, 0.0))
-        advance(4.0, ("keyboard", -0.08, 0.0))
-        rear = targets()
-        check(
-            "keyboard_collision_guard",
-            rear == [0, 0]
-            and max(abs(value) for value in latest["/joint_states"].velocity)
-            < 0.02,
-            drive_targets=rear,
-            measured_wheel_velocities=list(latest["/joint_states"].velocity),
-            requested=-0.08,
-        )
+        advance(3.0, ("keyboard", 0.08, 0.0))
         for duration, linear, angular in [
-            (3.0, 0.08, 0.0),
             (3.0, 0.0, -0.4),
             (4.0, 0.08, 0.0),
             (3.0, 0.0, 0.4),

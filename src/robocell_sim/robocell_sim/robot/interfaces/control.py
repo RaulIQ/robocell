@@ -6,16 +6,12 @@ from robocell_sim.robot.interfaces.pilot import Command
 
 
 class Control(Protocol):
-    """Application input whose age survives collision-guard reevaluation."""
+    """Application input with its original source time."""
 
     def steer(self, velocity: tuple[float, float], moment: float) -> "Control":
         """Accept a newer source command with its original monotonic time."""
         ...
 
-    def scan(self, ranges: tuple[float, ...], stamp: int) -> "Control":
-        """Replace guard measurements without renewing application input."""
-        ...
-
-    def reading(self, clock: int, *, protected: bool) -> Command:
-        """Return guarded body velocity with the unchanged source time."""
+    def reading(self) -> Command:
+        """Return body velocity with its original source time."""
         ...
