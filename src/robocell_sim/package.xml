@@ -3,7 +3,7 @@
 <package format="3">
   <name>robocell_sim</name>
   <version>0.0.0</version>
-  <description>MuJoCo simulation of a TurtleBot3 Waffle Pi with odometry, lidar, camera and a collision guard</description>
+  <description>MuJoCo simulation of a TurtleBot3 Waffle Pi with odometry, lidar and camera</description>
   <maintainer email="raulalimbekov@gmail.com">RaulIQ</maintainer>
   <license>Apache-2.0</license>
 
@@ -32,6 +32,15 @@
   <exec_depend>teleop_twist_keyboard</exec_depend>
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_navfn_planner</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>nav2_rviz_plugins</exec_depend>
+  <exec_depend>twist_mux</exec_depend>
 
   <test_depend>python3-pytest</test_depend>
 

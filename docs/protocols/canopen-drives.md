@@ -29,8 +29,8 @@ actuator handles physical response; configurable profile acceleration and
 deceleration objects are not implemented. This is not a complete PV model. Position, torque, homing, CAN FD, dynamic PDO remapping,
 segmented or block SDO, LSS, node guarding, persistent configuration and
 CANopen Safety are outside this profile. Quick-stop is a simulated stop,
-not a certified E-STOP or STO function. Wheel geometry, collision-guard
-geometry, SLAM and localization are outside this work.
+not a certified E-STOP or STO function. Wheel geometry, SLAM and
+localization are outside this work.
 
 ## Bus and identities
 
@@ -380,14 +380,10 @@ new epoch; it must not become a negative odometry time interval.
 
 ## Host integration boundary
 
-All command sources, including keyboard input, enter one explicit guarded
-body-command path before conversion to wheel speeds. The existing collision
-guard uses the existing scan geometry and must be reevaluated as scans arrive,
-even if the requested body command stays unchanged. A guard stop supersedes
-motion; guard data older than 500 ms of simulated time must inhibit motion.
-Before the first scan, motion is inhibited. The command path must preserve
-the original input's age so periodic guard output cannot keep an abandoned
-body command fresh. No command source may write MuJoCo actuators directly.
+All command sources, including keyboard input, enter one body-command path
+before conversion to wheel speeds. The driver preserves the original command
+time for the command watchdog. Only drive emulators write MuJoCo actuators.
+Nav2 uses lidar separately when it plans and follows an autonomous path.
 
 Only drive emulators write wheel actuators and acquire encoder feedback.
 The ROS host publishes exactly one `/joint_states` stream from matched CAN
@@ -579,7 +575,6 @@ mode is written and read back; the default supervision values must match.
 | `wheel_limit` | `7.88` | Maximum wheel speed in rad/s, at most 7.88 |
 | `physics_step` | `0.002` | Maximum paired acquisition skew in seconds |
 | `left_joint`, `right_joint` | `wheel_left_joint`, `wheel_right_joint` | JointState names |
-| `collision_guard` | `false` | Require fresh `/scan` and apply the existing 0.3 m by 0.2 m corridor guard |
 
 Geometry values must be finite and positive. Node identities and geometry
 are checked before opening CAN. The physics-step parameter must match the
@@ -634,7 +629,7 @@ PYTHONPATH=src/robocell_sim:$PYTHONPATH python -m robocell_sim.motor_driver \
 Use a shared SocketCAN interface for separate processes. The `virtual` backend
 is for isolated same-process tests. Run one motor driver per shared CAN bus.
 The standalone world accepts body commands directly; the normal workshop
-uses the guarded integration below.
+uses the integration below.
 
 Host tests cover independent node startup, fresh commands, forward/reverse
 and turning, measured CAN feedback, command expiry at both physical actuators,
@@ -651,7 +646,7 @@ This is not an electrical-CAN or separate-process SocketCAN validation.
 ## Workshop integration
 
 `workshop.launch.xml` starts the integrated emulators in `main.py` and one
-`motor_driver.py` with `collision_guard=true`. `can_interface`, `can_channel`,
+`motor_driver.py`. `can_interface`, `can_channel`,
 `left_node` and `right_node` are shared launch arguments. Defaults remain
 SocketCAN `vcan0`, left 1 and right 2. The simulator has no direct velocity
 command subscription, actuator assignment or joint-feedback publisher.
@@ -663,16 +658,8 @@ uses its monotonic ROS arrival time; `/keyboard/cmd_vel` is a
 `geometry_msgs/TwistStamped` stamped at the original key event with system
 wall time. The driver maps that age into monotonic time once. The keyboard
 publisher emits only actual arrow/Enter events, and a delayed older source
-cannot supersede newer input. Periodic guard reevaluation preserves the
-original input time, so a fresh scan cannot renew an abandoned command.
+cannot supersede newer input.
 Hold an arrow for key repeat or send a continuous ROS command stream.
-
-The existing corridor geometry remains 0.3 m front/rear by 0.2 m half-width.
-The ROS scan adapter bins the nearest valid return at each degree, accounting
-for `angle_min` and either sign of `angle_increment`. An obstacle blocks the
-relevant translation while leaving turning available. Before a scan arrives,
-with a backwards scan time, or more than 500 ms after its acquisition while
-simulation time advances, all motion is inhibited.
 
 Drive service brackets every physics step, including each individual catch-up
 step. A pause interrupts catch-up and continues protective CAN service on wall
@@ -684,6 +671,6 @@ ROS paths, with one `/joint_states` publisher named `motor_driver`.
 
 The repeatable headless recording, measured results, CAN traffic and compressed
 ROS bag are under [docs/canopen](../canopen/README.md). The run verifies
-keyboard guarding against a wall, stale commands, pause/resume, command-watchdog
+stale commands, pause/resume, command-watchdog
 faults, explicit fault recovery, drive restart, fresh-input requirements and
 clean host shutdown through the actual workshop launch.

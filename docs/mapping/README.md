@@ -3,7 +3,7 @@
 Issue #136 builds an occupancy map from the UART A1 driver, wheel encoders
 and calibrated IMU. Issue #148 supplies `/scan/slam`: a fixed angular grid
 with endpoints deskewed through odometry TF. The raw clockwise `/scan`
-remains available for diagnostics and the collision guard. Neither mapping
+remains available for diagnostics and Nav2. Neither mapping
 nor the recorded route consumes ground truth.
 
 ## Interactive mapping
@@ -91,7 +91,7 @@ All startup, service, motion, pause/resume and shutdown waits are bounded.
 [route.json](route.json) describes the fixed route in `odom`. A proportional
 command follows each specified waypoint using `/odometry/filtered`, then
 turns to the final heading. This is a diagnostic route, with no obstacle
-planner or ground-truth feedback. The collision guard remains active. The
+planner or ground-truth feedback. The
 route starts beside the dock, moves east around the low pallet, passes north
 along the west side of the central column, crosses east, turns south, and
 returns west to rejoin its earlier path before going back to the dock. It

@@ -193,8 +193,7 @@ nonlocal loop was found at 90.59 s, and the saved map reloaded with all
 was 8.00 cm, compared with 1.47 cm and 2.89 cm with the prototype adapter.
 
 Mapping uses the motion-compensated output after the comparison. The driver
-publishes original acquisitions on `/scan` for the collision guard and
-diagnostics. RViz and SLAM subscribe to `/scan/slam`.
+publishes original acquisitions on `/scan` for Nav2 and diagnostics. RViz and SLAM subscribe to `/scan/slam`.
 
 The restored adapter passed all mapping checks on the same route. It closed
 the first nonlocal loop at 90.95 s, reloaded all 14,400 cells, and measured

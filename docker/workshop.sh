@@ -2,9 +2,9 @@
 set -eo pipefail
 mode=${ROBOCELL_MODE:-workshop}
 case "$mode" in
-    workshop|mapping) ;;
+    workshop|mapping|follow) ;;
     *)
-        printf 'Invalid ROBOCELL_MODE "%s", expected workshop or mapping\n' "$mode" >&2
+        printf 'Invalid ROBOCELL_MODE "%s", expected workshop, mapping or follow\n' "$mode" >&2
         exit 2
         ;;
 esac

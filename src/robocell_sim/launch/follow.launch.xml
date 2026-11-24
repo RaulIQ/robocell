@@ -1,0 +1,36 @@
+<launch>
+  <arg name="rviz" default="true" description="Open the follow view"/>
+  <arg name="headless" default="false" description="Run without the MuJoCo viewer"/>
+  <arg name="teleop" default="true" description="Open the manual control panel"/>
+  <arg name="can_channel" default="vcan0" description="Shared SocketCAN channel"/>
+  <arg name="lidar_port" default="$(env HOME)/.ros/robocell-lidar" description="Shared UART endpoint"/>
+  <arg name="follow_tree" default="$(find-pkg-share nav2_bt_navigator)/behavior_trees/follow_point.xml" description="Behavior tree for following a changing goal"/>
+  <arg name="nav_params" default="$(find-pkg-share robocell_sim)/config/follow.yaml" description="Nav2 and velocity routing parameters"/>
+  <include file="$(find-pkg-share robocell_sim)/launch/mapping.launch.xml">
+    <arg name="rviz" value="$(var rviz)"/>
+    <arg name="headless" value="$(var headless)"/>
+    <arg name="teleop" value="$(var teleop)"/>
+    <arg name="can_channel" value="$(var can_channel)"/>
+    <arg name="lidar_port" value="$(var lidar_port)"/>
+    <arg name="rviz_config" value="$(find-pkg-share robocell_sim)/rviz/follow.rviz"/>
+    <arg name="panel_topic" value="/cmd_vel_manual"/>
+  </include>
+  <node pkg="nav2_planner" exec="planner_server" name="planner_server" output="screen">
+    <param from="$(var nav_params)"/>
+  </node>
+  <node pkg="nav2_controller" exec="controller_server" name="controller_server" output="screen">
+    <param from="$(var nav_params)"/>
+    <remap from="cmd_vel" to="/cmd_vel_nav"/>
+  </node>
+  <node pkg="nav2_bt_navigator" exec="bt_navigator" name="bt_navigator" output="screen">
+    <param from="$(var nav_params)"/>
+    <param name="default_nav_to_pose_bt_xml" value="$(var follow_tree)"/>
+  </node>
+  <node pkg="nav2_lifecycle_manager" exec="lifecycle_manager" name="lifecycle_manager_navigation" output="screen">
+    <param from="$(var nav_params)"/>
+  </node>
+  <node pkg="twist_mux" exec="twist_mux" name="twist_mux" output="screen">
+    <param from="$(var nav_params)"/>
+    <remap from="cmd_vel_out" to="/cmd_vel"/>
+  </node>
+</launch>

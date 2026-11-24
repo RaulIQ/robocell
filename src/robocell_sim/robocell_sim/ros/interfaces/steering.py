@@ -3,16 +3,15 @@
 from typing import Protocol
 
 from geometry_msgs.msg import Twist, TwistStamped  # type: ignore[import-untyped]  # ROS generates message modules without types
-from sensor_msgs.msg import LaserScan  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.robot.interfaces.pilot import Command
 
 
 class Steering(Protocol):
-    """Source commands and guard observations kept on independent clocks."""
+    """Body commands received from ROS and the keyboard."""
 
     def listen(self) -> None:
-        """Subscribe once to body commands, keyboard input and lidar scans."""
+        """Subscribe once to body commands and keyboard input."""
         ...
 
     def command(self, message: Twist) -> None:
@@ -23,10 +22,6 @@ class Steering(Protocol):
         """Accept keyboard intent without concealing its transport age."""
         ...
 
-    def scan(self, message: LaserScan) -> None:
-        """Replace collision observations without renewing source commands."""
-        ...
-
-    def reading(self, clock: int) -> Command:
-        """Evaluate the current guard with the original command deadline."""
+    def reading(self) -> Command:
+        """Return the latest command with its source time."""
         ...

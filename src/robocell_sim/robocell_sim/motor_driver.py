@@ -54,13 +54,9 @@ controls.put(
     Filtered(
         Arrows(Stepped(0.05, 5, 0), Stepped(0.3, 6, 0)),
         -1.0,
-        ((), -1),
-        (0.3, 0.2, 500000000),
     )
 )
-steering = Steered(
-    node, controls, _protected=settings.flag("collision_guard", default=False)
-)
+steering = Steered(node, controls)
 steering.listen()
 retries: queue.SimpleQueue[bool] = queue.SimpleQueue()
 clocks: queue.SimpleQueue[int] = queue.SimpleQueue()
@@ -157,7 +153,7 @@ with (
             )
         while not clocks.empty():
             simulation = clocks.get_nowait()
-        linear, angular, moment = steering.reading(simulation)
+        linear, angular, moment = steering.reading()
         if pilots:
             try:
                 pilots[0].command((linear, angular), moment)
