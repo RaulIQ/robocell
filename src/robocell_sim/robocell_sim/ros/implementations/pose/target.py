@@ -6,11 +6,13 @@ from collections import deque
 from dataclasses import dataclass
 from typing import final, override
 
-from geometry_msgs.msg import PoseStamped, Twist  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from geometry_msgs.msg import Point, Pose, PoseStamped, Twist, Vector3  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from rclpy.publisher import Publisher
 from rclpy.time import Time
+from std_msgs.msg import ColorRGBA  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from tf2_geometry_msgs import do_transform_pose_stamped  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from tf2_ros import Buffer, TransformException  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.hardware.interfaces.prop import Prop
 from robocell_sim.ros.interfaces.target import Goal
@@ -25,7 +27,7 @@ class Target(Goal):
 
     _cube: Prop
     _origin: tuple[float, float, float]
-    _output: tuple[Buffer, Publisher]
+    _output: tuple[Buffer, Publisher, Publisher]
     _intent: deque[tuple[float, float, float]]
 
     @override
@@ -52,7 +54,7 @@ class Target(Goal):
     @override
     def publish(self, moment: float) -> None:
         """Combine the spawn transform with the latest SLAM correction."""
-        buffer, topic = self._output
+        buffer, topic, display = self._output
         try:
             transform = buffer.lookup_transform("map", "odom", Time())
         except TransformException:
@@ -62,6 +64,7 @@ class Target(Goal):
         )
         goal.header.stamp = Time(nanoseconds=round(moment * 1e9)).to_msg()
         topic.publish(goal)
+        display.publish(marker(goal))
 
 
 def pose(
@@ -77,3 +80,20 @@ def pose(
     goal.pose.orientation.z = math.sin((heading - yaw) / 2)
     goal.pose.orientation.w = math.cos((heading - yaw) / 2)
     return goal
+
+
+def marker(goal: PoseStamped) -> Marker:
+    """Show the cube on the map without changing the navigation goal."""
+    return Marker(
+        header=goal.header,
+        ns="cube",
+        type=Marker.CUBE,
+        pose=Pose(
+            position=Point(
+                x=goal.pose.position.x, y=goal.pose.position.y, z=0.10
+            ),
+            orientation=goal.pose.orientation,
+        ),
+        scale=Vector3(x=0.20, y=0.20, z=0.20),
+        color=ColorRGBA(r=1.0, g=0.35, b=0.05, a=1.0),
+    )

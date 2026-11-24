@@ -43,6 +43,11 @@ Visualization Manager:
       Enabled: true
       Topic:
         Value: /plan
+    - Class: rviz_default_plugins/Marker
+      Name: Follow cube
+      Enabled: true
+      Topic:
+        Value: /cube/marker
   Tools:
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Select

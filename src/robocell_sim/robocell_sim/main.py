@@ -29,6 +29,7 @@ from rclpy.utilities import remove_ros_args, try_shutdown
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_srvs.srv import SetBool  # type: ignore[import-untyped]  # ROS generates message modules without types
 from tf2_ros import Buffer, TransformListener  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.display.implementations.camera.screen import Screen
 from robocell_sim.display.implementations.lidar.beams import Beams
@@ -232,7 +233,11 @@ with (
         target = Target(
             cube,
             (float(data.qpos[0]), float(data.qpos[1]), odometry.heading()),
-            (buffer, node.create_publisher(PoseStamped, "/goal_update", 1)),
+            (
+                buffer,
+                node.create_publisher(PoseStamped, "/goal_update", 1),
+                node.create_publisher(Marker, "/cube/marker", 1),
+            ),
             deque(maxlen=1),
         )
         node.create_subscription(Twist, "/cube/cmd_vel", target.accept, 1)

@@ -82,3 +82,19 @@ def test_follow_forwards_the_cube_option_to_the_workshop() -> None:
         equal_to([True, True, True, True]),
         "the follow launch did not enable both ends of cube control",
     )
+
+
+def test_follow_view_displays_the_cube_marker() -> None:
+    """The map displays the simulated cube whenever its marker arrives."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
+    assert_that(
+        [
+            (display["Enabled"], display["Topic"]["Value"])
+            for display in config["Visualization Manager"]["Displays"]
+            if display["Class"] == "rviz_default_plugins/Marker"
+        ],
+        equal_to([(True, "/cube/marker")]),
+        "RViz did not display the simulated cube marker",
+    )
