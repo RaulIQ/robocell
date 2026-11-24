@@ -61,3 +61,40 @@ def test_follow_drops_previous_goal_updates_when_restarted() -> None:
         equal_to(obj=True),
         "following did not reset its behavior tree for a new goal",
     )
+
+
+def test_follow_forwards_the_cube_option_to_the_workshop() -> None:
+    """The follow launch turns on the cube through mapping and workshop."""
+    launch = Path(__file__).parents[1] / "launch"
+    assert_that(
+        [
+            ElementTree.parse(launch / f"{name}.launch.xml").find(
+                path + "[@name='fake_target'][@value='$(var fake_target)']"
+            )
+            is not None
+            for name, path in (
+                ("follow", "./include/arg"),
+                ("mapping", "./include/arg"),
+                ("workshop", "./node[@exec='main.py']/param"),
+                ("workshop", "./node[@exec='panel.py']/param"),
+            )
+        ],
+        equal_to([True, True, True, True]),
+        "the follow launch did not enable both ends of cube control",
+    )
+
+
+def test_follow_view_displays_the_cube_marker() -> None:
+    """The map displays the simulated cube whenever its marker arrives."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
+    assert_that(
+        [
+            (display["Enabled"], display["Topic"]["Value"])
+            for display in config["Visualization Manager"]["Displays"]
+            if display["Class"] == "rviz_default_plugins/Marker"
+        ],
+        equal_to([(True, "/cube/marker")]),
+        "RViz did not display the simulated cube marker",
+    )

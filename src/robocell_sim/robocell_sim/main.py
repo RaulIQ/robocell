@@ -13,6 +13,7 @@ import threading
 import time
 import tty
 from argparse import ArgumentParser
+from collections import deque
 from contextlib import ExitStack, closing, suppress
 from pathlib import Path
 
@@ -22,10 +23,13 @@ import mujoco.viewer
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import PoseStamped, Twist  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import remove_ros_args, try_shutdown
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_srvs.srv import SetBool  # type: ignore[import-untyped]  # ROS generates message modules without types
+from tf2_ros import Buffer, TransformListener  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.display.implementations.camera.screen import Screen
 from robocell_sim.display.implementations.lidar.beams import Beams
@@ -50,6 +54,7 @@ from robocell_sim.hardware.implementations.lidar.serving import Serving
 from robocell_sim.hardware.implementations.motor.actuated import Actuated
 from robocell_sim.hardware.implementations.motor.attached import Attached
 from robocell_sim.hardware.implementations.motor.polled import Polled
+from robocell_sim.hardware.implementations.physics.cube import Cube
 from robocell_sim.hardware.implementations.physics.joined import Joined
 from robocell_sim.hardware.implementations.physics.periodic import Periodic
 from robocell_sim.hardware.implementations.physics.physical import Physical
@@ -69,6 +74,7 @@ from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
+from robocell_sim.ros.implementations.pose.target import Target
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.advertised import Advertised
@@ -216,6 +222,25 @@ with (
     bridge = Advertised(node)
     harness = Wired(node)
     settings = Declared(node)
+    target = None
+    update = 0.0
+    if settings.flag("fake_target", default=False):
+        cube = Cube(data, model.body("follow_cube").mocapid.item())
+        cube.place()
+        mujoco.mj_forward(model, data)
+        buffer = Buffer(node=node)
+        listener = TransformListener(buffer, node)
+        target = Target(
+            cube,
+            (float(data.qpos[0]), float(data.qpos[1]), odometry.heading()),
+            (
+                buffer,
+                node.create_publisher(PoseStamped, "/goal_update", 1),
+                node.create_publisher(Marker, "/cube/marker", 1),
+            ),
+            deque(maxlen=1),
+        )
+        node.create_subscription(Twist, "/cube/cmd_vel", target.accept, 1)
     transport = (
         settings.text("interface", "socketcan"),
         settings.text("channel", "vcan0"),
@@ -401,7 +426,13 @@ with (
             encoders = (left, right)
             odometry = odometry.read(left, right, gyro.angle())
         clock = data.time if pause.is_set() else clock + now - frame
+        previous = data.time
         physics.advance(clock)
+        if target is not None and data.time > previous:
+            target.advance(data.time - previous)
+            if data.time >= update:
+                target.publish(data.time)
+                update = data.time + 0.2
         if not pause.is_set():
             if data.time >= sample:
                 slipped = slip.slipping()

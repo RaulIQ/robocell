@@ -1,4 +1,5 @@
 <launch>
+  <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <!-- Simulator with its ROS 2 bridge, the CANopen motor, IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
   <arg name="fixed_odom" default="true" description="Attach odom to world when no map-based estimator owns it"/>
   <arg name="rviz_config" default="$(find-pkg-share robocell_sim)/rviz/workshop.rviz" description="RViz configuration"/>
@@ -31,6 +32,7 @@
     <param name="channel" value="$(var can_channel)"/>
     <param name="left_node" value="$(var left_node)"/>
     <param name="right_node" value="$(var right_node)"/>
+    <param name="fake_target" value="$(var fake_target)"/>
     <param name="lidar_port" value="$(var lidar_port)"/>
     <param name="gyro_bias" value="$(var gyro_bias)"/>
     <param name="gyro_noise" value="$(var gyro_noise)"/>
@@ -39,6 +41,7 @@
   </node>
   <node if="$(var teleop)" pkg="robocell_sim" exec="panel.py">
     <remap from="/cmd_vel" to="$(var panel_topic)"/>
+    <param name="fake_target" value="$(var fake_target)"/>
     <param name="speed" value="$(var speed)"/>
     <param name="turn" value="$(var turn)"/>
   </node>
