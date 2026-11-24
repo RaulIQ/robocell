@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-cv-bridge ros-jazzy-rmw-cyclonedds-cpp ros-jazzy-teleop-twist-keyboard \
       ros-jazzy-joint-state-publisher-gui ros-jazzy-robot-localization \
       ros-jazzy-slam-toolbox ros-jazzy-nav2-map-server \
+      ros-jazzy-navigation2 ros-jazzy-nav2-rviz-plugins ros-jazzy-twist-mux \
       ros-jazzy-ament-cmake ros-jazzy-laser-geometry g++ cmake \
       python3-pip python3-venv python3-opencv python3-numpy python3-colcon-common-extensions python3-tk \
       can-utils socat iproute2 gh git \

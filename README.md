@@ -638,3 +638,26 @@ Protocol errors, a disconnected terminal or missing data while ROS time
 advances restart the session with bounded transactions and reconnect waits.
 Pausing simulated time keeps the connection and gives it a fresh grace
 period on resume. Backwards time restarts acquisition. Shutdown sends STOP.
+
+## Follow an RViz target
+
+```console
+ROBOCELL_MODE=follow docker compose up --build
+```
+
+This mode shows the live SLAM map and starts Nav2. Drive with the Robocell
+panel until RViz shows the free area you intend to use. Choose **Nav2 Goal**
+to start following, then use **2D Goal Pose** to move the active target.
+Both tools set a position and heading by clicking and dragging on the map.
+Choose points in known free space. The supplied Nav2 Follow Dynamic Point
+tree replans once a second and truncates the path about 1 m from the target.
+To use a different stand-off distance, pass a copy of the tree with a
+different `TruncatePath` distance as `follow_tree:=/path/to/tree.xml`.
+
+Manual commands have priority while the panel is sending them. Releasing
+the keys sends zero before the mux hands control back to Nav2 after 250 ms
+of simulation time.
+Use **Cancel** in the RViz **Navigation 2** panel to end autonomous motion,
+including before switching back to manual-only driving. The panel's STOP
+button clears manual input. The motor driver checks lidar and command
+freshness for both sources.

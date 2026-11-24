@@ -52,17 +52,29 @@ def test_mapping_launch_activates_slam_on_simulated_time() -> None:
 
 def test_mapping_launch_selects_the_map_view() -> None:
     """RViz uses map as its fixed frame in mapping mode."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
     assert_that(
-        [
-            argument.get("value")
-            for include in ElementTree.parse(
-                Path(__file__).parents[1] / "launch/mapping.launch.xml"
-            ).iter("include")
-            for argument in include.iter("arg")
-            if argument.get("name") == "rviz_config"
-        ],
-        equal_to(["$(find-pkg-share robocell_sim)/rviz/mapping.rviz"]),
-        "mapping did not select the map view",
+        (
+            [
+                argument.get("default")
+                for argument in launch.findall("./arg[@name='rviz_config']")
+            ],
+            [
+                argument.get("value")
+                for argument in launch.findall(
+                    "./include/arg[@name='rviz_config']"
+                )
+            ],
+        ),
+        equal_to(
+            (
+                ["$(find-pkg-share robocell_sim)/rviz/mapping.rviz"],
+                ["$(var rviz_config)"],
+            )
+        ),
+        "mapping did not select and forward the default map view",
     )
 
 
