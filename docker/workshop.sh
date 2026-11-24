@@ -3,8 +3,9 @@ set -eo pipefail
 mode=${ROBOCELL_MODE:-workshop}
 case "$mode" in
     workshop|mapping|follow) ;;
+    cube) mode=follow; set -- fake_target:=true "$@" ;;
     *)
-        printf 'Invalid ROBOCELL_MODE "%s", expected workshop, mapping or follow\n' "$mode" >&2
+        printf 'Invalid ROBOCELL_MODE "%s", expected workshop, mapping, follow or cube\n' "$mode" >&2
         exit 2
         ;;
 esac

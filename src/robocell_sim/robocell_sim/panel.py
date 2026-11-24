@@ -6,18 +6,26 @@ from __future__ import annotations
 import math
 import queue
 import threading
+import time
 import tkinter as tk
 from contextlib import suppress
 from functools import partial
 from tkinter import ttk
+from typing import TYPE_CHECKING
 
 import rclpy
-from geometry_msgs.msg import Twist, Vector3  # type: ignore[import-untyped]  # ROS generates message modules without types
+from action_msgs.msg import GoalStatus  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from geometry_msgs.msg import PoseStamped, Twist, Vector3  # type: ignore[import-untyped]  # ROS generates message modules without types
+from nav2_msgs.action import NavigateToPose  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
+from rclpy.action.client import ActionClient, ClientGoalHandle
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import try_shutdown
 
 from robocell_sim.robot.implementations.command.held import Held
 from robocell_sim.ros.implementations.settings.declared import Declared
+
+if TYPE_CHECKING:
+    from rclpy.task import Future
 
 _LINEAR = (0.01, 0.26)
 _ANGULAR = (0.1, 1.8)
@@ -37,6 +45,16 @@ if not math.isfinite(turn) or not _ANGULAR[0] <= turn <= _ANGULAR[1]:
 commands: queue.SimpleQueue[Held] = queue.SimpleQueue()
 commands.put(Held(frozenset(), frozenset(), speed, turn))
 topic = node.create_publisher(Twist, "/cmd_vel", 1)
+cube = (
+    node.create_publisher(Twist, "/cube/cmd_vel", 1)
+    if settings.flag("fake_target", default=False)
+    else None
+)
+navigation = (
+    ActionClient(node, NavigateToPose, "/navigate_to_pose")  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+    if cube is not None
+    else None
+)
 window = tk.Tk()
 window.title("Robocell control")
 window.resizable(width=False, height=False)
@@ -68,6 +86,11 @@ ttk.Label(frame, text="Angular · e / c · ±0.1 rad/s").grid(
 )
 status = ttk.Label(frame, text="Click this window to take control")
 status.grid(row=6, column=0, columnspan=2, sticky="w", pady=(16, 0))
+selection = tk.StringVar(window, value="Robot")
+selected = [topic]
+target: list[tuple[PoseStamped, float]] = []
+goals: list[ClientGoalHandle] = []
+following = ttk.Label(frame)
 focused = threading.Event()
 closed = threading.Event()
 releases: dict[str, str] = {}
@@ -100,7 +123,7 @@ def publish() -> None:
     """Publish the current intent immediately on wall time."""
     command = intent()
     if node.context.ok():
-        topic.publish(
+        selected[0].publish(
             Twist(
                 linear=Vector3(x=command.velocity()[0]),
                 angular=Vector3(z=command.velocity()[1]),
@@ -141,6 +164,84 @@ def stop() -> None:
     """Cancel held movement until its keys are released and pressed again."""
     commands.put(commands.get_nowait().press("Escape"))
     publish()
+
+
+def select() -> None:
+    """Stop the previous source before changing the destination."""
+    stop()
+    selected[0] = (
+        cube if cube is not None and selection.get() == "Cube" else topic
+    )
+
+
+def observe_target(message: PoseStamped) -> None:
+    """Remember the last cube pose for starting a follow goal."""
+    target[:] = [(message, time.monotonic())]
+
+
+def follow() -> None:
+    """Start following the cube or cancel the active follow goal."""
+    if goals:
+        follow_button.state(["disabled"])
+        goals[0].cancel_goal_async().add_done_callback(cancelled)  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+    else:
+        start()
+
+
+def start() -> None:
+    """Submit the current cube pose when its source and Nav2 are ready."""
+    if navigation is None or not target or not navigation.server_is_ready():  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+        following.configure(text="Waiting for Nav2 and the cube pose")
+        return
+    pose, arrival = target[-1]
+    if time.monotonic() - arrival >= 1.0:
+        following.configure(text="Waiting for a fresh cube pose")
+        return
+    stop()
+    follow_button.state(["disabled"])
+    following.configure(text="Starting follow")
+    navigation.send_goal_async(
+        NavigateToPose.Goal(pose=pose)
+    ).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+        accepted
+    )
+
+
+def accepted(future: Future) -> None:
+    """Track the goal handle so the operator can cancel it."""
+    follow_button.state(["!disabled"])
+    goal = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
+    if goal is None or not goal.accepted:
+        following.configure(text="Nav2 rejected the cube goal")
+        return
+    goals.append(goal)
+    follow_button.configure(text="Cancel follow")
+    following.configure(text="Following cube")
+    goal.get_result_async().add_done_callback(finished)
+
+
+def cancelled(future: Future) -> None:
+    """Allow another cancellation attempt if Nav2 rejects the request."""
+    response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
+    if goals and (response is None or not response.goals_canceling):
+        follow_button.state(["!disabled"])
+        following.configure(text="Nav2 did not cancel the goal")
+
+
+def finished(future: Future) -> None:
+    """Show when Nav2 finishes the follow action."""
+    goals.clear()
+    follow_button.state(["!disabled"])
+    follow_button.configure(text="Follow cube")
+    response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
+    following.configure(
+        text=(
+            "Follow canceled"
+            if response is not None
+            and response.status == GoalStatus.STATUS_CANCELED
+            else "Follow ended"
+        )
+    )
 
 
 def focus(_event: tk.Event[tk.Misc]) -> None:
@@ -198,6 +299,15 @@ for column, keys in enumerate((("x", "w"), ("c", "e"))):
 ttk.Button(frame, text="STOP · Esc / Space / k", command=stop).grid(
     row=5, column=0, columnspan=2, sticky="ew"
 )
+if cube is not None:
+    node.create_subscription(PoseStamped, "/goal_update", observe_target, 1)
+    for column, name in enumerate(("Robot", "Cube")):
+        ttk.Radiobutton(
+            frame, text=name, value=name, variable=selection, command=select
+        ).grid(row=7, column=column, sticky="w", pady=(12, 0))
+    follow_button = ttk.Button(frame, text="Follow cube", command=follow)
+    follow_button.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+    following.grid(row=9, column=0, columnspan=2, sticky="w")
 window.bind("<KeyPress>", press)
 window.bind("<KeyRelease>", release)
 window.bind("<FocusIn>", focus)

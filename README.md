@@ -660,3 +660,22 @@ Use **Cancel** in the RViz **Navigation 2** panel to end autonomous motion,
 including before switching back to manual-only driving. The panel's STOP
 button clears manual input. The motor driver checks command
 freshness for both sources.
+
+### Follow a simulated cube
+
+```sh
+ROBOCELL_MODE=cube docker compose up --build
+```
+
+The orange cube starts to the right of the robot's spawn in the MuJoCo
+workshop. In the control panel, choose **Robot** or **Cube** to route the
+arrow keys. Switching stops the previous selection. Release and press the
+keys again to move the new selection. Drive the robot first to survey the
+area in SLAM, then click **Follow cube** and move the cube within mapped
+free space. **Cancel follow** ends autonomous motion. **STOP**
+only clears the selected manual controls.
+
+The simulator publishes the cube's position in `map` on `/goal_update` at
+5 Hz. The panel starts Nav2 with the current pose. The cube is a kinematic
+target and can pass through objects, so keep it in reachable space. RViz
+clicks are available in the regular `follow` mode.

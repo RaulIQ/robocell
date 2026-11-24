@@ -46,7 +46,11 @@ def test_workshop_launch_opens_an_optional_control_panel() -> None:
                     "robocell_sim",
                     "$(var teleop)",
                     None,
-                    {"speed": "$(var speed)", "turn": "$(var turn)"},
+                    {
+                        "fake_target": "$(var fake_target)",
+                        "speed": "$(var speed)",
+                        "turn": "$(var turn)",
+                    },
                 )
             ]
         ),
@@ -229,6 +233,7 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
                     "channel": "$(var can_channel)",
                     "left_node": "$(var left_node)",
                     "right_node": "$(var right_node)",
+                    "fake_target": "$(var fake_target)",
                     "lidar_port": "$(var lidar_port)",
                     "gyro_bias": "$(var gyro_bias)",
                     "gyro_noise": "$(var gyro_noise)",
