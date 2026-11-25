@@ -61,6 +61,7 @@ global_costmap:
         scan:
           topic: /scan
           data_type: LaserScan
+          max_obstacle_height: 0.2
           marking: true
           clearing: true
           obstacle_max_range: 4.0
@@ -90,6 +91,7 @@ local_costmap:
         scan:
           topic: /scan
           data_type: LaserScan
+          max_obstacle_height: 0.2
           marking: true
           clearing: true
           obstacle_max_range: 4.0

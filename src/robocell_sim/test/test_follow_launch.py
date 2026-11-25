@@ -114,3 +114,20 @@ def test_follow_launch_connects_both_costmaps_to_the_selected_scan() -> None:
         equal_to([True, True]),
         "the selected scan did not reach both Nav2 costmaps",
     )
+
+
+def test_follow_costmaps_accept_scan_points_above_the_floor() -> None:
+    """Both observation sources allow the D415 scan plane above the floor."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/follow.yaml").read_text()
+    )
+    assert_that(
+        [
+            config[name][name]["ros__parameters"]["obstacle_layer"]["scan"].get(
+                "max_obstacle_height"
+            )
+            for name in ("local_costmap", "global_costmap")
+        ],
+        equal_to([0.2, 0.2]),
+        "the costmap sources did not accept above-floor camera observations",
+    )
