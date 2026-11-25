@@ -147,6 +147,19 @@ To start the same simulator with SLAM and the map in RViz, run:
 ROBOCELL_MODE=mapping docker compose up
 ```
 
+Mapping and cube mode use lidar by default. To map with the D415 instead,
+select depth when starting Compose:
+
+```console
+ROBOCELL_MODE=mapping ROBOCELL_SCAN_SOURCE=depth docker compose up --build
+ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --build
+```
+
+The depth converter projects a band around the optical axis into a planar
+scan. In depth mode the lidar driver and emulator are disabled, and SLAM
+and both Nav2 obstacle layers receive `/scan/slam`. The scan covers only
+the camera sector. The D415 profile has a 0.45 m minimum depth.
+
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:
 

@@ -67,6 +67,7 @@ from robocell_sim.hardware.implementations.physics.serviced import Serviced
 from robocell_sim.hardware.implementations.uart.named import Named
 from robocell_sim.hardware.implementations.uart.terminal import Terminal
 from robocell_sim.hardware.interfaces.device import Device
+from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.robot.implementations.drive.differential import Differential
 from robocell_sim.robot.implementations.drive.limited import Limited
 from robocell_sim.robot.implementations.lidar.placed import Placed
@@ -111,6 +112,7 @@ arguments.add_argument(
 _MIN_RANGE = 0.15
 _MAX_RANGE = 12.0
 arguments.add_argument("--lidar-range-max", type=float, default=_MAX_RANGE)
+arguments.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
 options = arguments.parse_args(remove_ros_args()[1:])
 if not math.isfinite(options.duration) or options.duration < 0:
     arguments.error("Duration must be finite and nonnegative")
@@ -202,7 +204,7 @@ reach = (_MIN_RANGE, options.lidar_range_max)
 lidar = Raycast(model, data, "base_scan", reach)
 radar = (
     Polar(multiprocessing.get_context("fork").Queue(maxsize=2), reach[1])
-    if options.radar == "true"
+    if options.radar == "true" and options.scan_source == "lidar"
     else None
 )
 if radar is not None:
@@ -212,7 +214,7 @@ if radar is not None:
 scan = 0.0
 atlas = (
     Survey(multiprocessing.get_context("fork").Queue())
-    if options.survey == "true"
+    if options.survey == "true" and options.scan_source == "lidar"
     else None
 )
 if atlas is not None:
@@ -302,42 +304,45 @@ with (
     sensor = resources.enter_context(
         closing(mujoco.Renderer(model, depth[1], depth[0]))
     )
-    master, slave = pty.openpty()
-    tty.setraw(slave)
-    attributes = termios.tcgetattr(slave)
-    attributes[4] = termios.B115200
-    attributes[5] = termios.B115200
-    termios.tcsetattr(slave, termios.TCSANOW, attributes)
-    os.set_blocking(master, False)
-    state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
-    state.put(
-        (
-            Rplidar(
-                Directed(data, "base_scan", reach),
-                (False, 0.0, 0),
-                (b"", data.time),
-            ),
-            b"",
-            time.monotonic(),
+    serial: Report = Joined(())
+    if options.scan_source == "lidar":
+        master, slave = pty.openpty()
+        tty.setraw(slave)
+        attributes = termios.tcgetattr(slave)
+        attributes[4] = termios.B115200
+        attributes[5] = termios.B115200
+        termios.tcsetattr(slave, termios.TCSANOW, attributes)
+        os.set_blocking(master, False)
+        state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+        state.put(
+            (
+                Rplidar(
+                    Directed(data, "base_scan", reach),
+                    (False, 0.0, 0),
+                    (b"", data.time),
+                ),
+                b"",
+                time.monotonic(),
+            )
         )
-    )
-    log.info(
-        "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
-        os.ttyname(slave),
-    )
-
-    resources.enter_context(os.fdopen(master, "rb+", buffering=0))
-    resources.enter_context(os.fdopen(slave, "rb+", buffering=0))
-    resources.enter_context(
-        Named(
-            Path(
-                settings.text(
-                    "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
-                )
-            ),
+        log.info(
+            "RPLIDAR A1 standard SCAN is available on %s at 115200 baud",
             os.ttyname(slave),
-        ).binding()
-    )
+        )
+
+        resources.enter_context(os.fdopen(master, "rb+", buffering=0))
+        resources.enter_context(os.fdopen(slave, "rb+", buffering=0))
+        resources.enter_context(
+            Named(
+                Path(
+                    settings.text(
+                        "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
+                    )
+                ),
+                os.ttyname(slave),
+            ).binding()
+        )
+        serial = Serving(data, Terminal(master), state, 65536)
     viewer = (
         resources.enter_context(
             mujoco.viewer.launch_passive(model, data, key_callback=key)
@@ -345,7 +350,7 @@ with (
         if options.headless == "false"
         else None
     )
-    if viewer is not None:
+    if viewer is not None and options.scan_source == "lidar":
         viewer.set_texts(
             (
                 None,
@@ -375,7 +380,7 @@ with (
                     Periodic(
                         data,
                         model.opt.timestep,
-                        Serving(data, Terminal(master), state, 65536),
+                        serial,
                     ),
                     Periodic(data, 0.01, Clocked(data, bridge.clock())),
                     Periodic(
@@ -404,7 +409,7 @@ with (
                                 data,
                             ),
                             harness.picture(),
-                            harness.depth(),
+                            harness.depth(reliable=options.scan_source == "depth"),
                         ),
                     ),
                     Periodic(
@@ -452,7 +457,7 @@ with (
     ):
         now = time.monotonic()
         rclpy.spin_once(node, timeout_sec=0)
-        Serving(data, Terminal(master), state, 65536).publish()
+        serial.publish()
         while not counts.empty():
             left, right, _, _ = counts.get()
             encoders = (left, right)
@@ -489,7 +494,7 @@ with (
                         slipping=slip.slipping(),
                     )
                 sample += 0.1
-            if data.time >= scan:
+            if options.scan_source == "lidar" and data.time >= scan:
                 ranges = lidar.ranges()
                 if radar is not None:
                     radar.mark(ranges)

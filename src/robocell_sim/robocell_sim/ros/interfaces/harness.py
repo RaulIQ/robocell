@@ -25,7 +25,7 @@ class Harness(Protocol):
         """Topic of what the camera sees, sent best effort like any video."""
         ...
 
-    def depth(self) -> Topic:
+    def depth(self, reliable: bool = False) -> Topic:
         """Topic of the depth camera's image in millimeters."""
         ...
 

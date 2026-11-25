@@ -1,4 +1,6 @@
 <launch>
+  <arg name="scan_source" default="lidar" description="Source of SLAM and Nav2 scans: lidar or depth"/>
+  <let name="nav_scan" value="$(eval &quot;'/scan/slam' if '$(var scan_source)' == 'depth' else '/scan'&quot;)"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <arg name="rviz" default="true" description="Open the follow view"/>
   <arg name="headless" default="false" description="Run without the MuJoCo viewer"/>
@@ -8,6 +10,7 @@
   <arg name="follow_tree" default="$(find-pkg-share nav2_bt_navigator)/behavior_trees/follow_point.xml" description="Behavior tree for following a changing goal"/>
   <arg name="nav_params" default="$(find-pkg-share robocell_sim)/config/follow.yaml" description="Nav2 and velocity routing parameters"/>
   <include file="$(find-pkg-share robocell_sim)/launch/mapping.launch.xml">
+    <arg name="scan_source" value="$(var scan_source)"/>
     <arg name="fake_target" value="$(var fake_target)"/>
     <arg name="rviz" value="$(var rviz)"/>
     <arg name="headless" value="$(var headless)"/>
@@ -19,9 +22,11 @@
   </include>
   <node pkg="nav2_planner" exec="planner_server" name="planner_server" output="screen">
     <param from="$(var nav_params)"/>
+    <remap from="/scan" to="$(var nav_scan)"/>
   </node>
   <node pkg="nav2_controller" exec="controller_server" name="controller_server" output="screen">
     <param from="$(var nav_params)"/>
+    <remap from="/scan" to="$(var nav_scan)"/>
     <remap from="cmd_vel" to="/cmd_vel_nav"/>
   </node>
   <node pkg="nav2_bt_navigator" exec="bt_navigator" name="bt_navigator" output="screen">

@@ -15,6 +15,7 @@ services:
       - ROS_DOMAIN_ID=42
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROBOCELL_MODE=${ROBOCELL_MODE:-workshop}
+      - ROBOCELL_SCAN_SOURCE=${ROBOCELL_SCAN_SOURCE:-lidar}
     volumes:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix

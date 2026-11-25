@@ -1,4 +1,5 @@
 <launch>
+  <arg name="scan_source" default="lidar" description="Source of range scans: lidar or depth"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <!-- Simulator with its ROS 2 bridge, the CANopen motor, IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
   <arg name="fixed_odom" default="true" description="Attach odom to world when no map-based estimator owns it"/>
@@ -27,7 +28,7 @@
   <arg name="seed" default="-1" description="Seed of the noise generator of the IMU board, a fresh random one when negative"/>
   <arg name="gyro_variance" default="$(eval '$(var gyro_noise) ** 2')" description="Gyro variance the IMU driver reports, the square of the gyro noise unless set"/>
   <arg name="accelerometer_variance" default="$(eval '$(var accelerometer_noise) ** 2')" description="Accelerometer variance the IMU driver reports, the square of the accelerometer noise unless set"/>
-  <node pkg="robocell_sim" exec="main.py" args="--headless=$(var headless) --duration=$(var duration) --route=$(var route) --camera=$(var camera) --radar=$(var radar) --survey=$(var survey) --lidar-range-max=$(var lidar_range_max)" output="screen">
+  <node pkg="robocell_sim" exec="main.py" args="--headless=$(var headless) --duration=$(var duration) --route=$(var route) --camera=$(var camera) --radar=$(var radar) --survey=$(var survey) --lidar-range-max=$(var lidar_range_max) --scan-source=$(var scan_source)" output="screen">
     <param name="interface" value="$(var can_interface)"/>
     <param name="channel" value="$(var can_channel)"/>
     <param name="left_node" value="$(var left_node)"/>
@@ -52,7 +53,7 @@
     <param name="left_node" value="$(var left_node)"/>
     <param name="right_node" value="$(var right_node)"/>
   </node>
-  <node pkg="robocell_sim" exec="lidar.py" output="screen">
+  <node if="$(eval &quot;'$(var scan_source)' == 'lidar'&quot;)" pkg="robocell_sim" exec="lidar.py" output="screen">
     <param name="use_sim_time" value="true"/>
     <param name="port" value="$(var lidar_port)"/>
     <param name="range_max" value="$(var lidar_range_max)"/>

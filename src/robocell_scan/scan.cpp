@@ -97,6 +97,7 @@ int main(int argc, char ** argv)
   const auto input = node->declare_parameter<std::string>("input", "/scan");
   const auto output = node->declare_parameter<std::string>("output", "/scan/slam");
   const auto fixed = node->declare_parameter<std::string>("fixed_frame", "odom");
+  const auto preserve_sector = node->declare_parameter<bool>("preserve_sector", false);
   const auto bins = node->declare_parameter<int>("bins", 360);
   const auto capacity = node->declare_parameter<int>("capacity", 8);
   const auto timeout = node->declare_parameter<double>("transform_timeout", 0.5);
@@ -132,7 +133,12 @@ int main(int argc, char ** argv)
           continue;
         }
         try {
-          topic->publish(rectified(*scan, buffer, projection, fixed, bins));
+          if (preserve_sector && scan->time_increment == 0) {
+            buffer.lookupTransform(fixed, scan->header.frame_id, rclcpp::Time(scan->header.stamp));
+            topic->publish(*scan);
+          } else {
+            topic->publish(rectified(*scan, buffer, projection, fixed, bins));
+          }
         } catch (const tf2::TransformException &) {
           break;
         }

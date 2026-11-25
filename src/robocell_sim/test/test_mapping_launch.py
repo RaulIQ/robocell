@@ -112,3 +112,20 @@ def test_mapping_launch_accepts_a_recorded_slam_configuration() -> None:
         equal_to(["$(var slam_params_file)"]),
         "mapping did not accept the recorded SLAM configuration",
     )
+
+
+def test_mapping_launch_selects_the_camera_producer_for_slam() -> None:
+    """The camera converter sends its sector scan to the SLAM adapter."""
+    root = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    ).getroot()
+    assert_that(
+        [
+            node.get("to")
+            for node in root.findall(
+                "./node[@pkg='depthimage_to_laserscan']/remap[@from='scan']"
+            )
+        ],
+        equal_to(["/scan/depth"]),
+        "the depth camera converter did not publish a sector scan",
+    )

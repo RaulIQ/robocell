@@ -40,9 +40,9 @@ class Wired(Harness):
         )
 
     @override
-    def depth(self) -> Topic:
+    def depth(self, reliable: bool = False) -> Topic:
         return self._node.create_publisher(
-            Image, "/camera/depth/image_raw", qos_profile_sensor_data
+            Image, "/camera/depth/image_raw", 5 if reliable else qos_profile_sensor_data
         )
 
     @override

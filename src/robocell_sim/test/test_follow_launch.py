@@ -98,3 +98,19 @@ def test_follow_view_displays_the_cube_marker() -> None:
         equal_to([(True, "/cube/marker")]),
         "RViz did not display the simulated cube marker",
     )
+
+
+def test_follow_launch_connects_both_costmaps_to_the_selected_scan() -> None:
+    """The planner and controller both remap the configured scan topic."""
+    root = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/follow.launch.xml"
+    ).getroot()
+    assert_that(
+        [
+            root.find(f"./node[@name='{name}']/remap[@from='/scan']")
+            is not None
+            for name in ("planner_server", "controller_server")
+        ],
+        equal_to([True, True]),
+        "the selected scan did not reach both Nav2 costmaps",
+    )
