@@ -466,7 +466,8 @@ ros2 launch robocell_sim workshop.launch.xml route:=true survey:=true
 RViz shows the Waffle Pi in the `world` frame with its TF axes, and its wheels
 turn along with the wheels in MuJoCo. A red arrow marks the true pose from
 `/ground_truth/odom`, green squares mark the lidar echoes from `/scan`, one
-panel shows the picture from `/camera/image_raw`, and another draws the lidar,
+panel shows the picture from `/camera/image_raw`, the Depth panel shows
+`/camera/depth/image_raw`, and the overlay draws the lidar,
 the frames and the robot over that picture at half opacity, so the echoes land
 on the walls the camera sees. Steer it from the control panel on `/cmd_vel`.
 

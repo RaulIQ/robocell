@@ -36,18 +36,27 @@ def test_workshop_rviz_shows_the_lidar_scan() -> None:
     )
 
 
-def test_workshop_rviz_shows_the_camera_picture() -> None:
-    """An image display shows what the robot camera sees, best effort."""
+def test_workshop_rviz_shows_the_camera_images() -> None:
+    """The color and depth displays are enabled and use best effort."""
     assert_that(
         [
-            (display["Topic"]["Value"], display["Topic"]["Reliability Policy"])
+            (
+                display["Topic"]["Value"],
+                display["Topic"]["Reliability Policy"],
+                display["Enabled"],
+            )
             for display in yaml.safe_load(
                 (Path(__file__).parents[1] / "rviz/workshop.rviz").read_text()
             )["Visualization Manager"]["Displays"]
             if display["Class"] == "rviz_default_plugins/Image"
         ],
-        equal_to([("/camera/image_raw", "Best Effort")]),
-        "RViz did not show the camera picture best effort",
+        equal_to(
+            [
+                ("/camera/image_raw", "Best Effort", True),
+                ("/camera/depth/image_raw", "Best Effort", True),
+            ]
+        ),
+        "RViz did not enable both camera images with best effort",
     )
 
 
