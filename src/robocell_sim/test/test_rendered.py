@@ -7,7 +7,10 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.camera.rendered import Rendered
+from robocell_sim.hardware.implementations.camera.rendered import (
+    Paired,
+    Rendered,
+)
 
 
 def test_rendered_shoots_at_the_renderer_resolution() -> None:
@@ -59,7 +62,9 @@ def test_rendered_measures_the_front_of_the_low_pallet_in_meters() -> None:
     mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
     mujoco.mj_forward(model, data)
     with mujoco.Renderer(model, 120, 160) as renderer:
-        _, depth = Rendered(renderer, data, "camera_rgb").frame()
+        _, depth = Paired(
+            Rendered(renderer, data, "camera_rgb"), renderer, data
+        ).frame()
     assert_that(
         float(depth[88, 80]),
         close_to(
@@ -71,4 +76,27 @@ def test_rendered_measures_the_front_of_the_low_pallet_in_meters() -> None:
             1e-4,
         ),
         "depth did not measure the front of the low pallet in meters",
+    )
+
+
+def test_rendered_uses_full_hd_color_and_hd_depth() -> None:
+    """The camera profile supplies distinct native render sizes."""
+    model = mujoco.MjModel.from_xml_path(
+        str(Path(__file__).parents[1] / "models" / "waffle_pi" / "workshop.xml")
+    )
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    width, height = model.cam_resolution[model.camera("camera_rgb").id]
+    columns, rows = model.cam_resolution[model.camera("camera_depth").id]
+    with (
+        mujoco.Renderer(model, int(height), int(width)) as renderer,
+        mujoco.Renderer(model, int(rows), int(columns)) as sensor,
+    ):
+        color, depth = Paired(
+            Rendered(renderer, data, "camera_rgb"), sensor, data
+        ).frame()
+    assert_that(
+        (color.shape, depth.shape),
+        equal_to(((1080, 1920, 3), (720, 1280))),
+        "camera did not render full HD color and HD depth",
     )

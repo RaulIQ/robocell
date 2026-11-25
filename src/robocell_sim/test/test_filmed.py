@@ -165,12 +165,12 @@ def test_filmed_publishes_depth_in_its_own_frame_at_the_rgb_time() -> None:
     )
 
 
-def test_filmed_marks_depth_below_the_d415_minimum_invalid() -> None:
-    """Depth closer than 310 mm is invalid in the VGA profile."""
+def test_filmed_marks_depth_below_the_d415_hd_minimum_invalid() -> None:
+    """Depth closer than 450 mm is invalid in the 720p profile."""
     data = mujoco.MjData(mujoco.MjModel.from_xml_string("<mujoco/>"))
     messages: list[Any] = []
     Filmed(
-        data, Painted((31, 76, 182), (9, 5), 0.287), Kept([]), Kept(messages)
+        data, Painted((31, 76, 182), (9, 5), 0.424), Kept([]), Kept(messages)
     ).publish()
     assert_that(
         bytes(messages[0].data),

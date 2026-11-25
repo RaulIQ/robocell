@@ -227,7 +227,7 @@ more than 0.3 rad/s, the wheels slip: the console logs a warning, the route
 window marks the spot on the dashed line with a red cross, and the console
 logs again once the wheels grip.
 
-With `--camera`, a window shows what the robot camera sees, 640 by 480 pixels
+With `--camera`, a window shows what the robot camera sees, 1920 by 1080 pixels
 thirty times a second. MuJoCo renders it in a process of its own from the joint
 positions the simulation sends, so a slow window drops frames instead of
 slowing the robot down. At start the console logs the camera matrix of this
@@ -419,8 +419,8 @@ retain their separate 360-ray, 5 Hz, 0.12–3.5 m display path.
 ros2 topic echo --once /scan
 ```
 
-The simulated camera uses a RealSense D415 VGA profile at 640 × 480. Both
-image topics are best effort and share the simulated timestamp. The 30 Hz
+The simulated RealSense D415 renders color at 1920 × 1080 and depth at
+1280 × 720. Both image topics are best effort and share the simulated timestamp. The 30 Hz
 schedule rounds to 17 physics steps, yielding 29.4 frames per simulated second.
 
 | Image topic | Encoding | Optical frame | Camera info |
@@ -429,10 +429,10 @@ schedule rounds to 17 physics steps, yielding 29.4 frames per simulated second.
 | `/camera/depth/image_raw` | `16UC1` in millimeters | `camera_depth_optical_frame` | `/camera/depth/camera_info` |
 
 The two ideal pinhole cameras use separate projections. Depth uses the D415
-VGA vertical field of view of 40°. Color approximates a centered VGA crop of
-the sensor's 42.5° vertical field of view. The optical centers are offset
+720p vertical field of view of 40°. Color uses the sensor's 42.5° vertical
+field of view. The optical centers are offset
 laterally by the nominal 15 mm from the RealSense ROS description. Depth
-samples below the VGA minimum of 310 mm are published as zero. MuJoCo supplies
+samples below the 720p minimum of 450 mm are published as zero. MuJoCo supplies
 geometric depth without simulating stereo matching, lens distortion, or
 rolling shutter.
 [RealSense D400 datasheet](https://www.realsenseai.com/wp-content/uploads/2026/03/RealSense-D400-Series-Datasheet-Mar-2026.pdf)
@@ -514,7 +514,7 @@ the publisher, or for the subscription on `/cmd_vel`.
 | `/robot_description`  | `std_msgs/String`        | once          | reliable, transient local        | RViz may start after `robot_state_publisher` and still needs the URDF.                                        |
 | `/joint_states`       | `sensor_msgs/JointState` | 50 Hz         | reliable, keep last 10           | A small message; reliable publishing also serves `robot_state_publisher`, which subscribes best effort.        |
 | `/scan`               | `sensor_msgs/LaserScan`  | 5.5 Hz          | reliable, keep last 10           | A full turn at 5.5 Hz is small, and reliable publishing serves both RViz and best effort readers like Nav2.   |
-| `/camera/image_raw`   | `sensor_msgs/Image`      | 29.4 Hz       | best effort, keep last 5         | A frame is 900 KB and only the newest one matters, so a lost frame is skipped rather than resent late.         |
+| `/camera/image_raw`   | `sensor_msgs/Image`      | 29.4 Hz       | best effort, keep last 5         | A frame is 6.2 MB and only the newest one matters, so a lost frame is skipped rather than resent late.         |
 | `/camera/camera_info` | `sensor_msgs/CameraInfo` | 29.4 Hz       | reliable, keep last 10           | Readers pair it with each picture; it is small, and reliable serves readers of either kind.                    |
 | `/cmd_vel`            | `geometry_msgs/Twist`    | as sent       | reliable, keep last 10           | A lost command would leave the robot on its last speed, so every one must arrive.                              |
 | `/imu`                | `sensor_msgs/Imu`        | 100 Hz        | best effort, keep last 5         | Readings come every 10 ms, so a late resend is worth less than the next fresh reading.                         |

@@ -17,7 +17,7 @@ from robocell_sim.ros.interfaces.topic import Topic
 @final
 @dataclass(frozen=True)
 class Filmed(Report):
-    """Publish VGA color and depth in their respective optical frames."""
+    """Publish color and depth in their respective optical frames."""
 
     _data: mujoco.MjData
     _camera: Camera
@@ -46,7 +46,7 @@ class Filmed(Report):
                 encoding="16UC1",
                 step=depth.shape[1] * 2,
                 data=np.rint(
-                    np.where((depth >= 0.310) & (depth <= 65.535), depth, 0)
+                    np.where((depth >= 0.450) & (depth <= 65.535), depth, 0)
                     * 1000
                 ).astype("<u2").tobytes(),
             )

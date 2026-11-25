@@ -22,7 +22,6 @@ class Painted(Camera):
     _size: tuple[int, int]
     _depth: float = 1.0
 
-    @override
     def shot(self) -> npt.NDArray[np.uint8]:
         return np.full((self._size[1], self._size[0], 3), self._color, np.uint8)
 
