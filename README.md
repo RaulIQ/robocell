@@ -78,14 +78,32 @@ development image and run project commands through Docker Compose:
 
 ```console
 docker compose build dev
-docker compose run --rm dev python -m pytest --eo
+docker compose run --rm dev python -m pytest
 ```
 
 Compose mounts the checkout at `/ws`, so the container sees edits made on
 the host. If you have an existing VS Code dev container, use
 **Dev Containers: Rebuild and Reopen in Container** to apply the new
 configuration. Review and trust the project hooks in your host checkout.
-The shared EO gate runs its checks through Docker Compose.
+The shared EO gate uses a dedicated Python environment on the host. Set it
+up from the repository root with Python 3.11 or newer:
+
+```console
+python3 -m venv --system-site-packages .venv-eo
+.venv-eo/bin/python -m pip install --upgrade pip
+.venv-eo/bin/python -m pip install --group eo
+```
+
+Run the host gate manually from the repository root:
+
+```console
+printf '%s\n' '{"hook_event_name":"Stop"}' | bash .claude/hooks/eo-gate.sh
+```
+
+The gate collects only EO checks. For strict type checking, use a host Python
+version compatible with ROS 2 Jazzy, source its setup script, and install
+the Python runtime dependencies listed in [the Dockerfile](docker/Dockerfile)
+into the host environment.
 
 ## Run the simulation
 
@@ -161,12 +179,12 @@ MuJoCo; the plain `colcon` command runs the system Python, which does not.
 With `--symlink-install`, edits to Python code and models take effect on
 restart. Rebuild after changing the C++ scan adapter or package metadata.
 
-Run the tests the same way, or with the strict style gate from the root:
+Run the simulator tests in the development container:
 
 ```console
 python -m colcon test --packages-up-to robocell_sim
 python -m colcon test-result --verbose
-python -m pytest --eo
+python -m pytest
 ```
 
 The robot drives in a closed 6 by 6 m workshop centered at the origin, with
