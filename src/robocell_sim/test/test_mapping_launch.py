@@ -85,6 +85,7 @@ def test_mapping_launch_rectifies_driver_scans_on_simulated_time() -> None:
             {
                 parameter.get("name"): parameter.get("value")
                 for parameter in node.iter("param")
+                if parameter.get("name") == "use_sim_time"
             }
             for node in ElementTree.parse(
                 Path(__file__).parents[1] / "launch/mapping.launch.xml"
