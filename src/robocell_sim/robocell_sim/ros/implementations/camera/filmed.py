@@ -1,4 +1,4 @@
-"""Report that publishes the picture of the camera."""
+"""Report that publishes aligned color and depth images."""
 
 from dataclasses import dataclass
 from typing import final, override
@@ -16,32 +16,37 @@ from robocell_sim.ros.interfaces.topic import Topic
 @final
 @dataclass(frozen=True)
 class Filmed(Report):
-    """Report that publishes what the camera of the robot sees.
-
-    The data holds the live state of the simulation, the camera takes the
-    picture, and the topic carries it as an rgb8 sensor_msgs/Image in the
-    camera_rgb_optical_frame of the URDF, stamped with the simulated time.
-    """
+    """Publish color and depth in the camera frame at the same simulated time."""
 
     _data: mujoco.MjData
     _camera: Camera
     _topic: Topic
+    _depth: Topic
 
     @override
     def publish(self) -> None:
-        shot = self._camera.shot()
+        picture, depth = self._camera.frame()
+        header = Header(
+            stamp=Time(nanoseconds=round(self._data.time * 1e9)).to_msg(),
+            frame_id="camera_rgb_optical_frame",
+        )
         self._topic.publish(
             Image(
-                header=Header(
-                    stamp=Time(
-                        nanoseconds=round(self._data.time * 1e9)
-                    ).to_msg(),
-                    frame_id="camera_rgb_optical_frame",
-                ),
-                height=shot.shape[0],
-                width=shot.shape[1],
+                header=header,
+                height=picture.shape[0],
+                width=picture.shape[1],
                 encoding="rgb8",
-                step=shot.shape[1] * 3,
-                data=shot.tobytes(),
+                step=picture.shape[1] * 3,
+                data=picture.tobytes(),
+            )
+        )
+        self._depth.publish(
+            Image(
+                header=header,
+                height=depth.shape[0],
+                width=depth.shape[1],
+                encoding="32FC1",
+                step=depth.shape[1] * 4,
+                data=depth.astype("<f4", copy=False).tobytes(),
             )
         )

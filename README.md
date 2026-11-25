@@ -425,8 +425,14 @@ The `/camera/image_raw` topic carries what `camera_rgb` sees as an `rgb8`
 with no distortion. Both lie in `camera_rgb_optical_frame`. The step count
 rounds 1/30 s to 17 physics steps, so the camera runs at 29.4 Hz rather than 30.
 
+`/camera/depth/image_raw` carries a best-effort `32FC1` image aligned with
+each RGB frame. Each pixel gives the depth in meters along the optical axis.
+Both images share the resolution, simulated timestamp, optical frame, and
+calibration on `/camera/camera_info`.
+
 ```console
 ros2 topic hz /camera/image_raw
+ros2 topic hz /camera/depth/image_raw
 ros2 topic echo --once /camera/camera_info
 ```
 

@@ -28,3 +28,12 @@ class Rendered(Camera):
     def shot(self) -> npt.NDArray[np.uint8]:
         self._renderer.update_scene(self._data, camera=self._camera)
         return self._renderer.render()
+
+    @override
+    def frame(self) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.float32]]:
+        picture = self.shot()
+        self._renderer.enable_depth_rendering()
+        try:
+            return picture, self._renderer.render()
+        finally:
+            self._renderer.disable_depth_rendering()

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import mujoco
 import numpy as np
-from hamcrest import assert_that, equal_to
+from hamcrest import assert_that, close_to, equal_to
 from robocell_sim.hardware.implementations.camera.rendered import Rendered
 
 
@@ -47,4 +47,28 @@ def test_rendered_follows_the_robot_as_it_turns() -> None:
         np.array_equal(camera.shot(), before),
         equal_to(obj=False),
         "shot did not change after the robot turned",
+    )
+
+
+def test_rendered_measures_the_front_of_the_low_pallet_in_meters() -> None:
+    """A pixel below the optical axis sees the pallet at its known depth."""
+    model = mujoco.MjModel.from_xml_path(
+        str(Path(__file__).parents[1] / "models" / "waffle_pi" / "workshop.xml")
+    )
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, model.key("start").id)
+    mujoco.mj_forward(model, data)
+    with mujoco.Renderer(model, 120, 160) as renderer:
+        _, depth = Rendered(renderer, data, "camera_rgb").frame()
+    assert_that(
+        float(depth[84, 80]),
+        close_to(
+            float(
+                data.geom("pallet").xpos[1]
+                - model.geom("pallet").size[1]
+                - data.camera("camera_rgb").xpos[1]
+            ),
+            1e-4,
+        ),
+        "depth did not measure the front of the low pallet in meters",
     )

@@ -25,6 +25,10 @@ class Harness(Protocol):
         """Topic of what the camera sees, sent best effort like any video."""
         ...
 
+    def depth(self) -> Topic:
+        """Topic of the depth at each pixel in the picture, in meters."""
+        ...
+
     def calibration(self) -> Topic:
         """Topic of how the camera projects the world onto its pixels."""
         ...

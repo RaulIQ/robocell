@@ -388,6 +388,7 @@ with (
                             data,
                             Rendered(renderer, data, "camera_rgb"),
                             harness.picture(),
+                            harness.depth(),
                         ),
                     ),
                     Periodic(

@@ -2,6 +2,7 @@
 
 import secrets
 from pathlib import Path
+from struct import pack
 from typing import Any
 
 import mujoco
@@ -29,7 +30,7 @@ def test_filmed_publishes_the_pixels_the_camera_shot() -> None:
         ),
     )
     messages: list[Any] = []
-    Filmed(mujoco.MjData(model), camera, Kept(messages)).publish()
+    Filmed(mujoco.MjData(model), camera, Kept(messages), Kept([])).publish()
     assert_that(
         bytes(messages[-1].data),
         equal_to(camera.shot().tobytes()),
@@ -48,7 +49,7 @@ def test_filmed_publishes_the_size_of_the_shot() -> None:
     )
     messages: list[Any] = []
     Filmed(
-        mujoco.MjData(model), Painted((0, 0, 0), size), Kept(messages)
+        mujoco.MjData(model), Painted((0, 0, 0), size), Kept(messages), Kept([])
     ).publish()
     assert_that(
         (messages[-1].width, messages[-1].height),
@@ -65,7 +66,10 @@ def test_filmed_packs_three_bytes_per_pixel_in_a_row() -> None:
     width = secrets.SystemRandom().randint(16, 640)
     messages: list[Any] = []
     Filmed(
-        mujoco.MjData(model), Painted((0, 0, 0), (width, 48)), Kept(messages)
+        mujoco.MjData(model),
+        Painted((0, 0, 0), (width, 48)),
+        Kept(messages),
+        Kept([]),
     ).publish()
     assert_that(
         messages[-1].step,
@@ -81,7 +85,10 @@ def test_filmed_encodes_the_picture_as_rgb() -> None:
     )
     messages: list[Any] = []
     Filmed(
-        mujoco.MjData(model), Painted((9, 99, 199), (64, 48)), Kept(messages)
+        mujoco.MjData(model),
+        Painted((9, 99, 199), (64, 48)),
+        Kept(messages),
+        Kept([]),
     ).publish()
     assert_that(
         messages[-1].encoding,
@@ -97,7 +104,10 @@ def test_filmed_places_the_picture_in_the_optical_frame() -> None:
     )
     messages: list[Any] = []
     Filmed(
-        mujoco.MjData(model), Painted((9, 99, 199), (64, 48)), Kept(messages)
+        mujoco.MjData(model),
+        Painted((9, 99, 199), (64, 48)),
+        Kept(messages),
+        Kept([]),
     ).publish()
     assert_that(
         messages[-1].header.frame_id,
@@ -114,10 +124,36 @@ def test_filmed_stamps_the_picture_with_the_simulated_time() -> None:
     data = mujoco.MjData(model)
     mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(2, 900))
     messages: list[Any] = []
-    Filmed(data, Painted((9, 99, 199), (64, 48)), Kept(messages)).publish()
+    Filmed(data, Painted((9, 99, 199), (64, 48)), Kept(messages), Kept([])).publish()
     assert_that(
         messages[-1].header.stamp.sec
         + messages[-1].header.stamp.nanosec * 1e-9,
         close_to(data.time, 1e-9),
         "image did not carry the simulated time",
+    )
+
+
+def test_filmed_publishes_depth_aligned_to_the_picture() -> None:
+    """The depth image carries a float in meters for every RGB pixel."""
+    model = mujoco.MjModel.from_xml_string("<mujoco/>")
+    data = mujoco.MjData(model)
+    data.time = 1.375
+    pictures: list[Any] = []
+    depths: list[Any] = []
+    Filmed(
+        data, Painted((17, 92, 153), (11, 7), 0.625), Kept(pictures), Kept(depths)
+    ).publish()
+    assert_that(
+        depths[-1],
+        equal_to(
+            type(pictures[-1])(
+                header=pictures[-1].header,
+                width=pictures[-1].width,
+                height=pictures[-1].height,
+                encoding="32FC1",
+                step=44,
+                data=pack("<f", 0.625) * 77,
+            )
+        ),
+        "depth did not match the RGB frame or carry float pixels in meters",
     )
