@@ -133,27 +133,47 @@ def test_filmed_stamps_the_picture_with_the_simulated_time() -> None:
     )
 
 
-def test_filmed_publishes_depth_aligned_to_the_picture() -> None:
-    """The depth image carries a float in meters for every RGB pixel."""
+def test_filmed_publishes_depth_in_its_own_frame_at_the_rgb_time() -> None:
+    """The depth image carries an unsigned depth in millimeters for every RGB pixel."""
     model = mujoco.MjModel.from_xml_string("<mujoco/>")
     data = mujoco.MjData(model)
     data.time = 1.375
     pictures: list[Any] = []
     depths: list[Any] = []
     Filmed(
-        data, Painted((17, 92, 153), (11, 7), 0.625), Kept(pictures), Kept(depths)
+        data,
+        Painted((17, 92, 153), (11, 7), 0.6254),
+        Kept(pictures),
+        Kept(depths),
     ).publish()
     assert_that(
         depths[-1],
         equal_to(
             type(pictures[-1])(
-                header=pictures[-1].header,
+                header=type(pictures[-1].header)(
+                    stamp=pictures[-1].header.stamp,
+                    frame_id="camera_depth_optical_frame",
+                ),
                 width=pictures[-1].width,
                 height=pictures[-1].height,
-                encoding="32FC1",
-                step=44,
-                data=pack("<f", 0.625) * 77,
+                encoding="16UC1",
+                step=22,
+                data=pack("<H", 625) * 77,
             )
         ),
-        "depth did not match the RGB frame or carry float pixels in meters",
+        "depth did not carry the expected header or unsigned millimeter pixels",
+    )
+
+
+def test_filmed_marks_depth_below_the_d415_minimum_invalid() -> None:
+    """Depth closer than 310 mm is invalid in the VGA profile."""
+    data = mujoco.MjData(mujoco.MjModel.from_xml_string("<mujoco/>"))
+    messages: list[Any] = []
+    Filmed(
+        data, Painted((31, 76, 182), (9, 5), 0.287), Kept([]), Kept(messages)
+    ).publish()
+    assert_that(
+        bytes(messages[0].data),
+        equal_to(bytes(9 * 5 * 2)),
+        "depth closer than the D415 minimum did not produce invalid pixels",
     )

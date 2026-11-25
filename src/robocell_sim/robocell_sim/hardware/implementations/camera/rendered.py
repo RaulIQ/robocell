@@ -17,7 +17,7 @@ class Rendered(Camera):
 
     The renderer fixes the image size and holds the drawing context, the
     data holds the state of the simulation to draw, and the camera names
-    the camera of the model to look through.
+    the color camera of the model.
     """
 
     _renderer: mujoco.Renderer
@@ -32,6 +32,7 @@ class Rendered(Camera):
     @override
     def frame(self) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.float32]]:
         picture = self.shot()
+        self._renderer.update_scene(self._data, camera="camera_depth")
         self._renderer.enable_depth_rendering()
         try:
             return picture, self._renderer.render()

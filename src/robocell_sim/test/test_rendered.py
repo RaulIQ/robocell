@@ -61,12 +61,12 @@ def test_rendered_measures_the_front_of_the_low_pallet_in_meters() -> None:
     with mujoco.Renderer(model, 120, 160) as renderer:
         _, depth = Rendered(renderer, data, "camera_rgb").frame()
     assert_that(
-        float(depth[84, 80]),
+        float(depth[88, 80]),
         close_to(
             float(
                 data.geom("pallet").xpos[1]
                 - model.geom("pallet").size[1]
-                - data.camera("camera_rgb").xpos[1]
+                - data.camera("camera_depth").xpos[1]
             ),
             1e-4,
         ),

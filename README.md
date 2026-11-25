@@ -419,21 +419,29 @@ retain their separate 360-ray, 5 Hz, 0.12–3.5 m display path.
 ros2 topic echo --once /scan
 ```
 
-The `/camera/image_raw` topic carries what `camera_rgb` sees as an `rgb8`
-`sensor_msgs/Image` of 640 by 480 pixels, sent best effort like any video, and
-`/camera/camera_info` carries its ideal pinhole as `sensor_msgs/CameraInfo`,
-with no distortion. Both lie in `camera_rgb_optical_frame`. The step count
-rounds 1/30 s to 17 physics steps, so the camera runs at 29.4 Hz rather than 30.
+The simulated camera uses a RealSense D415 VGA profile at 640 × 480. Both
+image topics are best effort and share the simulated timestamp. The 30 Hz
+schedule rounds to 17 physics steps, yielding 29.4 frames per simulated second.
 
-`/camera/depth/image_raw` carries a best-effort `32FC1` image aligned with
-each RGB frame. Each pixel gives the depth in meters along the optical axis.
-Both images share the resolution, simulated timestamp, optical frame, and
-calibration on `/camera/camera_info`.
+| Image topic | Encoding | Optical frame | Camera info |
+| --- | --- | --- | --- |
+| `/camera/image_raw` | `rgb8` | `camera_rgb_optical_frame` | `/camera/camera_info` |
+| `/camera/depth/image_raw` | `16UC1` in millimeters | `camera_depth_optical_frame` | `/camera/depth/camera_info` |
+
+The two ideal pinhole cameras use separate projections. Depth uses the D415
+VGA vertical field of view of 40°. Color approximates a centered VGA crop of
+the sensor's 42.5° vertical field of view. The optical centers are offset
+laterally by the nominal 15 mm from the RealSense ROS description. Depth
+samples below the VGA minimum of 310 mm are published as zero. MuJoCo supplies
+geometric depth without simulating stereo matching, lens distortion, or
+rolling shutter.
+[RealSense D400 datasheet](https://www.realsenseai.com/wp-content/uploads/2026/03/RealSense-D400-Series-Datasheet-Mar-2026.pdf)
+[RealSense ROS D415 model](https://github.com/realsenseai/realsense-ros/blob/ros2-master/realsense2_description/urdf/_d415.urdf.xacro)
 
 ```console
 ros2 topic hz /camera/image_raw
 ros2 topic hz /camera/depth/image_raw
-ros2 topic echo --once /camera/camera_info
+ros2 topic echo --once /camera/depth/camera_info
 ```
 
 ## Watch the robot in RViz

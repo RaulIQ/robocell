@@ -118,7 +118,7 @@ def test_wired_opens_the_calibration_topic() -> None:
 
 
 def test_wired_opens_the_depth_topic() -> None:
-    """The harness advertises the aligned depth stream as an image."""
+    """The harness advertises the depth stream as an image."""
     context = Context()
     context.init(domain_id=secrets.SystemRandom().randint(0, 101))
     node = Node(f"wired{secrets.token_hex(4)}", context=context)

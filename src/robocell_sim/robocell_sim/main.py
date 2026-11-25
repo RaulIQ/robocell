@@ -187,6 +187,9 @@ if camera is not None:
 lens = Pinhole(
     math.radians(model.cam_fovy[model.camera("camera_rgb").id]), *size
 )
+projection = Pinhole(
+    math.radians(model.cam_fovy[model.camera("camera_depth").id]), *size
+)
 log.info("Camera sees through the intrinsics %s", lens.matrix())
 shot = 0.0
 reach = (_MIN_RANGE, options.lidar_range_max)
@@ -394,7 +397,22 @@ with (
                     Periodic(
                         data,
                         1 / 30,
-                        Calibrated(data, lens, size, harness.calibration()),
+                        Calibrated(
+                            data,
+                            lens,
+                            size,
+                            (harness.calibration(), "camera_rgb_optical_frame"),
+                        ),
+                    ),
+                    Periodic(
+                        data,
+                        1 / 30,
+                        Calibrated(
+                            data,
+                            projection,
+                            size,
+                            (harness.intrinsics(), "camera_depth_optical_frame"),
+                        ),
                     ),
                 )
             ),

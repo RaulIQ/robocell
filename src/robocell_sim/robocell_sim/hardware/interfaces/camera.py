@@ -14,5 +14,5 @@ class Camera(Protocol):
         ...
 
     def frame(self) -> tuple[npt.NDArray[np.uint8], npt.NDArray[np.float32]]:
-        """Aligned RGB and optical-axis depth in meters from one scene."""
+        """RGB and optical-axis depth in meters from one simulation state."""
         ...

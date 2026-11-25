@@ -52,6 +52,12 @@ class Wired(Harness):
         )
 
     @override
+    def intrinsics(self) -> Topic:
+        return self._node.create_publisher(
+            CameraInfo, "/camera/depth/camera_info", 10
+        )
+
+    @override
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
         def receive(message: Twist) -> None:
             inbox.put((message.linear.x, message.angular.z))
