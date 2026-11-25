@@ -98,3 +98,23 @@ def test_follow_view_displays_the_cube_marker() -> None:
         equal_to([(True, "/cube/marker")]),
         "RViz did not display the simulated cube marker",
     )
+
+
+def test_follow_view_displays_the_depth_image() -> None:
+    """The cube view opens the depth image with best-effort reliability."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
+    assert_that(
+        [
+            (
+                display["Enabled"],
+                display["Topic"]["Value"],
+                display["Topic"]["Reliability Policy"],
+            )
+            for display in config["Visualization Manager"]["Displays"]
+            if display["Class"] == "rviz_default_plugins/Image"
+        ],
+        equal_to([(True, "/camera/depth/image_raw", "Best Effort")]),
+        "RViz did not open the depth image with best-effort reliability",
+    )
