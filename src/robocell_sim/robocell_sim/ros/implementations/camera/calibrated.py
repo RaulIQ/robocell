@@ -20,8 +20,8 @@ class Calibrated(Report):
 
     The data holds the live state of the simulation, the intrinsics give
     the camera matrix, the size is the width and the height of the image
-    in pixels, and the topic carries them as sensor_msgs/CameraInfo in the
-    camera_rgb_optical_frame of the URDF, stamped with the simulated time.
+    in pixels, and the output carries them as sensor_msgs/CameraInfo in the
+    associated optical frame, stamped with the simulated time.
     The camera is an ideal pinhole, so its lens bends nothing and the
     projection is the camera matrix with no shift.
     """
@@ -29,18 +29,19 @@ class Calibrated(Report):
     _data: mujoco.MjData
     _intrinsics: Intrinsics
     _size: tuple[int, int]
-    _topic: Topic
+    _output: tuple[Topic, str]
 
     @override
     def publish(self) -> None:
         matrix = self._intrinsics.matrix()
-        self._topic.publish(
+        topic, frame = self._output
+        topic.publish(
             CameraInfo(
                 header=Header(
                     stamp=Time(
                         nanoseconds=round(self._data.time * 1e9)
                     ).to_msg(),
-                    frame_id="camera_rgb_optical_frame",
+                    frame_id=frame,
                 ),
                 width=self._size[0],
                 height=self._size[1],

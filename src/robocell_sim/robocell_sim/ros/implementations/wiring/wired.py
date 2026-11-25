@@ -40,9 +40,21 @@ class Wired(Harness):
         )
 
     @override
+    def depth(self) -> Topic:
+        return self._node.create_publisher(
+            Image, "/camera/depth/image_raw", qos_profile_sensor_data
+        )
+
+    @override
     def calibration(self) -> Topic:
         return self._node.create_publisher(
             CameraInfo, "/camera/camera_info", 10
+        )
+
+    @override
+    def intrinsics(self) -> Topic:
+        return self._node.create_publisher(
+            CameraInfo, "/camera/depth/camera_info", 10
         )
 
     @override

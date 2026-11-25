@@ -5,6 +5,10 @@
 
   <size nuserdata="1"/>
 
+  <visual>
+    <global offwidth="1920" offheight="1080"/>
+  </visual>
+
   <default>
     <default class="waffle_pi">
       <default class="visual">
@@ -43,7 +47,8 @@
       <geom name="caster_back_left" class="caster" pos="-0.177 0.064 -0.004"/>
       <geom name="caster_back_right" class="caster" pos="-0.177 -0.064 -0.004"/>
       <site name="imu" pos="0 0 0.068"/>
-      <camera name="camera_rgb" pos="0.076 0 0.093" xyaxes="0 -1 0 0 0 1" fovy="49"/>
+      <camera name="camera_rgb" pos="0.076 0 0.093" xyaxes="0 -1 0 0 0 1" fovy="42.5" resolution="1920 1080"/>
+      <camera name="camera_depth" pos="0.076 -0.015 0.093" xyaxes="0 -1 0 0 0 1" fovy="40" resolution="1280 720"/>
       <body name="wheel_left_link" pos="0 0.144 0.023">
         <inertial pos="0 0 0" mass="0.02849894" diaginertia="1.1175580e-05 2.0712558e-05 1.1192413e-05"/>
         <joint name="wheel_left_joint" class="wheel"/>

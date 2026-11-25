@@ -115,3 +115,16 @@ def test_wired_opens_the_calibration_topic() -> None:
         has_entry("/camera/camera_info", ["sensor_msgs/msg/CameraInfo"]),
         "harness did not advertise the calibration topic",
     )
+
+
+def test_wired_opens_the_depth_topic() -> None:
+    """The harness advertises the depth stream as an image."""
+    context = Context()
+    context.init(domain_id=secrets.SystemRandom().randint(0, 101))
+    node = Node(f"wired{secrets.token_hex(4)}", context=context)
+    Wired(node).depth()
+    assert_that(
+        Settled(node, "/camera/depth/image_raw", 2.0).publishers(),
+        has_entry("/camera/depth/image_raw", ["sensor_msgs/msg/Image"]),
+        "harness did not advertise the depth image topic",
+    )

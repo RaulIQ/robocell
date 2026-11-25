@@ -39,7 +39,10 @@ from robocell_sim.display.implementations.lidar.scanned import Scanned
 from robocell_sim.display.implementations.maps.survey import Survey
 from robocell_sim.display.implementations.route.window import Window
 from robocell_sim.hardware.implementations.camera.pinhole import Pinhole
-from robocell_sim.hardware.implementations.camera.rendered import Rendered
+from robocell_sim.hardware.implementations.camera.rendered import (
+    Paired,
+    Rendered,
+)
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
@@ -169,13 +172,16 @@ if route is not None:
         target=route.show, daemon=True
     ).start()
 sample = 0.0
-size = (640, 480)
+width, height = model.cam_resolution[model.camera("camera_rgb").id]
+columns, rows = model.cam_resolution[model.camera("camera_depth").id]
+color = (int(width), int(height))
+depth = (int(columns), int(rows))
 camera = (
     Screen(
         multiprocessing.get_context("fork").Queue(maxsize=2),
         model,
         "camera_rgb",
-        size,
+        color,
     )
     if options.camera == "true"
     else None
@@ -185,7 +191,10 @@ if camera is not None:
         target=camera.show, daemon=True
     ).start()
 lens = Pinhole(
-    math.radians(model.cam_fovy[model.camera("camera_rgb").id]), *size
+    math.radians(model.cam_fovy[model.camera("camera_rgb").id]), *color
+)
+projection = Pinhole(
+    math.radians(model.cam_fovy[model.camera("camera_depth").id]), *depth
 )
 log.info("Camera sees through the intrinsics %s", lens.matrix())
 shot = 0.0
@@ -288,7 +297,10 @@ with (
         ),
     )
     renderer = resources.enter_context(
-        closing(mujoco.Renderer(model, size[1], size[0]))
+        closing(mujoco.Renderer(model, color[1], color[0]))
+    )
+    sensor = resources.enter_context(
+        closing(mujoco.Renderer(model, depth[1], depth[0]))
     )
     master, slave = pty.openpty()
     tty.setraw(slave)
@@ -386,14 +398,34 @@ with (
                         1 / 30,
                         Filmed(
                             data,
-                            Rendered(renderer, data, "camera_rgb"),
+                            Paired(
+                                Rendered(renderer, data, "camera_rgb"),
+                                sensor,
+                                data,
+                            ),
                             harness.picture(),
+                            harness.depth(),
                         ),
                     ),
                     Periodic(
                         data,
                         1 / 30,
-                        Calibrated(data, lens, size, harness.calibration()),
+                        Calibrated(
+                            data,
+                            lens,
+                            color,
+                            (harness.calibration(), "camera_rgb_optical_frame"),
+                        ),
+                    ),
+                    Periodic(
+                        data,
+                        1 / 30,
+                        Calibrated(
+                            data,
+                            projection,
+                            depth,
+                            (harness.intrinsics(), "camera_depth_optical_frame"),
+                        ),
                     ),
                 )
             ),

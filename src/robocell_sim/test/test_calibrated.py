@@ -24,7 +24,12 @@ def test_calibrated_publishes_the_camera_matrix() -> None:
         secrets.SystemRandom().randint(48, 960),
     )
     messages: list[Any] = []
-    Calibrated(mujoco.MjData(model), lens, (640, 480), Kept(messages)).publish()
+    Calibrated(
+        mujoco.MjData(model),
+        lens,
+        (640, 480),
+        (Kept(messages), "camera_rgb_optical_frame"),
+    ).publish()
     assert_that(
         math.dist(
             messages[-1].k, [value for row in lens.matrix() for value in row]
@@ -45,7 +50,12 @@ def test_calibrated_projects_with_the_camera_matrix_alone() -> None:
         secrets.SystemRandom().randint(48, 960),
     )
     messages: list[Any] = []
-    Calibrated(mujoco.MjData(model), lens, (640, 480), Kept(messages)).publish()
+    Calibrated(
+        mujoco.MjData(model),
+        lens,
+        (640, 480),
+        (Kept(messages), "camera_rgb_optical_frame"),
+    ).publish()
     assert_that(
         math.dist(
             messages[-1].p,
@@ -66,7 +76,7 @@ def test_calibrated_leaves_the_image_unrectified() -> None:
         mujoco.MjData(model),
         Pinhole(secrets.SystemRandom().uniform(0.3, 2.0), 640, 480),
         (640, 480),
-        Kept(messages),
+        (Kept(messages), "camera_rgb_optical_frame"),
     ).publish()
     assert_that(
         list(messages[-1].r),
@@ -85,7 +95,7 @@ def test_calibrated_declares_no_lens_distortion() -> None:
         mujoco.MjData(model),
         Pinhole(secrets.SystemRandom().uniform(0.3, 2.0), 640, 480),
         (640, 480),
-        Kept(messages),
+        (Kept(messages), "camera_rgb_optical_frame"),
     ).publish()
     assert_that(
         (messages[-1].distortion_model, list(messages[-1].d)),
@@ -105,7 +115,10 @@ def test_calibrated_publishes_the_size_of_the_image() -> None:
     )
     messages: list[Any] = []
     Calibrated(
-        mujoco.MjData(model), Pinhole(0.85, *size), size, Kept(messages)
+        mujoco.MjData(model),
+        Pinhole(0.85, *size),
+        size,
+        (Kept(messages), "camera_rgb_optical_frame"),
     ).publish()
     assert_that(
         (messages[-1].width, messages[-1].height),
@@ -124,11 +137,11 @@ def test_calibrated_places_the_calibration_in_the_optical_frame() -> None:
         mujoco.MjData(model),
         Pinhole(0.85, 640, 480),
         (640, 480),
-        Kept(messages),
+        (Kept(messages), "camera_depth_optical_frame"),
     ).publish()
     assert_that(
         messages[-1].header.frame_id,
-        equal_to("camera_rgb_optical_frame"),
+        equal_to("camera_depth_optical_frame"),
         "camera info did not lie in the optical frame of the camera",
     )
 
@@ -142,7 +155,10 @@ def test_calibrated_stamps_the_calibration_with_the_simulated_time() -> None:
     mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(2, 900))
     messages: list[Any] = []
     Calibrated(
-        data, Pinhole(0.85, 640, 480), (640, 480), Kept(messages)
+        data,
+        Pinhole(0.85, 640, 480),
+        (640, 480),
+        (Kept(messages), "camera_rgb_optical_frame"),
     ).publish()
     assert_that(
         messages[-1].header.stamp.sec

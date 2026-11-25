@@ -1,9 +1,10 @@
-"""Report that publishes the picture of the camera."""
+"""Report that publishes synchronized D415 color and depth images."""
 
 from dataclasses import dataclass
 from typing import final, override
 
 import mujoco
+import numpy as np
 from rclpy.time import Time
 from sensor_msgs.msg import Image  # type: ignore[import-untyped]  # ROS generates message modules without types
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
@@ -16,32 +17,37 @@ from robocell_sim.ros.interfaces.topic import Topic
 @final
 @dataclass(frozen=True)
 class Filmed(Report):
-    """Report that publishes what the camera of the robot sees.
-
-    The data holds the live state of the simulation, the camera takes the
-    picture, and the topic carries it as an rgb8 sensor_msgs/Image in the
-    camera_rgb_optical_frame of the URDF, stamped with the simulated time.
-    """
+    """Publish color and depth in their respective optical frames."""
 
     _data: mujoco.MjData
     _camera: Camera
     _topic: Topic
+    _depth: Topic
 
     @override
     def publish(self) -> None:
-        shot = self._camera.shot()
+        picture, depth = self._camera.frame()
+        stamp = Time(nanoseconds=round(self._data.time * 1e9)).to_msg()
         self._topic.publish(
             Image(
-                header=Header(
-                    stamp=Time(
-                        nanoseconds=round(self._data.time * 1e9)
-                    ).to_msg(),
-                    frame_id="camera_rgb_optical_frame",
-                ),
-                height=shot.shape[0],
-                width=shot.shape[1],
+                header=Header(stamp=stamp, frame_id="camera_rgb_optical_frame"),
+                height=picture.shape[0],
+                width=picture.shape[1],
                 encoding="rgb8",
-                step=shot.shape[1] * 3,
-                data=shot.tobytes(),
+                step=picture.shape[1] * 3,
+                data=picture.tobytes(),
+            )
+        )
+        self._depth.publish(
+            Image(
+                header=Header(stamp=stamp, frame_id="camera_depth_optical_frame"),
+                height=depth.shape[0],
+                width=depth.shape[1],
+                encoding="16UC1",
+                step=depth.shape[1] * 2,
+                data=np.rint(
+                    np.where((depth >= 0.450) & (depth <= 65.535), depth, 0)
+                    * 1000
+                ).astype("<u2").tobytes(),
             )
         )

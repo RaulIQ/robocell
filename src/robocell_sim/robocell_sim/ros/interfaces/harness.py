@@ -25,8 +25,16 @@ class Harness(Protocol):
         """Topic of what the camera sees, sent best effort like any video."""
         ...
 
+    def depth(self) -> Topic:
+        """Topic of the depth camera's image in millimeters."""
+        ...
+
     def calibration(self) -> Topic:
         """Topic of how the camera projects the world onto its pixels."""
+        ...
+
+    def intrinsics(self) -> Topic:
+        """Topic of how the depth camera projects the world onto its pixels."""
         ...
 
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:
