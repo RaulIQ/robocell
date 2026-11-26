@@ -305,6 +305,7 @@ launch(
         "right_node:=29",
         f"lidar_port:={args.output / 'lidar'}",
         f"slam_params_file:={args.output / 'slam.yaml'}",
+        f"rtabmap_database:={args.output / 'rtabmap.db'}",
     ],
 )
 try:

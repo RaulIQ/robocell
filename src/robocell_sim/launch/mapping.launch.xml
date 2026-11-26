@@ -1,4 +1,6 @@
 <launch>
+  <arg name="localize" default="false" description="Localize against an existing RTAB-Map database"/>
+  <arg name="rtabmap_database" default="$(env HOME)/.ros/robocell-rtabmap.db" description="RTAB-Map session database"/>
   <arg name="scan_source" default="lidar" description="Source of SLAM scans: lidar or depth"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <arg name="slam_params_file" default="$(find-pkg-share robocell_sim)/config/slam.yaml" description="SLAM configuration for lidar mapping"/>
@@ -87,7 +89,7 @@
     <remap from="rgbd_image" to="/camera/rgbd_image"/>
     <remap from="odom" to="/visual/odometry"/>
   </node>
-  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="rtabmap_slam" exec="rtabmap" args="--delete_db_on_start" output="screen">
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="rtabmap_slam" exec="rtabmap" output="screen">
     <param name="use_sim_time" value="true"/>
     <param name="frame_id" value="base_footprint"/>
     <param name="odom_frame_id" value="odom"/>
@@ -100,7 +102,16 @@
     <param name="approx_sync" value="false"/>
     <param name="odom_sensor_sync" value="true"/>
     <param name="wait_for_transform" value="0.5"/>
-    <param name="database_path" value="$(env HOME)/.ros/robocell-rtabmap.db"/>
+    <param name="database_path" value="$(var rtabmap_database)"/>
+    <param name="Mem/IncrementalMemory" value="'$(eval &quot;'false' if '$(var localize)' == 'true' else 'true'&quot;)'"/>
+    <param name="Mem/InitWMWithAllNodes" value="'$(eval &quot;'true' if '$(var localize)' == 'true' else 'false'&quot;)'"/>
+    <param name="RGBD/StartAtOrigin" value="'$(eval &quot;'true' if '$(var localize)' == 'true' else 'false'&quot;)'"/>
+    <param name="RGBD/ProximityPathMaxNeighbors" value="'$(eval &quot;'10' if '$(var localize)' == 'true' else '0'&quot;)'"/>
+    <param name="RGBD/ProximityGlobalScanMap" value="'$(eval &quot;'true' if '$(var localize)' == 'true' else 'false'&quot;)'"/>
+    <param name="Icp/MaxCorrespondenceDistance" value="'$(eval &quot;'1.0' if '$(var localize)' == 'true' else '0.1'&quot;)'"/>
+    <param name="Icp/MaxTranslation" value="'$(eval &quot;'1.0' if '$(var localize)' == 'true' else '0.2'&quot;)'"/>
+    <param name="Icp/MaxRotation" value="'$(eval &quot;'0.15' if '$(var localize)' == 'true' else '0.78'&quot;)'"/>
+    <param name="Icp/PointToPlane" value="'$(eval &quot;'false' if '$(var localize)' == 'true' else 'true'&quot;)'"/>
     <param name="qos_image" value="2"/>
     <param name="qos_camera_info" value="1"/>
     <param name="qos_odom" value="1"/>

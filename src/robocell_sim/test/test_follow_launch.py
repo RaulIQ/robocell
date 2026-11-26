@@ -131,3 +131,24 @@ def test_follow_costmaps_accept_scan_points_above_the_floor() -> None:
         equal_to([0.2, 0.2]),
         "the costmap sources did not accept above-floor camera observations",
     )
+
+
+def test_follow_launch_passes_localization_arguments_to_mapping() -> None:
+    """Cube mode forwards the database and localization switch."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/follow.launch.xml"
+    )
+    assert_that(
+        {
+            argument.get("name"): argument.get("value")
+            for argument in launch.findall("./include/arg")
+            if argument.get("name") in {"localize", "rtabmap_database"}
+        },
+        equal_to(
+            {
+                "localize": "$(var localize)",
+                "rtabmap_database": "$(var rtabmap_database)",
+            }
+        ),
+        "cube mode did not forward the RTAB-Map localization settings",
+    )

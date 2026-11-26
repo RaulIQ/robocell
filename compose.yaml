@@ -16,6 +16,8 @@ services:
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - ROBOCELL_MODE=${ROBOCELL_MODE:-workshop}
       - ROBOCELL_SCAN_SOURCE=${ROBOCELL_SCAN_SOURCE:-lidar}
+      - ROBOCELL_LOCALIZE=${ROBOCELL_LOCALIZE:-false}
+      - ROBOCELL_RTABMAP_DATABASE=${ROBOCELL_RTABMAP_DATABASE:-/ws/log/rtabmap.db}
     volumes:
       - ./:/ws
       - /tmp/.X11-unix:/tmp/.X11-unix

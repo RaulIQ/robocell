@@ -286,3 +286,29 @@ def test_mapping_launch_builds_the_rtabmap_grid_from_the_depth_scan() -> None:
         equal_to(("true", "'0'", "/scan/slam")),
         "RTAB-Map did not build occupancy from the planar depth scan",
     )
+
+
+def test_mapping_launch_reuses_the_database_in_localization_mode() -> None:
+    """Localization loads the recorded graph and keeps it fixed."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    node = launch.find("./node[@exec='rtabmap']")
+    parameters = {param.get("name"): param.get("value") for param in node.iter("param")}
+    assert_that(
+        (
+            node.get("args", ""),
+            parameters.get("database_path"),
+            parameters.get("Mem/IncrementalMemory"),
+            parameters.get("Mem/InitWMWithAllNodes"),
+        ),
+        equal_to(
+            (
+                "",
+                "$(var rtabmap_database)",
+                "'$(eval \"'false' if '$(var localize)' == 'true' else 'true'\")'",
+                "'$(eval \"'true' if '$(var localize)' == 'true' else 'false'\")'",
+            )
+        ),
+        "RTAB-Map did not retain the saved graph for localization",
+    )
