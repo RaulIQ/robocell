@@ -192,3 +192,36 @@ def test_follow_displays_a_live_depth_cloud_without_mapping() -> None:
         equal_to((True, [("/camera/depth/points", 0)])),
         "the follow view did not show a live depth cloud without mapping",
     )
+
+
+def test_follow_view_keeps_the_scene_fixed_while_the_robot_follows() -> None:
+    """Object motion remains visible relative to the stationary odometry grid."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
+    assert_that(
+        config["Visualization Manager"]["Views"]["Current"]["Target Frame"],
+        equal_to("odom"),
+        "the follow view did not anchor object motion to the stationary scene",
+    )
+
+
+def test_follow_decimates_the_display_cloud_without_changing_navigation_depth() -> None:
+    """The cloud uses a smaller calibrated image while navigation keeps raw depth."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/follow.launch.xml"
+    )
+    assert_that(
+        (
+            [param.get("value") for param in launch.findall(
+                "./node[@exec='crop_decimate_node']/param[@name='decimation_x']"
+            )],
+            [param.get("value") for param in launch.findall(
+                "./node[@exec='crop_decimate_node']/param[@name='decimation_y']"
+            )],
+            launch.find("./node[@exec='point_cloud_xyz_node']/remap[@from='image_rect']").get("to"),
+            launch.find("./node[@exec='depthimage_to_laserscan_node']/remap[@from='depth']").get("to"),
+        ),
+        equal_to((["4"], ["4"], "/camera/depth/preview/image_raw", "/camera/depth/image_raw")),
+        "the cloud did not reduce display traffic independently of navigation",
+    )

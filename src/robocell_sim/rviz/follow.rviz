@@ -8,7 +8,7 @@ Visualization Manager:
   Global Options:
     Background Color: 32; 32; 32
     Fixed Frame: odom
-    Frame Rate: 30
+    Frame Rate: 15
   Displays:
   - Class: rviz_default_plugins/Map
     Name: Global Costmap
@@ -106,7 +106,7 @@ Visualization Manager:
     Axis: Z
     Position Transformer: XYZ
     Decay Time: 0
-    Queue Size: 2
+    Queue Size: 1
   Tools:
   - Class: rviz_default_plugins/MoveCamera
   - Class: rviz_default_plugins/Select
@@ -118,7 +118,7 @@ Visualization Manager:
     Current:
       Class: rviz_default_plugins/Orbit
       Name: Navigation view
-      Target Frame: base_footprint
+      Target Frame: odom
       Distance: 7
       Pitch: 0.9
       Yaw: 0.8

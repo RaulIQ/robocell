@@ -43,10 +43,19 @@
     <remap from="depth_camera_info" to="/camera/depth/camera_info"/>
     <remap from="scan" to="/scan/depth"/>
   </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="image_proc" exec="crop_decimate_node" name="depth_preview" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="decimation_x" value="4"/>
+    <param name="decimation_y" value="4"/>
+    <param name="queue_size" value="1"/>
+    <remap from="in/image_raw" to="/camera/depth/image_raw"/>
+    <remap from="out/image_raw" to="/camera/depth/preview/image_raw"/>
+  </node>
   <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="depth_image_proc" exec="point_cloud_xyz_node" output="screen">
     <param name="use_sim_time" value="true"/>
-    <remap from="image_rect" to="/camera/depth/image_raw"/>
-    <remap from="camera_info" to="/camera/depth/camera_info"/>
+    <param name="queue_size" value="1"/>
+    <remap from="image_rect" to="/camera/depth/preview/image_raw"/>
+    <remap from="camera_info" to="/camera/depth/preview/camera_info"/>
     <remap from="points" to="/camera/depth/points"/>
   </node>
   <node pkg="robocell_sim" exec="approached.py" output="screen">

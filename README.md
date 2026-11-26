@@ -694,7 +694,10 @@ ROBOCELL_MODE=follow ROBOCELL_SCAN_SOURCE=depth docker compose up --no-build
 This experimental mode starts Nav2 with MPPI and rolling costmaps in `odom`,
 without SLAM or a static map. RViz shows both costmaps, the footprint, paths,
 RGB and depth images, and a live 3D depth cloud colored by height. The cloud
-is projected from the current depth image without accumulating a map.
+is projected from a depth preview reduced by four along each axis, without
+accumulating a map. The preview keeps the camera calibration through binning;
+navigation still uses the original depth image. RViz keeps its view anchored
+to `odom` so object motion is visible against a stationary grid.
 Drive with the Robocell panel to observe the free area. Choose **Nav2 Goal**
 to start following, then use **2D Goal Pose** to move the active target.
 Both tools set a position and heading by clicking and dragging on the map.
