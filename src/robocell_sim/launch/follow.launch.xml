@@ -1,4 +1,5 @@
 <launch>
+  <arg name="following_distance" default="1.0" description="Distance in meters between the approach point and target"/>
   <arg name="scan_source" default="depth" description="Source of Nav2 obstacle scans: lidar or depth"/>
   <let name="nav_scan" value="$(eval &quot;'/scan/navigation' if '$(var scan_source)' == 'depth' else '/scan'&quot;)"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
@@ -7,10 +8,11 @@
   <arg name="teleop" default="true" description="Open the manual control panel"/>
   <arg name="can_channel" default="vcan0" description="Shared SocketCAN channel"/>
   <arg name="lidar_port" default="$(env HOME)/.ros/robocell-lidar" description="Shared UART endpoint"/>
-  <arg name="follow_tree" default="$(find-pkg-share nav2_bt_navigator)/behavior_trees/follow_point.xml" description="Behavior tree for following a changing goal"/>
+  <arg name="follow_tree" default="$(find-pkg-share robocell_sim)/config/follow.xml" description="Behavior tree for following a changing goal"/>
   <arg name="nav_params" default="$(find-pkg-share robocell_sim)/config/follow.yaml" description="Nav2 and velocity routing parameters"/>
   <include file="$(find-pkg-share robocell_sim)/launch/workshop.launch.xml">
     <arg name="fixed_odom" value="false"/>
+    <arg name="target_topic" value="/target/pose"/>
     <arg name="target_frame" value="odom"/>
     <arg name="scan_source" value="$(var scan_source)"/>
     <arg name="fake_target" value="$(var fake_target)"/>
@@ -47,6 +49,10 @@
     <remap from="camera_info" to="/camera/depth/camera_info"/>
     <remap from="points" to="/camera/depth/points"/>
   </node>
+  <node pkg="robocell_sim" exec="approached.py" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="distance" value="$(var following_distance)"/>
+  </node>
   <node pkg="nav2_planner" exec="planner_server" name="planner_server" output="screen">
     <param from="$(var nav_params)"/>
     <remap from="/scan" to="$(var nav_scan)"/>
@@ -55,6 +61,9 @@
     <param from="$(var nav_params)"/>
     <remap from="/scan" to="$(var nav_scan)"/>
     <remap from="cmd_vel" to="/cmd_vel_nav"/>
+  </node>
+  <node pkg="nav2_behaviors" exec="behavior_server" name="behavior_server" output="screen">
+    <param from="$(var nav_params)"/>
   </node>
   <node pkg="nav2_bt_navigator" exec="bt_navigator" name="bt_navigator" output="screen">
     <param from="$(var nav_params)"/>

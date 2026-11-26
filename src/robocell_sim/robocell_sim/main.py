@@ -247,7 +247,9 @@ with (
             (
                 buffer,
                 settings.text("target_frame", "map"),
-                node.create_publisher(PoseStamped, "/goal_update", 1),
+                node.create_publisher(
+                    PoseStamped, settings.text("target_topic", "/goal_update"), 1
+                ),
                 node.create_publisher(Marker, "/cube/marker", 1),
             ),
             deque(maxlen=1),

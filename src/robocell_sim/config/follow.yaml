@@ -140,6 +140,7 @@ lifecycle_manager_navigation:
     node_names:
     - planner_server
     - controller_server
+    - behavior_server
     - bt_navigator
 twist_mux:
   ros__parameters:
@@ -154,3 +155,14 @@ twist_mux:
         topic: /cmd_vel_nav
         timeout: 0.25
         priority: 50
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+    local_frame: odom
+    global_frame: odom
+    robot_base_frame: base_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: [wait]
+    wait:
+      plugin: nav2_behaviors::Wait

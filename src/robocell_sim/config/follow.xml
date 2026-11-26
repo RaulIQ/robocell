@@ -1,0 +1,19 @@
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="120" name="AwaitObservedPath">
+      <PipelineSequence name="FollowObservedPath">
+        <RateController hz="1.0">
+          <Sequence>
+            <GoalUpdater input_goal="{goal}" output_goal="{updated_goal}">
+              <ComputePathToPose goal="{updated_goal}" path="{path}" planner_id="GridBased" error_code_id="{compute_path_error_code}"/>
+            </GoalUpdater>
+          </Sequence>
+        </RateController>
+        <KeepRunningUntilFailure>
+          <FollowPath path="{path}" controller_id="FollowPath" error_code_id="{follow_path_error_code}"/>
+        </KeepRunningUntilFailure>
+      </PipelineSequence>
+      <Wait wait_duration="1.0"/>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

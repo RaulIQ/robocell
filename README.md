@@ -700,10 +700,13 @@ to start following, then use **2D Goal Pose** to move the active target.
 Both tools set a position and heading by clicking and dragging on the map.
 Choose points in known free space. Nav2 uses `/scan/navigation` from the depth camera for obstacle avoidance
 during autonomous motion. The operator handles obstacles during manual control.
-The supplied Nav2 Follow Dynamic Point
-tree replans once a second and truncates the path about 1 m from the target.
-To use a different stand-off distance, pass a copy of the tree with a
-different `TruncatePath` distance as `follow_tree:=/path/to/tree.xml`.
+The follow tree replans once a second. For observed objects, the approach
+node chooses a goal 1 m before the target, then Nav2 plans to that point.
+Set `following_distance:=0.8` to choose a different separation. RViz goals
+on `/goal_update` directly select the approach point. A failed plan halts
+the controller and waits before retrying, with a limit of 120 retries and
+a one-second pause between attempts; planning and scheduling add time.
+The operator can cancel at any point.
 
 Manual commands have priority while the panel is sending them. Releasing
 the keys sends zero before the mux hands control back to Nav2 after 250 ms
@@ -723,13 +726,16 @@ The orange cube starts to the right of the robot's spawn in the MuJoCo
 workshop. In the control panel, choose **Robot** or **Cube** to route the
 arrow keys. Switching stops the previous selection. Release and press the
 keys again to move the new selection. The initial cube is outside the
-forward camera view: observe the intended route before clicking **Follow cube**.
-Unknown space remains blocked; the planner rejects an unobserved route.
-Following around a target that itself occupies the goal cell still needs
-validation in issue #172. **Cancel follow** ends autonomous motion. **STOP**
+forward camera view. **Follow cube** can start while the path is unknown;
+the robot waits instead of ending the action after the first failed plan.
+Use manual control to show the camera the target and intended route, then
+release the keys. Unknown space remains blocked. Navigation resumes when
+a path to the approach point becomes available. **Cancel follow** ends autonomous motion. **STOP**
 only clears the selected manual controls.
 
-In follow mode the simulator publishes the cube's position in `odom` on `/goal_update` at
-5 Hz. The panel starts Nav2 with the current pose. The cube is a kinematic
+In follow mode the simulator publishes the cube's position in `odom` on
+`/target/pose` at 5 Hz. The approach node publishes the derived navigation
+goal on `/goal_update`; the cube marker retains the actual object position.
+The panel starts Nav2 with the current approach goal. The cube is a kinematic
 target and can pass through objects, so keep it in reachable space. RViz
 clicks are available in the regular `follow` mode.
