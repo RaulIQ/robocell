@@ -147,7 +147,7 @@ To start the same simulator with SLAM and the map in RViz, run:
 ROBOCELL_MODE=mapping docker compose up
 ```
 
-Mapping and cube mode use lidar by default. To map with the D415 instead,
+Mapping uses lidar by default; select depth explicitly for camera-based following. To map with the D415 instead,
 select depth when starting Compose:
 
 ```console
@@ -688,14 +688,17 @@ period on resume. Backwards time restarts acquisition. Shutdown sends STOP.
 ## Follow an RViz target
 
 ```console
-ROBOCELL_MODE=follow docker compose up --build
+ROBOCELL_MODE=follow ROBOCELL_SCAN_SOURCE=depth docker compose up --no-build
 ```
 
-This mode shows the live SLAM map and starts Nav2. Drive with the Robocell
-panel until RViz shows the free area you intend to use. Choose **Nav2 Goal**
+This experimental mode starts Nav2 with MPPI and rolling costmaps in `odom`,
+without SLAM or a static map. RViz shows both costmaps, the footprint, paths,
+RGB and depth images, and a live 3D depth cloud colored by height. The cloud
+is projected from the current depth image without accumulating a map.
+Drive with the Robocell panel to observe the free area. Choose **Nav2 Goal**
 to start following, then use **2D Goal Pose** to move the active target.
 Both tools set a position and heading by clicking and dragging on the map.
-Choose points in known free space. Nav2 uses `/scan` for obstacle avoidance
+Choose points in known free space. Nav2 uses `/scan/navigation` from the depth camera for obstacle avoidance
 during autonomous motion. The operator handles obstacles during manual control.
 The supplied Nav2 Follow Dynamic Point
 tree replans once a second and truncates the path about 1 m from the target.
@@ -713,18 +716,20 @@ freshness for both sources.
 ### Follow a simulated cube
 
 ```sh
-ROBOCELL_MODE=cube docker compose up --build
+ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --no-build
 ```
 
 The orange cube starts to the right of the robot's spawn in the MuJoCo
 workshop. In the control panel, choose **Robot** or **Cube** to route the
 arrow keys. Switching stops the previous selection. Release and press the
-keys again to move the new selection. Drive the robot first to survey the
-area in SLAM, then click **Follow cube** and move the cube within mapped
-free space. **Cancel follow** ends autonomous motion. **STOP**
+keys again to move the new selection. The initial cube is outside the
+forward camera view: observe the intended route before clicking **Follow cube**.
+Unknown space remains blocked; the planner rejects an unobserved route.
+Following around a target that itself occupies the goal cell still needs
+validation in issue #172. **Cancel follow** ends autonomous motion. **STOP**
 only clears the selected manual controls.
 
-The simulator publishes the cube's position in `map` on `/goal_update` at
+In follow mode the simulator publishes the cube's position in `odom` on `/goal_update` at
 5 Hz. The panel starts Nav2 with the current pose. The cube is a kinematic
 target and can pass through objects, so keep it in reachable space. RViz
 clicks are available in the regular `follow` mode.

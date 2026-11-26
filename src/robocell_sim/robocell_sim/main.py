@@ -246,6 +246,7 @@ with (
             (float(data.qpos[0]), float(data.qpos[1]), odometry.heading()),
             (
                 buffer,
+                settings.text("target_frame", "map"),
                 node.create_publisher(PoseStamped, "/goal_update", 1),
                 node.create_publisher(Marker, "/cube/marker", 1),
             ),

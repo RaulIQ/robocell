@@ -1,68 +1,131 @@
 Panels:
-  - Class: rviz_common/Displays
-    Name: Displays
-  - Class: nav2_rviz_plugins/Navigation 2
-    Name: Navigation 2
+- Class: rviz_common/Displays
+  Name: Displays
+- Class: nav2_rviz_plugins/Navigation 2
+  Name: Navigation 2
 Visualization Manager:
-  Class: ""
+  Class: ''
   Global Options:
-    Background Color: 48; 48; 48
-    Fixed Frame: map
+    Background Color: 32; 32; 32
+    Fixed Frame: odom
     Frame Rate: 30
   Displays:
-    - Class: rviz_default_plugins/Map
-      Name: Map
-      Enabled: true
-      Topic:
-        Value: /map
-        Durability Policy: Transient Local
-        Reliability Policy: Reliable
-      Alpha: 0.7
-    - Class: rviz_default_plugins/RobotModel
-      Name: RobotModel
-      Enabled: true
-      Description Source: Topic
-      Description Topic:
-        Value: /robot_description
-    - Class: rviz_default_plugins/TF
-      Name: TF
-      Enabled: true
-      Show Names: false
-      Marker Scale: 0.3
-    - Class: rviz_default_plugins/LaserScan
-      Name: Lidar
-      Enabled: true
-      Topic:
-        Value: /scan/slam
-      Style: Flat Squares
-      Size (m): 0.03
-      Color Transformer: FlatColor
-      Color: 0; 255; 0
-    - Class: rviz_default_plugins/Path
-      Name: Nav2 plan
-      Enabled: true
-      Topic:
-        Value: /plan
-    - Class: rviz_default_plugins/Marker
-      Name: Follow cube
-      Enabled: true
-      Topic:
-        Value: /cube/marker
+  - Class: rviz_default_plugins/Map
+    Name: Global Costmap
+    Enabled: true
+    Color Scheme: costmap
+    Alpha: 0.6
+    Topic:
+      Value: /global_costmap/costmap
+      Durability Policy: Transient Local
+      Reliability Policy: Reliable
+    Update Topic:
+      Value: /global_costmap/costmap_updates
+  - Class: rviz_default_plugins/Map
+    Name: Local Costmap
+    Enabled: true
+    Color Scheme: costmap
+    Alpha: 0.8
+    Topic:
+      Value: /local_costmap/costmap
+      Durability Policy: Transient Local
+      Reliability Policy: Reliable
+    Update Topic:
+      Value: /local_costmap/costmap_updates
+  - Class: rviz_default_plugins/RobotModel
+    Name: RobotModel
+    Enabled: true
+    Description Source: Topic
+    Description Topic:
+      Value: /robot_description
+  - Class: rviz_default_plugins/TF
+    Name: TF
+    Enabled: true
+    Show Names: false
+    Marker Scale: 0.3
+  - Class: rviz_default_plugins/LaserScan
+    Name: Depth obstacle scan
+    Enabled: true
+    Topic:
+      Value: /scan/navigation
+      Reliability Policy: Best Effort
+    Style: Flat Squares
+    Size (m): 0.03
+    Color Transformer: FlatColor
+    Color: 0; 255; 0
+  - Class: rviz_default_plugins/Path
+    Name: Nav2 plan
+    Enabled: true
+    Topic:
+      Value: /plan
+  - Class: rviz_default_plugins/Marker
+    Name: Follow cube
+    Enabled: true
+    Topic:
+      Value: /cube/marker
+  - Class: rviz_default_plugins/Grid
+    Name: Ground grid
+    Enabled: true
+    Cell Size: 1
+    Plane Cell Count: 20
+  - Class: rviz_default_plugins/Path
+    Name: Local trajectory
+    Enabled: true
+    Topic:
+      Value: /local_plan
+  - Class: rviz_default_plugins/Polygon
+    Name: Robot footprint
+    Enabled: true
+    Topic:
+      Value: /local_costmap/published_footprint
+  - Class: rviz_default_plugins/Image
+    Name: RGB camera
+    Enabled: true
+    Topic:
+      Value: /camera/image_raw
+      Reliability Policy: Best Effort
+    Transport Hint: raw
+  - Class: rviz_default_plugins/Image
+    Name: Depth camera
+    Enabled: true
+    Topic:
+      Value: /camera/depth/image_raw
+      Reliability Policy: Best Effort
+    Transport Hint: raw
+  - Class: rviz_default_plugins/PointCloud2
+    Name: Live depth cloud
+    Enabled: true
+    Topic:
+      Value: /camera/depth/points
+      Reliability Policy: Best Effort
+      Durability Policy: Volatile
+    Style: Flat Squares
+    Size (m): 0.015
+    Size (Pixels): 2
+    Color Transformer: AxisColor
+    Axis: Z
+    Position Transformer: XYZ
+    Decay Time: 0
+    Queue Size: 2
   Tools:
-    - Class: rviz_default_plugins/MoveCamera
-    - Class: rviz_default_plugins/Select
-    - Class: rviz_default_plugins/Measure
-    - Class: nav2_rviz_plugins/GoalTool
-    - Class: rviz_default_plugins/SetGoal
-      Topic: /goal_update
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/Select
+  - Class: rviz_default_plugins/Measure
+  - Class: nav2_rviz_plugins/GoalTool
+  - Class: rviz_default_plugins/SetGoal
+    Topic: /goal_update
   Views:
     Current:
-      Class: rviz_default_plugins/TopDownOrtho
-      Name: Current View
-      Target Frame: <Fixed Frame>
-      Scale: 70
-      X: 0
-      Y: 0
+      Class: rviz_default_plugins/Orbit
+      Name: Navigation view
+      Target Frame: base_footprint
+      Distance: 7
+      Pitch: 0.9
+      Yaw: 0.8
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
 Window Geometry:
   Width: 1200
   Height: 800

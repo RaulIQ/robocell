@@ -234,6 +234,7 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
                     "channel": "$(var can_channel)",
                     "left_node": "$(var left_node)",
                     "right_node": "$(var right_node)",
+                    "target_frame": "$(var target_frame)",
                     "fake_target": "$(var fake_target)",
                     "lidar_port": "$(var lidar_port)",
                     "gyro_bias": "$(var gyro_bias)",

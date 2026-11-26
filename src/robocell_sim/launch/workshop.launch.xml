@@ -1,4 +1,5 @@
 <launch>
+  <arg name="target_frame" default="map" description="Frame used by the simulated target"/>
   <arg name="scan_source" default="lidar" description="Source of range scans: lidar or depth"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <!-- Simulator with its ROS 2 bridge, the CANopen motor, IMU and lidar drivers, the wheel odometry, the EKF, odom fixed where the robot starts, the URDF on simulated time, and RViz -->
@@ -33,6 +34,7 @@
     <param name="channel" value="$(var can_channel)"/>
     <param name="left_node" value="$(var left_node)"/>
     <param name="right_node" value="$(var right_node)"/>
+    <param name="target_frame" value="$(var target_frame)"/>
     <param name="fake_target" value="$(var fake_target)"/>
     <param name="lidar_port" value="$(var lidar_port)"/>
     <param name="gyro_bias" value="$(var gyro_bias)"/>
