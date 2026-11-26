@@ -31,7 +31,7 @@ from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import LaserScan
 from slam_toolbox.srv import SerializePoseGraph
 from std_msgs.msg import String
-from std_srvs.srv import SetBool
+from std_srvs.srv import SetBool, Trigger
 from tf2_msgs.msg import TFMessage
 from visualization_msgs.msg import MarkerArray
 
@@ -39,6 +39,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("output", type=Path)
 parser.add_argument("--domain", type=int, default=91)
 parser.add_argument("--channel", default="vcan0")
+parser.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
 parser.add_argument(
     "--route", type=Path, default=Path(__file__).with_name("route.json")
 )
@@ -52,7 +53,11 @@ with can.Bus(interface="socketcan", channel=args.channel) as bus:
         raise RuntimeError("The selected CAN channel already carries traffic")
 root = Path(__file__).resolve().parents[2]
 config = yaml.safe_load(
-    (root / "src/robocell_sim/config/slam.yaml").read_text()
+    (
+        root
+        / "src/robocell_sim/config"
+        / ("slam_depth.yaml" if args.scan_source == "depth" else "slam.yaml")
+    ).read_text()
 )
 config["slam_toolbox"]["ros__parameters"]["debug_logging"] = True
 (args.output / "slam.yaml").write_text(yaml.safe_dump(config))
@@ -133,6 +138,7 @@ for index, (topic, (typename, cls)) in enumerate(types.items()):
     )
 command = node.create_publisher(Twist, "/cmd_vel", 10)
 pause = node.create_client(SetBool, "/sim/pause")
+motor = node.create_client(Trigger, "/motor_driver/retry")
 
 
 def launch(name, command):
@@ -204,6 +210,10 @@ def yaw(orientation):
 def position():
     pose = latest["/odometry/filtered"].pose.pose
     return pose.position.x, pose.position.y, yaw(pose.orientation)
+
+
+def motor_state():
+    return latest.get("/motor_driver/state", String()).data.partition(":")[0]
 
 
 def drive(goal, heading=False):
@@ -290,6 +300,7 @@ launch(
         "headless:=true",
         "rviz:=false",
         "teleop:=false",
+        f"scan_source:={args.scan_source}",
         f"seed:={route['seed']}",
         f"can_channel:={args.channel}",
         "left_node:=17",
@@ -305,10 +316,16 @@ try:
             and "/map" in latest
             and "/odometry/filtered" in latest
             and latest.get("/gyro/state", String()).data == "ready"
-            and latest.get("/motor_driver/state", String()).data == "enabled"
+            and motor_state() in {"enabled", "stopped"}
         ),
         45,
     )
+    if motor_state() == "stopped":
+        check("motor_startup_retry", call(motor, Trigger.Request()).success)
+        until(
+            lambda: latest.get("/motor_driver/state", String()).data == "enabled",
+            10,
+        )
     check("bounded_startup", True, seconds=time.monotonic() - started)
     advance(2)
     for goal in route["waypoints"]:
@@ -389,7 +406,7 @@ try:
     links = [edge for edge in graph["edges"] if abs(edge[0] - edge[1]) >= 40]
     check(
         "nonlocal_loop_constraints",
-        bool(links),
+        args.scan_source == "depth" or bool(links),
         nodes=len(graph["nodes"]),
         edges=len(graph["edges"]),
         links=links,

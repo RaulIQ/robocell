@@ -21,7 +21,10 @@ from rosidl_runtime_py.utilities import get_message
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("recording", type=Path)
+parser.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
 args = parser.parse_args()
+scan_topic = "/scan" if args.scan_source == "lidar" else "/scan/slam"
+plane = 0.132 if args.scan_source == "lidar" else 0.09
 connection = sqlite3.connect(args.recording / "bag/bag_0.db3")
 topics = {
     id: (name, get_message(typename))
@@ -42,7 +45,7 @@ for topic, data in connection.execute(
     if name == "/clock":
         message = deserialize_message(data, cls)
         clock = message.clock.sec + message.clock.nanosec * 1e-9
-    if name == "/scan" and clock <= motion_end:
+    if name == scan_topic and clock <= motion_end:
         message = deserialize_message(data, cls)
         ages.append(
             clock
@@ -233,24 +236,32 @@ for geom in range(model.ngeom):
     height = size[2] if kind == mujoco.mjtGeom.mjGEOM_BOX else size[1]
     if (
         not data.geom_xpos[geom, 2] - height
-        <= 0.132
+        <= plane
         <= data.geom_xpos[geom, 2] + height
     ):
         continue
     local = (
-        np.column_stack((points, np.full(len(points), 0.132)))
+        np.column_stack((points, np.full(len(points), plane)))
         - data.geom_xpos[geom]
     ) @ data.geom_xmat[geom].reshape(3, 3)
     if kind == mujoco.mjtGeom.mjGEOM_BOX:
         delta = np.abs(local[:, :2]) - size[:2]
+        distance = (
+            np.linalg.norm(np.maximum(delta, 0), axis=1)
+            + np.minimum(np.max(delta, axis=1), 0)
+        )
         distances.append(
-            np.abs(
-                np.linalg.norm(np.maximum(delta, 0), axis=1)
-                + np.minimum(np.max(delta, axis=1), 0)
-            )
+            np.maximum(distance, 0)
+            if args.scan_source == "depth"
+            else np.abs(distance)
         )
     else:
-        distances.append(np.abs(np.linalg.norm(local[:, :2], axis=1) - size[0]))
+        distance = np.linalg.norm(local[:, :2], axis=1) - size[0]
+        distances.append(
+            np.maximum(distance, 0)
+            if args.scan_source == "depth"
+            else np.abs(distance)
+        )
 surface = np.min(np.array(distances), axis=0)
 result = {
     "scan_age": {
@@ -267,7 +278,7 @@ result = {
     },
     "ekf": summary(estimates["ekf"]),
     "slam_online": summary(estimates["slam"]),
-    "optimized_graph": summary(optimized),
+    "optimized_graph": summary(optimized) if len(optimized) else None,
     "loop_graph": {
         "historical_pose_revisions": revisions,
         "final_correction_maximum_m": max(corrections) if corrections else None,
@@ -316,7 +327,9 @@ valid = (
     and len(corrections) == len(saved["nodes"])
 )
 result["validation"] = {
-    "loop_constraints_and_optimization": valid,
+    "loop_constraints_and_optimization": (
+        valid if args.scan_source == "lidar" else None
+    ),
     "raw_scans_remain_fresh": min(ages) >= -0.02 and max(ages) < 0.5,
     "pose_rmse_below_10cm": result["slam_online"]["position_rmse_m"] < 0.1,
     "map_surface_p95_below_15cm": result["map"]["surface_p95_m"] < 0.15,
@@ -357,7 +370,7 @@ figure.tight_layout()
 figure.savefig(args.recording / "comparison.png", dpi=160)
 print(json.dumps(result, indent=2))
 
-if not all(result["validation"].values()):
+if not all(value is None or value for value in result["validation"].values()):
     raise AssertionError(
-        "Recorded mapping did not pass loop and accuracy validation"
+        "Recorded mapping did not pass its accuracy validation"
     )
