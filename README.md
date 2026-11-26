@@ -158,10 +158,11 @@ ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --build
 The depth converter projects a band around the optical axis into a planar
 scan. In depth mode the lidar driver and emulator are disabled, and SLAM
 and both Nav2 obstacle layers receive `/scan/slam`. The scan covers only
-the camera sector. Depth mapping uses filtered odometry without local scan
-matching or loop closure, because matches from the narrow sector can move
-the map away from accurate odometry. The D415 profile has a 0.45 m minimum
-depth.
+the camera sector. Depth mode registers the 720p depth image into the 1080p
+RGB camera, synchronizes both into RGB-D frames, and uses RGB-D odometry in
+the EKF alongside the wheels and gyro. RTAB-Map owns `map -> odom` and the
+occupancy grid; the EKF alone owns `odom -> base_footprint`. The D415 profile
+has a 0.45 m minimum depth.
 
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:

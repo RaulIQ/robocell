@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import yaml
 from defusedxml import ElementTree
 from hamcrest import assert_that, equal_to
 
@@ -133,25 +132,140 @@ def test_mapping_launch_selects_the_camera_producer_for_slam() -> None:
     )
 
 
-def test_mapping_launch_keeps_depth_scans_on_the_filtered_odometry() -> None:
-    """Depth mode rejects ambiguous local matches from its narrow sector."""
-    selection = next(
-        argument
-        for argument in ElementTree.parse(
-            Path(__file__).parents[1] / "launch/mapping.launch.xml"
-        ).iter("arg")
-        if argument.get("name") == "slam_params_file"
-    ).get("default", "")
-    config = yaml.safe_load(
-        (Path(__file__).parents[1] / "config/slam_depth.yaml").read_text()
-    )["slam_toolbox"]["ros__parameters"]
+def test_mapping_launch_starts_slam_toolbox_only_for_lidar() -> None:
+    """RTAB-Map replaces SLAM Toolbox when the depth source is selected."""
     assert_that(
-        (
-            "slam_depth.yaml" in selection,
-            "scan_source" in selection,
-            config["use_scan_matching"],
-            config["do_loop_closing"],
+        [
+            include.get("if")
+            for include in ElementTree.parse(
+                Path(__file__).parents[1] / "launch/mapping.launch.xml"
+            ).iter("include")
+            if include.get("file", "").endswith("online_async_launch.py")
+        ],
+        equal_to(['$(eval "\'$(var scan_source)\' == \'lidar\'")']),
+        "depth mode did not leave map to odom to RTAB-Map alone",
+    )
+
+
+def test_mapping_launch_registers_and_synchronizes_rgbd_frames() -> None:
+    """Depth is reprojected into the RGB camera before exact synchronization."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    nodes = [
+        node
+        for node in launch.iter("node")
+        if node.get("pkg") in {"depth_image_proc", "rtabmap_sync"}
+    ]
+    assert_that(
+        [
+            (
+                node.get("exec"),
+                {
+                    parameter.get("name"): parameter.get("value")
+                    for parameter in node.iter("param")
+                    if parameter.get("name") in {"approx_sync", "decimation"}
+                },
+                {remap.get("from"): remap.get("to") for remap in node.iter("remap")},
+            )
+            for node in nodes
+        ],
+        equal_to(
+            [
+                (
+                    "register_node",
+                    {},
+                    {
+                        "depth/image_rect": "/camera/depth/image_raw",
+                        "depth/camera_info": "/camera/depth/camera_info",
+                        "rgb/camera_info": "/camera/camera_info",
+                        "depth_registered/image_rect": (
+                            "/camera/depth_registered/image_raw"
+                        ),
+                    },
+                ),
+                (
+                    "rgbd_sync",
+                    {"approx_sync": "false", "decimation": "4"},
+                    {
+                        "rgb/image": "/camera/image_raw",
+                        "depth/image": "/camera/depth_registered/image_raw",
+                        "rgb/camera_info": "/camera/camera_info",
+                        "rgbd_image": "/camera/rgbd_image",
+                    },
+                ),
+            ]
         ),
-        equal_to((True, True, False, False)),
-        "depth SLAM did not keep mapping on filtered odometry alone",
+        "RGB and depth were not registered and synchronized into one RGB-D frame",
+    )
+
+
+def test_mapping_launch_uses_visual_pose_without_duplicate_odom_tf() -> None:
+    """RGB-D odometry feeds EKF while RTAB-Map alone owns map to odom."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    nodes = [
+        node
+        for node in launch.iter("node")
+        if node.get("exec") in {"rgbd_odometry", "rtabmap"}
+    ]
+    assert_that(
+        [
+            (
+                node.get("exec"),
+                {
+                    parameter.get("name"): parameter.get("value")
+                    for parameter in node.iter("param")
+                    if parameter.get("name")
+                    in {
+                        "frame_id",
+                        "odom_frame_id",
+                        "map_frame_id",
+                        "publish_tf",
+                        "publish_null_when_lost",
+                        "subscribe_rgbd",
+                    }
+                },
+                {
+                    remap.get("from"): remap.get("to")
+                    for remap in node.iter("remap")
+                    if remap.get("from") in {"odom", "rgbd_image"}
+                },
+            )
+            for node in nodes
+        ],
+        equal_to(
+            [
+                (
+                    "rgbd_odometry",
+                    {
+                        "frame_id": "base_footprint",
+                        "odom_frame_id": "odom",
+                        "publish_tf": "false",
+                        "publish_null_when_lost": "false",
+                        "subscribe_rgbd": "true",
+                    },
+                    {
+                        "odom": "/visual/odometry",
+                        "rgbd_image": "/camera/rgbd_image",
+                    },
+                ),
+                (
+                    "rtabmap",
+                    {
+                        "frame_id": "base_footprint",
+                        "odom_frame_id": "odom",
+                        "map_frame_id": "map",
+                        "publish_tf": "true",
+                        "subscribe_rgbd": "true",
+                    },
+                    {
+                        "odom": "/odometry/filtered",
+                        "rgbd_image": "/camera/rgbd_image",
+                    },
+                ),
+            ]
+        ),
+        "visual odometry and RTAB-Map did not get separate EKF and TF roles",
     )

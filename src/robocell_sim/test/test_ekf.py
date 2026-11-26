@@ -44,6 +44,23 @@ def test_ekf_uses_the_gyro_without_orientation_or_acceleration() -> None:
     )
 
 
+def test_ekf_fuses_visual_position_and_heading() -> None:
+    """RGB-D odometry corrects planar position and absolute course."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/ekf.yaml").read_text()
+    )["ekf_filter_node"]["ros__parameters"]
+    assert_that(
+        (
+            config["odom1"],
+            [index for index, value in enumerate(config["odom1_config"]) if value],
+            config["odom1_differential"],
+            config["odom1_relative"],
+        ),
+        equal_to(("/visual/odometry", [0, 1, 5], False, True)),
+        "filter did not fuse visual planar position and absolute heading",
+    )
+
+
 def test_ekf_publishes_the_planar_footprint_transform() -> None:
     """The filtered pose owns odom to base_footprint on simulated time."""
     config = yaml.safe_load(

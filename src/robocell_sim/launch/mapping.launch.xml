@@ -1,7 +1,7 @@
 <launch>
   <arg name="scan_source" default="lidar" description="Source of SLAM scans: lidar or depth"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
-  <arg name="slam_params_file" default="$(eval &quot;'$(find-pkg-share robocell_sim)/config/slam_depth.yaml' if '$(var scan_source)' == 'depth' else '$(find-pkg-share robocell_sim)/config/slam.yaml'&quot;)" description="SLAM configuration for this mapping session"/>
+  <arg name="slam_params_file" default="$(find-pkg-share robocell_sim)/config/slam.yaml" description="SLAM configuration for lidar mapping"/>
   <arg name="rviz_config" default="$(find-pkg-share robocell_sim)/rviz/mapping.rviz" description="RViz configuration"/>
   <arg name="panel_topic" default="/cmd_vel" description="Control panel velocity topic"/>
   <arg name="rviz" default="true" description="Show the occupancy map in RViz"/>
@@ -49,7 +49,65 @@
     <remap from="depth_camera_info" to="/camera/depth/camera_info"/>
     <remap from="scan" to="/scan/depth"/>
   </node>
-  <include file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py">
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="depth_image_proc" exec="register_node" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="queue_size" value="10"/>
+    <remap from="depth/image_rect" to="/camera/depth/image_raw"/>
+    <remap from="depth/camera_info" to="/camera/depth/camera_info"/>
+    <remap from="rgb/camera_info" to="/camera/camera_info"/>
+    <remap from="depth_registered/image_rect" to="/camera/depth_registered/image_raw"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="rtabmap_sync" exec="rgbd_sync" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="approx_sync" value="false"/>
+    <param name="decimation" value="4"/>
+    <param name="qos" value="2"/>
+    <param name="qos_camera_info" value="1"/>
+    <param name="sync_queue_size" value="10"/>
+    <remap from="rgb/image" to="/camera/image_raw"/>
+    <remap from="depth/image" to="/camera/depth_registered/image_raw"/>
+    <remap from="rgb/camera_info" to="/camera/camera_info"/>
+    <remap from="rgbd_image" to="/camera/rgbd_image"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="rtabmap_odom" exec="rgbd_odometry" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="frame_id" value="base_footprint"/>
+    <param name="odom_frame_id" value="odom"/>
+    <param name="publish_tf" value="false"/>
+    <param name="publish_null_when_lost" value="false"/>
+    <param name="subscribe_rgbd" value="true"/>
+    <param name="approx_sync" value="false"/>
+    <param name="qos" value="2"/>
+    <param name="qos_camera_info" value="1"/>
+    <param name="wait_for_transform" value="0.5"/>
+    <param name="max_update_rate" value="15.0"/>
+    <param name="frame_policy" value="1"/>
+    <param name="output_queue_size" value="5"/>
+    <param name="Odom/ResetCountdown" value="'1'"/>
+    <remap from="rgbd_image" to="/camera/rgbd_image"/>
+    <remap from="odom" to="/visual/odometry"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="rtabmap_slam" exec="rtabmap" args="--delete_db_on_start" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="frame_id" value="base_footprint"/>
+    <param name="odom_frame_id" value="odom"/>
+    <param name="map_frame_id" value="map"/>
+    <param name="publish_tf" value="true"/>
+    <param name="subscribe_rgbd" value="true"/>
+    <param name="approx_sync" value="false"/>
+    <param name="odom_sensor_sync" value="true"/>
+    <param name="wait_for_transform" value="0.5"/>
+    <param name="database_path" value="$(env HOME)/.ros/robocell-rtabmap.db"/>
+    <param name="qos_image" value="2"/>
+    <param name="qos_camera_info" value="1"/>
+    <param name="qos_odom" value="1"/>
+    <param name="Rtabmap/DetectionRate" value="'1.0'"/>
+    <param name="Grid/3D" value="'false'"/>
+    <param name="Grid/DepthDecimation" value="'3'"/>
+    <remap from="rgbd_image" to="/camera/rgbd_image"/>
+    <remap from="odom" to="/odometry/filtered"/>
+  </node>
+  <include if="$(eval &quot;'$(var scan_source)' == 'lidar'&quot;)" file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py">
     <arg name="autostart" value="true"/>
     <arg name="use_lifecycle_manager" value="false"/>
     <arg name="use_sim_time" value="true"/>

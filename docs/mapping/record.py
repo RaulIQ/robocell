@@ -53,11 +53,7 @@ with can.Bus(interface="socketcan", channel=args.channel) as bus:
         raise RuntimeError("The selected CAN channel already carries traffic")
 root = Path(__file__).resolve().parents[2]
 config = yaml.safe_load(
-    (
-        root
-        / "src/robocell_sim/config"
-        / ("slam_depth.yaml" if args.scan_source == "depth" else "slam.yaml")
-    ).read_text()
+    (root / "src/robocell_sim/config/slam.yaml").read_text()
 )
 config["slam_toolbox"]["ros__parameters"]["debug_logging"] = True
 (args.output / "slam.yaml").write_text(yaml.safe_dump(config))
@@ -80,6 +76,7 @@ types = {
     "/ground_truth/odom": ("nav_msgs/msg/Odometry", Odometry),
     "/wheel/odometry": ("nav_msgs/msg/Odometry", Odometry),
     "/odometry/filtered": ("nav_msgs/msg/Odometry", Odometry),
+    "/visual/odometry": ("nav_msgs/msg/Odometry", Odometry),
     "/pose": (
         "geometry_msgs/msg/PoseWithCovarianceStamped",
         PoseWithCovarianceStamped,
@@ -168,6 +165,7 @@ def pump():
 def until(predicate, timeout):
     deadline = time.monotonic() + timeout
     while not predicate() and time.monotonic() < deadline:
+        command.publish(Twist())
         pump()
     if not predicate():
         raise TimeoutError("Mapping verification exceeded its bounded wait")
@@ -310,28 +308,35 @@ launch(
     ],
 )
 try:
-    until(
-        lambda: (
-            counts["/scan/slam"] >= 10
-            and "/map" in latest
-            and "/odometry/filtered" in latest
-            and latest.get("/gyro/state", String()).data == "ready"
-            and motor_state() in {"enabled", "stopped"}
-        ),
-        45,
-    )
+    until(lambda: motor_state() in {"enabled", "stopped"}, 20)
     if motor_state() == "stopped":
         check("motor_startup_retry", call(motor, Trigger.Request()).success)
         until(
             lambda: latest.get("/motor_driver/state", String()).data == "enabled",
             10,
         )
+    until(
+        lambda: (
+            counts["/scan/slam"] >= 10
+            and "/map" in latest
+            and "/odometry/filtered" in latest
+            and latest.get("/gyro/state", String()).data == "ready"
+            and motor_state() == "enabled"
+        ),
+        45,
+    )
     check("bounded_startup", True, seconds=time.monotonic() - started)
     advance(2)
     for goal in route["waypoints"]:
         drive(tuple(goal))
     drive(route["heading"], heading=True)
     advance(3)
+    if args.scan_source == "depth":
+        check(
+            "visual_odometry_started",
+            counts["/visual/odometry"] > 0,
+            messages=counts["/visual/odometry"],
+        )
     check(
         "route_completed",
         len(segments) == len(route["waypoints"]) + 1,
@@ -379,29 +384,32 @@ try:
         and (args.output / "workshop.pgm").is_file()
         and (args.output / "workshop.yaml").is_file(),
     )
-    graph = node.create_client(
-        SerializePoseGraph, "/slam_toolbox/serialize_map"
-    )
-    check(
-        "graph_saved_separately",
-        call(
-            graph,
-            SerializePoseGraph.Request(filename=str(args.output / "graph")),
-        ).result
-        == 0,
-    )
-    exported = subprocess.run(
-        [
-            str(args.output / "export"),
-            str(args.output / "graph.posegraph"),
-            str(args.output / "graph.json"),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=10,
-    )
-    (args.output / "graph-export.log").write_text(exported.stdout)
+    if args.scan_source == "depth":
+        (args.output / "graph.json").write_text('{"nodes":[],"edges":[]}')
+    else:
+        graph = node.create_client(
+            SerializePoseGraph, "/slam_toolbox/serialize_map"
+        )
+        check(
+            "graph_saved_separately",
+            call(
+                graph,
+                SerializePoseGraph.Request(filename=str(args.output / "graph")),
+            ).result
+            == 0,
+        )
+        exported = subprocess.run(
+            [
+                str(args.output / "export"),
+                str(args.output / "graph.posegraph"),
+                str(args.output / "graph.json"),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        )
+        (args.output / "graph-export.log").write_text(exported.stdout)
     graph = json.loads((args.output / "graph.json").read_text())
     links = [edge for edge in graph["edges"] if abs(edge[0] - edge[1]) >= 40]
     check(
@@ -505,7 +513,11 @@ try:
             endpoint.node_name
             for endpoint in node.get_publishers_info_by_topic("/tf")
         }
-        == {"slam_toolbox", "ekf_filter_node", "robot_state_publisher"},
+        == {
+            "rtabmap" if args.scan_source == "depth" else "slam_toolbox",
+            "ekf_filter_node",
+            "robot_state_publisher",
+        },
         publishers=[
             endpoint.node_name
             for endpoint in node.get_publishers_info_by_topic("/tf")

@@ -55,6 +55,7 @@ for topic, data in connection.execute(
     if name in {
         "/ground_truth/odom",
         "/odometry/filtered",
+        "/visual/odometry",
         "/pose",
         "/slam_toolbox/graph_visualization",
         "/scan",
@@ -88,7 +89,10 @@ def row(message):
 truth = np.array([row(message) for message in records["/ground_truth/odom"]])
 estimates = {
     name: np.array([row(message) for message in records[topic]])
-    for name, topic in (("ekf", "/odometry/filtered"), ("slam", "/pose"))
+    for name, topic in (
+        ("ekf", "/odometry/filtered"),
+        ("slam", "/visual/odometry" if args.scan_source == "depth" else "/pose"),
+    )
 }
 
 
@@ -198,7 +202,8 @@ optimized = np.array(
     [(time, x, y, heading) for _, time, x, y, heading in saved["nodes"]]
 )
 online = {
-    round(stamp(message) * 1e9): row(message) for message in records["/pose"]
+    round(stamp(message) * 1e9): row(message)
+    for message in records.get("/pose", [])
 }
 corrections = [
     math.dist((x, y), online[round(time * 1e9)][1:3])
