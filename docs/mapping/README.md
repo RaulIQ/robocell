@@ -83,13 +83,14 @@ python docs/mapping/analyze.py log/mapping-136/verification
 ```
 
 Append `--scan-source depth` to both commands to record and evaluate the D415
-pipeline. The analyzer then measures scan age on `/scan/slam` and occupancy
-against solid geometry in the camera's scan band, including the low pallet.
-Depth mapping registers depth into the RGB camera, and RTAB-Map builds
-occupancy from the planar scan. The EKF uses wheel odometry and gyro yaw
-rate. Validation compares the filtered pose with ground truth and checks
-occupancy accuracy. Visual odometry is recorded for diagnostics; the Karto graph export does
-not apply to RTAB-Map.
+pipeline. The analyzer measures scan age on `/scan/slam` and compares
+occupancy with the workshop geometry between 2 and 40 cm above the floor,
+including the low pallet.
+RTAB-Map registers RGB-D frames with the planar scan and builds occupancy
+from image depth with ground and obstacle height filters. The EKF uses
+wheel odometry and gyro yaw rate. Validation compares the filtered pose
+and occupancy grid with the simulator. The recorder saves visual odometry
+for diagnostics. Karto graph export applies to the lidar pipeline.
 
 `--channel` selects the CAN channel. The script refuses an existing output
 directory or traffic on that channel. It starts the headless mapping stack

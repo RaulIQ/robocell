@@ -271,8 +271,35 @@ def test_mapping_launch_uses_visual_pose_without_duplicate_odom_tf() -> None:
     )
 
 
-def test_mapping_launch_builds_the_rtabmap_grid_from_the_depth_scan() -> None:
-    """RTAB-Map associates RGB-D frames with the planar depth scans."""
+def test_mapping_launch_projects_filtered_rgbd_depth_to_the_rtabmap_grid() -> None:
+    """RTAB-Map builds the planar grid using obstacle heights in the depth frame."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    node = launch.find("./node[@exec='rtabmap']")
+    assert_that(
+        {
+            parameter.get("name"): parameter.get("value")
+            for parameter in node.iter("param")
+            if parameter.get("name", "").startswith("Grid/")
+        },
+        equal_to(
+            {
+                "Grid/3D": "'false'",
+                "Grid/Sensor": "'1'",
+                "Grid/RangeMax": "'3.0'",
+                "Grid/NormalsSegmentation": "'false'",
+                "Grid/MaxGroundHeight": "'0.02'",
+                "Grid/MaxObstacleHeight": "'0.4'",
+                "Grid/RayTracing": "'true'",
+            }
+        ),
+        "RTAB-Map did not project filtered image depth into a 2D grid",
+    )
+
+
+def test_mapping_launch_keeps_the_planar_scan_for_registration() -> None:
+    """RTAB-Map consumes the planar scan alongside RGB-D frames."""
     launch = ElementTree.parse(
         Path(__file__).parents[1] / "launch/mapping.launch.xml"
     )
@@ -280,11 +307,10 @@ def test_mapping_launch_builds_the_rtabmap_grid_from_the_depth_scan() -> None:
     assert_that(
         (
             node.find("param[@name='subscribe_scan']").get("value"),
-            node.find("param[@name='Grid/Sensor']").get("value"),
             node.find("remap[@from='scan']").get("to"),
         ),
-        equal_to(("true", "'0'", "/scan/slam")),
-        "RTAB-Map did not build occupancy from the planar depth scan",
+        equal_to(("true", "/scan/slam")),
+        "RTAB-Map did not receive the planar depth scan for registration",
     )
 
 

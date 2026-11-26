@@ -155,14 +155,17 @@ ROBOCELL_MODE=mapping ROBOCELL_SCAN_SOURCE=depth docker compose up --build
 ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --build
 ```
 
-The depth converter projects a band around the optical axis into a planar
-scan. In depth mode the lidar driver and emulator are disabled, and SLAM
-and both Nav2 obstacle layers receive `/scan/slam`. The scan covers only
-the camera sector. Depth mode registers the 720p depth image into the 1080p
-RGB camera and synchronizes both into RGB-D frames for RTAB-Map and visual
-odometry diagnostics. The EKF uses wheel odometry and gyro yaw rate for
-`odom -> base_footprint`. RTAB-Map owns `map -> odom` and builds the occupancy
-grid from `/scan/slam`. The D415 profile has a 0.45 m minimum depth.
+Depth mode registers the 720p depth image into the 1080p RGB camera and
+synchronizes both into RGB-D frames. RTAB-Map projects image depth within
+3 m into a 2D occupancy grid. It treats points up to 2 cm above the floor
+as ground, projects obstacles up to 40 cm, and traces free space along
+sensor rays. The D415 profile has a 0.45 m minimum depth.
+
+The depth converter also projects a band around the optical axis into
+`/scan/slam` for RTAB-Map scan registration and both Nav2 obstacle layers.
+The lidar driver and emulator are disabled in depth mode. The EKF uses
+wheel odometry and gyro yaw rate for `odom -> base_footprint`, and RTAB-Map
+owns `map -> odom`. Visual odometry is available for diagnostics.
 
 The simulator includes a workshop map for depth localization. Compose
 copies the reference database for each session so RTAB-Map can update
@@ -182,7 +185,9 @@ To build a custom map, start depth mapping and stop the session with Ctrl+C
 to save it to `log/rtabmap.db`. Set
 `ROBOCELL_RTABMAP_DATABASE=/ws/log/rtabmap.db` when starting localization
 to use that database. Choose a different path under `/ws` for a separate
-map.
+map. RTAB-Map keeps the occupancy data stored in existing databases, so
+start with an empty database to rebuild a custom map with the new depth
+projection.
 
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:

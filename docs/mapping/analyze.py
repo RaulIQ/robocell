@@ -24,7 +24,7 @@ parser.add_argument("recording", type=Path)
 parser.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
 args = parser.parse_args()
 scan_topic = "/scan" if args.scan_source == "lidar" else "/scan/slam"
-plane = 0.132 if args.scan_source == "lidar" else 0.09
+heights = (0.132, 0.132) if args.scan_source == "lidar" else (0.02, 0.4)
 connection = sqlite3.connect(args.recording / "bag/bag_0.db3")
 topics = {
     id: (name, get_message(typename))
@@ -240,13 +240,12 @@ for geom in range(model.ngeom):
     size = model.geom_size[geom]
     height = size[2] if kind == mujoco.mjtGeom.mjGEOM_BOX else size[1]
     if (
-        not data.geom_xpos[geom, 2] - height
-        <= plane
-        <= data.geom_xpos[geom, 2] + height
+        data.geom_xpos[geom, 2] - height > heights[1]
+        or data.geom_xpos[geom, 2] + height < heights[0]
     ):
         continue
     local = (
-        np.column_stack((points, np.full(len(points), plane)))
+        np.column_stack((points, np.full(len(points), heights[0])))
         - data.geom_xpos[geom]
     ) @ data.geom_xmat[geom].reshape(3, 3)
     if kind == mujoco.mjtGeom.mjGEOM_BOX:
