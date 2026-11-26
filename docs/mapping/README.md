@@ -87,7 +87,7 @@ pipeline. The analyzer measures scan age on `/scan/slam` and compares
 occupancy with the workshop geometry between 2 and 40 cm above the floor,
 including the low pallet.
 RTAB-Map registers RGB-D frames with the planar scan and builds occupancy
-from image depth with ground and obstacle height filters. The EKF uses
+from both sources with ground and obstacle height filters. The EKF uses
 wheel odometry and gyro yaw rate. Validation compares the filtered pose
 and occupancy grid with the simulator. The recorder saves visual odometry
 for diagnostics. Karto graph export applies to the lidar pipeline.

@@ -186,7 +186,7 @@ def test_mapping_launch_registers_and_synchronizes_rgbd_frames() -> None:
                 ),
                 (
                     "rgbd_sync",
-                    {"approx_sync": "false", "decimation": "4"},
+                    {"approx_sync": "false", "decimation": "2"},
                     {
                         "rgb/image": "/camera/image_raw",
                         "depth/image": "/camera/depth_registered/image_raw",
@@ -286,7 +286,7 @@ def test_mapping_launch_projects_filtered_rgbd_depth_to_the_rtabmap_grid() -> No
         equal_to(
             {
                 "Grid/3D": "'false'",
-                "Grid/Sensor": "'1'",
+                "Grid/Sensor": "'2'",
                 "Grid/RangeMax": "'3.0'",
                 "Grid/NormalsSegmentation": "'false'",
                 "Grid/MaxGroundHeight": "'0.02'",
@@ -327,6 +327,7 @@ def test_mapping_launch_reuses_the_database_in_localization_mode() -> None:
             parameters.get("database_path"),
             parameters.get("Mem/IncrementalMemory"),
             parameters.get("Mem/InitWMWithAllNodes"),
+            parameters.get("RGBD/StartAtOrigin"),
         ),
         equal_to(
             (
@@ -334,7 +335,46 @@ def test_mapping_launch_reuses_the_database_in_localization_mode() -> None:
                 "$(var rtabmap_database)",
                 "'$(eval \"'false' if '$(var localize)' == 'true' else 'true'\")'",
                 "'$(eval \"'true' if '$(var localize)' == 'true' else 'false'\")'",
+                "'$(eval \"'true' if '$(var localize)' == 'true' else 'false'\")'",
             )
         ),
         "RTAB-Map did not retain the saved graph for localization",
+    )
+
+
+def test_mapping_launch_uses_planar_icp_for_rgbd_scan_registration() -> None:
+    """Mapping and localization use planar ICP with separate search limits."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    node = launch.find("./node[@exec='rtabmap']")
+    parameters = {param.get("name"): param.get("value") for param in node.iter("param")}
+    assert_that(
+        (
+            parameters.get("Reg/Strategy"),
+            parameters.get("Reg/Force3DoF"),
+            parameters.get("RGBD/NeighborLinkRefining"),
+            parameters.get("Optimizer/GravitySigma"),
+            parameters.get("RGBD/ProximityPathMaxNeighbors"),
+            parameters.get("RGBD/ProximityMaxPaths"),
+            parameters.get("RGBD/ProximityGlobalScanMap"),
+            parameters.get("Icp/MaxCorrespondenceDistance"),
+            parameters.get("Icp/MaxRotation"),
+            parameters.get("Icp/PointToPlane"),
+        ),
+        equal_to(
+            (
+                "'1'",
+                "'true'",
+                "'True'",
+                "'0'",
+                "'10'",
+                "'$(eval \"'1' if '$(var localize)' == 'true' else '3'\")'",
+                "'$(eval \"'true' if '$(var recover)' == 'true' else 'false'\")'",
+                "'$(eval \"'0.2' if '$(var localize)' == 'true' or '$(var recover)' == 'true' else '0.1'\")'",
+                "'$(eval \"'0.15' if '$(var localize)' == 'true' or '$(var recover)' == 'true' else '0.78'\")'",
+                "'$(eval \"'false' if '$(var localize)' == 'true' or '$(var recover)' == 'true' else 'true'\")'",
+            )
+        ),
+        "mapping and localization did not use the configured planar ICP limits",
     )

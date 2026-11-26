@@ -156,10 +156,10 @@ ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --build
 ```
 
 Depth mode registers the 720p depth image into the 1080p RGB camera and
-synchronizes both into RGB-D frames. RTAB-Map projects image depth within
-3 m into a 2D occupancy grid. It treats points up to 2 cm above the floor
-as ground, projects obstacles up to 40 cm, and traces free space along
-sensor rays. The D415 profile has a 0.45 m minimum depth.
+synchronizes both into 960 by 540 RGB-D frames. RTAB-Map combines image depth
+and the planar scan within 3 m into a 2D occupancy grid. It treats points up
+to 2 cm above the floor as ground, projects obstacles up to 40 cm, and traces
+free space along sensor rays. The D415 profile has a 0.45 m minimum depth.
 
 The depth converter also projects a band around the optical axis into
 `/scan/slam` for RTAB-Map scan registration and both Nav2 obstacle layers.
@@ -175,11 +175,14 @@ the working copy.
 ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth ROBOCELL_LOCALIZE=true docker compose up
 ```
 
-This command uses the saved graph and starts from the simulated spawn
-pose at the map origin. RTAB-Map updates `map -> odom` when the D415 matches
-known features or scan geometry. After contact, back away and turn toward
-mapped features. A straight reverse can leave the camera looking at the
-same feature-poor view, and a scan match may only partly correct the drift.
+This command uses the saved graph and starts at the simulator's map origin.
+RTAB-Map uses planar ICP to refine neighboring odometry links while mapping.
+In localization mode it checks one nearby candidate path at a time using
+merged local scans.
+
+After contact, back away and turn toward mapped features. This is local
+relocalization near the expected pose. A straight reverse can leave the
+camera looking at the same feature-poor view.
 
 To build a custom map, start depth mapping and stop the session with Ctrl+C
 to save it to `log/rtabmap.db`. Set
