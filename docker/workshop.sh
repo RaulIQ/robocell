@@ -18,15 +18,23 @@ case "$source_scan" in
         ;;
 esac
 localize=${ROBOCELL_LOCALIZE:-false}
-database=${ROBOCELL_RTABMAP_DATABASE:-/ws/log/rtabmap.db}
+database=${ROBOCELL_RTABMAP_DATABASE:-}
 case "$localize" in
-    false) ;;
+    false) database=${database:-/ws/log/rtabmap.db} ;;
     true)
         if [[ "$source_scan" != depth || "$mode" == workshop ]]; then
             printf 'ROBOCELL_LOCALIZE=true requires depth scans and mapping, follow or cube mode\n' >&2
             exit 2
         fi
-        if [[ ! -s "$database" ]]; then
+        if [[ -z "$database" ]]; then
+            reference=/ws/src/robocell_sim/maps/workshop-depth.db
+            if [[ ! -s "$reference" ]]; then
+                printf 'Bundled RTAB-Map database %s is missing or empty\n' "$reference" >&2
+                exit 2
+            fi
+            database=$(mktemp --suffix=.db /tmp/robocell-rtabmap.XXXXXX)
+            cp -- "$reference" "$database"
+        elif [[ ! -s "$database" ]]; then
             printf 'RTAB-Map database %s is missing or empty\n' "$database" >&2
             exit 2
         fi

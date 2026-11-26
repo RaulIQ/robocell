@@ -164,23 +164,25 @@ odometry diagnostics. The EKF uses wheel odometry and gyro yaw rate for
 `odom -> base_footprint`. RTAB-Map owns `map -> odom` and builds the occupancy
 grid from `/scan/slam`. The D415 profile has a 0.45 m minimum depth.
 
-To reuse a map in `cube`, first run depth mapping and drive through the
-area so RTAB-Map sees it from several positions. Stop the session with
-Ctrl+C to save its database. Compose stores it in `log/rtabmap.db`; set
-`ROBOCELL_RTABMAP_DATABASE` to a different path under `/ws` to build a
-separate map. Starting a mapping session with the same path extends the
-database.
+The simulator includes a workshop map for depth localization. Compose
+copies the reference database for each session so RTAB-Map can update
+the working copy.
 
 ```console
-ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up
 ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth ROBOCELL_LOCALIZE=true docker compose up
 ```
 
-The second command uses the saved graph and starts from the simulated spawn
+This command uses the saved graph and starts from the simulated spawn
 pose at the map origin. RTAB-Map updates `map -> odom` when the D415 matches
 known features or scan geometry. After contact, back away and turn toward
 mapped features. A straight reverse can leave the camera looking at the
 same feature-poor view, and a scan match may only partly correct the drift.
+
+To build a custom map, start depth mapping and stop the session with Ctrl+C
+to save it to `log/rtabmap.db`. Set
+`ROBOCELL_RTABMAP_DATABASE=/ws/log/rtabmap.db` when starting localization
+to use that database. Choose a different path under `/ws` for a separate
+map.
 
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:
