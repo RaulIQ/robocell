@@ -44,20 +44,19 @@ def test_ekf_uses_the_gyro_without_orientation_or_acceleration() -> None:
     )
 
 
-def test_ekf_fuses_visual_position_and_heading() -> None:
-    """RGB-D odometry corrects planar position and absolute course."""
+def test_ekf_accepts_only_wheel_and_gyro_inputs() -> None:
+    """Mapping uses wheel velocities and gyro yaw rate for the robot pose."""
     config = yaml.safe_load(
         (Path(__file__).parents[1] / "config/ekf.yaml").read_text()
     )["ekf_filter_node"]["ros__parameters"]
     assert_that(
-        (
-            config["odom1"],
-            [index for index, value in enumerate(config["odom1_config"]) if value],
-            config["odom1_differential"],
-            config["odom1_relative"],
-        ),
-        equal_to(("/visual/odometry", [0, 1, 5], False, True)),
-        "filter did not fuse visual planar position and absolute heading",
+        {
+            name
+            for name in config
+            if name.startswith(("odom", "imu")) and name[-1].isdigit()
+        },
+        equal_to({"odom0", "imu0"}),
+        "filter accepted an input besides wheel odometry and the gyro",
     )
 
 

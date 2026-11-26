@@ -159,10 +159,10 @@ The depth converter projects a band around the optical axis into a planar
 scan. In depth mode the lidar driver and emulator are disabled, and SLAM
 and both Nav2 obstacle layers receive `/scan/slam`. The scan covers only
 the camera sector. Depth mode registers the 720p depth image into the 1080p
-RGB camera, synchronizes both into RGB-D frames, and uses RGB-D odometry in
-the EKF alongside the wheels and gyro. RTAB-Map owns `map -> odom` and the
-occupancy grid; the EKF alone owns `odom -> base_footprint`. The D415 profile
-has a 0.45 m minimum depth.
+RGB camera and synchronizes both into RGB-D frames for RTAB-Map and visual
+odometry diagnostics. The EKF uses wheel odometry and gyro yaw rate for
+`odom -> base_footprint`. RTAB-Map owns `map -> odom` and builds the occupancy
+grid from `/scan/slam`. The D415 profile has a 0.45 m minimum depth.
 
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:

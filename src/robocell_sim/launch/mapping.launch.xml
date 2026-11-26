@@ -93,7 +93,10 @@
     <param name="odom_frame_id" value="odom"/>
     <param name="map_frame_id" value="map"/>
     <param name="publish_tf" value="true"/>
+    <param name="subscribe_depth" value="false"/>
     <param name="subscribe_rgbd" value="true"/>
+    <param name="subscribe_scan" value="true"/>
+    <param name="qos_scan" value="2"/>
     <param name="approx_sync" value="false"/>
     <param name="odom_sensor_sync" value="true"/>
     <param name="wait_for_transform" value="0.5"/>
@@ -103,9 +106,10 @@
     <param name="qos_odom" value="1"/>
     <param name="Rtabmap/DetectionRate" value="'1.0'"/>
     <param name="Grid/3D" value="'false'"/>
-    <param name="Grid/DepthDecimation" value="'3'"/>
+    <param name="Grid/Sensor" value="'0'"/>
     <remap from="rgbd_image" to="/camera/rgbd_image"/>
     <remap from="odom" to="/odometry/filtered"/>
+    <remap from="scan" to="/scan/slam"/>
   </node>
   <include if="$(eval &quot;'$(var scan_source)' == 'lidar'&quot;)" file="$(find-pkg-share slam_toolbox)/launch/online_async_launch.py">
     <arg name="autostart" value="true"/>

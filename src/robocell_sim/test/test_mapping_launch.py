@@ -201,7 +201,7 @@ def test_mapping_launch_registers_and_synchronizes_rgbd_frames() -> None:
 
 
 def test_mapping_launch_uses_visual_pose_without_duplicate_odom_tf() -> None:
-    """RGB-D odometry feeds EKF while RTAB-Map alone owns map to odom."""
+    """Visual odometry is diagnostic and RTAB-Map alone owns map to odom."""
     launch = ElementTree.parse(
         Path(__file__).parents[1] / "launch/mapping.launch.xml"
     )
@@ -267,5 +267,22 @@ def test_mapping_launch_uses_visual_pose_without_duplicate_odom_tf() -> None:
                 ),
             ]
         ),
-        "visual odometry and RTAB-Map did not get separate EKF and TF roles",
+        "visual odometry and RTAB-Map did not get separate diagnostic and TF roles",
+    )
+
+
+def test_mapping_launch_builds_the_rtabmap_grid_from_the_depth_scan() -> None:
+    """RTAB-Map associates RGB-D frames with the planar depth scans."""
+    launch = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    )
+    node = launch.find("./node[@exec='rtabmap']")
+    assert_that(
+        (
+            node.find("param[@name='subscribe_scan']").get("value"),
+            node.find("param[@name='Grid/Sensor']").get("value"),
+            node.find("remap[@from='scan']").get("to"),
+        ),
+        equal_to(("true", "'0'", "/scan/slam")),
+        "RTAB-Map did not build occupancy from the planar depth scan",
     )

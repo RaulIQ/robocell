@@ -336,7 +336,11 @@ result["validation"] = {
         valid if args.scan_source == "lidar" else None
     ),
     "raw_scans_remain_fresh": min(ages) >= -0.02 and max(ages) < 0.5,
-    "pose_rmse_below_10cm": result["slam_online"]["position_rmse_m"] < 0.1,
+    "pose_rmse_below_10cm": (
+        result["ekf" if args.scan_source == "depth" else "slam_online"][
+            "position_rmse_m"
+        ] < 0.1
+    ),
     "map_surface_p95_below_15cm": result["map"]["surface_p95_m"] < 0.15,
 }
 (args.recording / "analysis.json").write_text(json.dumps(result, indent=2))

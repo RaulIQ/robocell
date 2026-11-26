@@ -512,6 +512,7 @@ try:
         {
             endpoint.node_name
             for endpoint in node.get_publishers_info_by_topic("/tf")
+            if args.scan_source != "depth" or endpoint.node_name != "rgbd_odometry"
         }
         == {
             "rtabmap" if args.scan_source == "depth" else "slam_toolbox",
