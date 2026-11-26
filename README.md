@@ -189,6 +189,14 @@ map. RTAB-Map keeps the occupancy data stored in existing databases, so
 start with an empty database to rebuild a custom map with the new depth
 projection.
 
+Experimental recovery during depth mapping can be enabled with
+`ROBOCELL_RECOVER=true`. If wheel odometry reports travel while depth
+ranges barely change, RTAB-Map temporarily switches to localization. It
+resumes mapping after three consistent matches. The pallet test verified
+the switch into localization, but the camera did not find a match that
+recovered the pose. The detector also switched modes during an unobstructed
+drive.
+
 Inside a development container, you can still build and launch manually to
 use custom ROS arguments:
 

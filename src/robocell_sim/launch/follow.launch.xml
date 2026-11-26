@@ -1,4 +1,5 @@
 <launch>
+  <arg name="recover" default="false" description="Enable experimental recovery while mapping with depth"/>
   <arg name="localize" default="false" description="Localize against an existing RTAB-Map database"/>
   <arg name="rtabmap_database" default="$(env HOME)/.ros/robocell-rtabmap.db" description="RTAB-Map session database"/>
   <arg name="scan_source" default="lidar" description="Source of SLAM and Nav2 scans: lidar or depth"/>
@@ -14,6 +15,7 @@
   <include file="$(find-pkg-share robocell_sim)/launch/mapping.launch.xml">
     <arg name="scan_source" value="$(var scan_source)"/>
     <arg name="localize" value="$(var localize)"/>
+    <arg name="recover" value="$(var recover)"/>
     <arg name="rtabmap_database" value="$(var rtabmap_database)"/>
     <arg name="fake_target" value="$(var fake_target)"/>
     <arg name="rviz" value="$(var rviz)"/>

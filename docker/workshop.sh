@@ -18,6 +18,7 @@ case "$source_scan" in
         ;;
 esac
 localize=${ROBOCELL_LOCALIZE:-false}
+recover=${ROBOCELL_RECOVER:-false}
 database=${ROBOCELL_RTABMAP_DATABASE:-}
 case "$localize" in
     false) database=${database:-/ws/log/rtabmap.db} ;;
@@ -44,9 +45,22 @@ case "$localize" in
         exit 2
         ;;
 esac
+case "$recover" in
+    false) ;;
+    true)
+        if [[ "$source_scan" != depth || "$mode" == workshop || "$localize" == true ]]; then
+            printf 'ROBOCELL_RECOVER=true requires depth mapping\n' >&2
+            exit 2
+        fi
+        ;;
+    *)
+        printf 'Invalid ROBOCELL_RECOVER "%s", expected true or false\n' "$recover" >&2
+        exit 2
+        ;;
+esac
 if [[ "$source_scan" == depth && "$mode" != workshop ]]; then
     mkdir -p -- "$(dirname -- "$database")"
-    set -- "localize:=$localize" "rtabmap_database:=$database" "$@"
+    set -- "recover:=$recover" "localize:=$localize" "rtabmap_database:=$database" "$@"
 fi
 cd /ws
 source /opt/ros/jazzy/setup.bash

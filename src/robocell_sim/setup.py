@@ -49,5 +49,6 @@ setup(
         "robocell_sim/gyro.py",
         "robocell_sim/lidar.py",
         "robocell_sim/odometry.py",
+        "robocell_sim/recover.py",
     ],
 )
