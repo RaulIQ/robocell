@@ -122,7 +122,7 @@ def test_wired_opens_the_depth_topic() -> None:
     context = Context()
     context.init(domain_id=secrets.SystemRandom().randint(0, 101))
     node = Node(f"wired{secrets.token_hex(4)}", context=context)
-    Wired(node).depth()
+    Wired(node).picture(stream="depth")
     assert_that(
         Settled(node, "/camera/depth/image_raw", 2.0).publishers(),
         has_entry("/camera/depth/image_raw", ["sensor_msgs/msg/Image"]),

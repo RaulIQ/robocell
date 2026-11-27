@@ -23,7 +23,7 @@ _TIMEOUT = 0.25
 @final
 @dataclass(frozen=True)
 class Target(Goal):
-    """Move the cube from fresh commands and publish its pose in the selected frame."""
+    """Move the cube from fresh commands and publish its pose."""
 
     _cube: Prop
     _origin: tuple[float, float, float]
@@ -58,10 +58,11 @@ class Target(Goal):
         goal = pose(self._cube.pose(), self._origin)
         if frame != "odom":
             try:
-                transform = buffer.lookup_transform(frame, "odom", Time())
+                goal = do_transform_pose_stamped(
+                    goal, buffer.lookup_transform(frame, "odom", Time())
+                )
             except TransformException:
                 return
-            goal = do_transform_pose_stamped(goal, transform)
         goal.header.stamp = Time(nanoseconds=round(moment * 1e9)).to_msg()
         topic.publish(goal)
         display.publish(marker(goal))

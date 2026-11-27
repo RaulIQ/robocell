@@ -1,12 +1,11 @@
 """Tests for selecting and locating configured ArUco markers."""
 
-from dataclasses import astuple
-
 import cv2
 import numpy as np
 import pytest
 from hamcrest import assert_that, equal_to
-from robocell_sim.detection import detect, detected
+from robocell_sim.detection import Detected
+from robocell_sim.projection import Projected
 
 
 def test_detection_selects_the_configured_marker_for_projection() -> None:
@@ -18,24 +17,15 @@ def test_detection_selects_the_configured_marker_for_projection() -> None:
     depth = np.full(image.shape, 1200, dtype=np.uint16)
     depth[80:145, 160:225] = 2300
     assert_that(
-        astuple(
-            detect(
-                image,
-                depth,
-                np.array([[180.0, 0.0, 140.0], [0.0, 175.0, 120.0], [0.0, 0.0, 1.0]]),
-                cv2.aruco.DICT_4X4_50,
-                7,
-                "camera_rgb_optical_frame",
-                91.75,
-            )
-        ),
+        Detected(cv2.aruco.DICT_4X4_50, 7, Projected((3, 3)))(
+            image,
+            depth,
+            np.array(
+                [[180.0, 0.0, 140.0], [0.0, 175.0, 120.0], [0.0, 0.0, 1.0]]
+            ),
+        )[0],
         equal_to(
-            (
-                ((192.0 - 140.0) * 2.3 / 180.0, (112.0 - 120.0) * 2.3 / 175.0, 2.3),
-                "camera_rgb_optical_frame",
-                91.75,
-                True,
-            )
+            ((192.0 - 140.0) * 2.3 / 180.0, (112.0 - 120.0) * 2.3 / 175.0, 2.3)
         ),
         "the detector did not project the configured marker",
     )
@@ -46,15 +36,13 @@ def test_detection_rejects_an_image_without_the_configured_marker() -> None:
     dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
     image = np.full((120, 160), 255, dtype=np.uint8)
     image[25:90, 45:110] = cv2.aruco.generateImageMarker(dictionary, 2, 65)
-    with pytest.raises(ValueError) as error:
-        detect(
+    with pytest.raises(
+        ValueError, match="Configured marker was not detected"
+    ) as error:
+        Detected(cv2.aruco.DICT_4X4_50, 9, Projected((3, 3)))(
             image,
             np.full(image.shape, 1500, dtype=np.uint16),
             np.eye(3),
-            cv2.aruco.DICT_4X4_50,
-            9,
-            "camera_rgb_optical_frame",
-            37.5,
         )
     assert_that(
         str(error.value),
@@ -69,21 +57,17 @@ def test_detection_annotates_only_the_selected_marker() -> None:
     gray = np.full((150, 240), 255, dtype=np.uint8)
     gray[20:85, 20:85] = cv2.aruco.generateImageMarker(dictionary, 3, 65)
     gray[55:120, 150:215] = cv2.aruco.generateImageMarker(dictionary, 7, 65)
-    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-    result = detected(
+    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB).astype(np.uint8)
+    position, preview = Detected(cv2.aruco.DICT_4X4_50, 7, Projected((3, 3)))(
         image,
         np.full(gray.shape, 2300, dtype=np.uint16),
         np.array([[180.0, 0.0, 120.0], [0.0, 175.0, 75.0], [0.0, 0.0, 1.0]]),
-        cv2.aruco.DICT_4X4_50,
-        7,
-        "camera_rgb_optical_frame",
-        91.75,
     )
     assert_that(
         (
-            bool(np.any(result.image()[55:120, 150:215] != image[55:120, 150:215])),
-            bool(np.any(result.image()[20:85, 20:85] != image[20:85, 20:85])),
-            result.observation().position()[2],
+            bool(np.any(preview[55:120, 150:215] != image[55:120, 150:215])),
+            bool(np.any(preview[20:85, 20:85] != image[20:85, 20:85])),
+            position[2],
         ),
         equal_to((True, False, 2.3)),
         "the preview did not annotate only the configured marker",
@@ -101,24 +85,16 @@ def test_detection_tracks_a_moving_marker() -> None:
     matrix = np.array([[100.0, 0.0, 80.0], [0.0, 110.0, 60.0], [0.0, 0.0, 1.0]])
     assert_that(
         (
-            detect(
+            Detected(cv2.aruco.DICT_4X4_50, 7, Projected((3, 3)))(
                 first,
                 np.full(first.shape, 1200, dtype=np.uint16),
                 matrix,
-                cv2.aruco.DICT_4X4_50,
-                7,
-                "camera_rgb_optical_frame",
-                10.0,
-            ).position(),
-            detect(
+            )[0],
+            Detected(cv2.aruco.DICT_4X4_50, 7, Projected((3, 3)))(
                 second,
                 np.full(second.shape, 1700, dtype=np.uint16),
                 matrix,
-                cv2.aruco.DICT_4X4_50,
-                7,
-                "camera_rgb_optical_frame",
-                10.1,
-            ).position(),
+            )[0],
         ),
         equal_to(
             (
@@ -136,15 +112,13 @@ def test_detection_rejects_an_occluded_marker() -> None:
     image = np.full((120, 160), 255, dtype=np.uint8)
     image[25:90, 45:110] = cv2.aruco.generateImageMarker(dictionary, 0, 65)
     image[25:90, 85:110] = 255
-    with pytest.raises(ValueError) as error:
-        detect(
+    with pytest.raises(
+        ValueError, match="Configured marker was not detected"
+    ) as error:
+        Detected(cv2.aruco.DICT_4X4_50, 0, Projected((3, 3)))(
             image,
             np.full(image.shape, 1500, dtype=np.uint16),
             np.eye(3),
-            cv2.aruco.DICT_4X4_50,
-            0,
-            "camera_rgb_optical_frame",
-            37.5,
         )
     assert_that(
         str(error.value),

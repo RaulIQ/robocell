@@ -7,10 +7,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 from hamcrest import assert_that, close_to, equal_to
-from robocell_sim.hardware.implementations.camera.rendered import (
-    Paired,
-    Rendered,
-)
+from robocell_sim.hardware.implementations.camera.paired import Paired
+from robocell_sim.hardware.implementations.camera.rendered import Rendered
 
 
 def test_rendered_shoots_at_the_renderer_resolution() -> None:

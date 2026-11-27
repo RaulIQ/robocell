@@ -1,27 +1,24 @@
 """The common observation supplied by visual target detectors."""
 
 from dataclasses import dataclass
-from typing import final
+from typing import final, override
+
+from robocell_sim.robot.interfaces.target_observation import (
+    Reading,
+    TargetObservation,
+)
 
 
 @final
 @dataclass(frozen=True)
-class Observation:
-    """A target position in a named frame at its acquisition time."""
+class Observation(TargetObservation):
+    """A measured target position and its acquisition metadata."""
 
     _position: tuple[float, float, float]
     _frame: str
     _stamp: float
     _valid: bool
 
-    def position(self) -> tuple[float, float, float]:
-        return self._position
-
-    def frame(self) -> str:
-        return self._frame
-
-    def stamp(self) -> float:
-        return self._stamp
-
-    def valid(self) -> bool:
-        return self._valid
+    @override
+    def reading(self) -> Reading:
+        return self._position, self._frame, self._stamp, self._valid

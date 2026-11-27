@@ -8,12 +8,13 @@ def approach(
     robot: tuple[float, float],
     distance: float,
 ) -> tuple[float, float]:
-    """Choose a point toward the target without backing away from a close one."""
+    """Choose a point toward the target and stop at the following distance."""
     if (
         not all(isfinite(value) for value in (*target, *robot, distance))
         or distance <= 0
     ):
-        raise ValueError("Approach requires finite coordinates and a positive distance")
+        error = "Approach requires finite coordinates and a positive distance"
+        raise ValueError(error)
     if dist(target, robot) <= distance:
         return robot
     return (

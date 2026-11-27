@@ -3,7 +3,6 @@
 from math import dist
 
 from hamcrest import assert_that, close_to, equal_to
-
 from robocell_sim.approach import approach
 
 

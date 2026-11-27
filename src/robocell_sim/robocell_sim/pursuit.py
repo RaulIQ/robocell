@@ -1,47 +1,42 @@
 """State transitions for safe target following."""
 
 from dataclasses import dataclass, replace
-from typing import final
+from typing import Literal, final, override
+
+from robocell_sim.robot.interfaces.pursuing import Decision, Pursuing, Stage
 
 
 @final
-@dataclass(frozen=True)
-class Pursuit:
+@dataclass(frozen=True, kw_only=True)
+class Pursuit(Pursuing):
     """Coordinate operator intent, goal lifetime and target availability."""
 
-    _requested: bool
-    _active: bool
-    _starting: bool
-    _available: bool
+    _intent: Literal["follow", "stop"]
+    _stage: Stage
+    _visible: bool
 
+    @override
     def toggle(self) -> "Pursuit":
-        return replace(self, _requested=not self._requested)
+        return replace(self, _intent="stop" if self.requested() else "follow")
 
-    def observe(self) -> "Pursuit":
-        return replace(self, _available=True)
+    @override
+    def sight(self, *, visible: bool) -> "Pursuit":
+        return replace(self, _visible=visible)
 
-    def lose(self) -> "Pursuit":
-        return replace(self, _available=False)
+    @override
+    def goal(self, stage: Stage) -> "Pursuit":
+        return replace(self, _stage=stage)
 
-    def begin(self) -> "Pursuit":
-        return replace(self, _starting=True)
+    @override
+    def decision(self) -> Decision:
+        wanted = self.requested() and self._visible
+        result: Decision = "wait"
+        if self._stage == "idle" and wanted:
+            result = "start"
+        elif self._stage == "active" and not wanted:
+            result = "cancel"
+        return result
 
-    def accept(self) -> "Pursuit":
-        return replace(self, _active=True, _starting=False)
-
-    def finish(self) -> "Pursuit":
-        return replace(self, _active=False, _starting=False)
-
-    def starts(self) -> bool:
-        return (
-            self._requested
-            and self._available
-            and not self._active
-            and not self._starting
-        )
-
-    def cancels(self) -> bool:
-        return self._active and (not self._requested or not self._available)
-
+    @override
     def requested(self) -> bool:
-        return self._requested
+        return self._intent == "follow"

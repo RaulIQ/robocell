@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
+from robocell_sim.hardware.implementations.camera.rendered import Rendered
 from robocell_sim.hardware.implementations.physics.cube import Cube
 
 
@@ -39,7 +40,7 @@ def test_cube_carries_the_configured_aruco_marker() -> None:
 
 
 def test_cube_exposes_a_readable_aruco_marker_to_the_rgb_camera() -> None:
-    """The rendered cube presents a detectable marker rather than a dark plane."""
+    """A marker on the cube is readable in the rendered frame."""
     model = mujoco.MjModel.from_xml_path(
         str(Path(__file__).parents[1] / "models/waffle_pi/workshop.xml")
     )
@@ -48,11 +49,10 @@ def test_cube_exposes_a_readable_aruco_marker_to_the_rgb_camera() -> None:
     data.qpos[3:7] = (1.0, 0.0, 0.0, 0.0)
     data.mocap_pos[model.body("follow_cube").mocapid.item(), 2] = 0.05
     mujoco.mj_forward(model, data)
-    renderer = mujoco.Renderer(model, 1080, 1920)
-    renderer.update_scene(data, camera="camera_rgb")
+    image = Rendered(mujoco.Renderer(model, 1080, 1920), data, "camera_rgb")
     _, identifiers, _ = cv2.aruco.ArucoDetector(
         cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-    ).detectMarkers(renderer.render())
+    ).detectMarkers(image.shot())
     assert_that(
         None if identifiers is None else identifiers.tolist(),
         equal_to([[0]]),

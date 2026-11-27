@@ -27,6 +27,8 @@ from robocell_sim.robot.implementations.command.held import Held
 from robocell_sim.ros.implementations.settings.declared import Declared
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from rclpy.task import Future
 
 _LINEAR = (0.01, 0.26)
@@ -92,7 +94,7 @@ selection = tk.StringVar(window, value="Robot")
 selected = [topic]
 target: list[tuple[PoseStamped, float]] = []
 goals: list[ClientGoalHandle] = []
-pursuit = [Pursuit(False, False, False, False)]
+pursuit = [Pursuit(_intent="stop", _stage="idle", _visible=False)]
 following = ttk.Label(frame)
 focused = threading.Event()
 closed = threading.Event()
@@ -172,13 +174,15 @@ def stop() -> None:
 def select() -> None:
     """Stop the previous source before changing the destination."""
     stop()
-    selected[0] = cube if cube is not None and selection.get() == "Cube" else topic
+    selected[0] = (
+        cube if cube is not None and selection.get() == "Cube" else topic
+    )
 
 
 def observe_target(message: PoseStamped) -> None:
     """Remember fresh goals and resume only an operator-requested pursuit."""
     target[:] = [(message, time.monotonic())]
-    pursuit[0] = pursuit[0].observe()
+    pursuit[0] = pursuit[0].sight(visible=True)
     if not pursuit[0].requested():
         following.configure(text="Target ready")
     transition()
@@ -196,7 +200,7 @@ def observe_status(message: String) -> None:
 def lose(state: str) -> None:
     """Discard stale positions while preserving the operator's follow intent."""
     target.clear()
-    pursuit[0] = pursuit[0].lose()
+    pursuit[0] = pursuit[0].sight(visible=False)
     following.configure(
         text=f"Target {state} · waiting"
         if pursuit[0].requested()
@@ -218,9 +222,9 @@ def follow() -> None:
 
 def transition() -> None:
     """Submit fresh goals or cancel an active goal exactly once."""
-    if pursuit[0].cancels() and goals:
+    if pursuit[0].decision() == "cancel" and goals:
         goal = goals[0]
-        pursuit[0] = pursuit[0].finish().begin()
+        pursuit[0] = pursuit[0].goal("pending")
         follow_button.state(["disabled"])
         following.configure(
             text="Target lost · waiting"
@@ -228,7 +232,7 @@ def transition() -> None:
             else "Canceling follow"
         )
         goal.cancel_goal_async().add_done_callback(cancelled)  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
-    elif pursuit[0].starts():
+    elif pursuit[0].decision() == "start":
         start()
 
 
@@ -241,13 +245,20 @@ def start() -> None:
     if time.monotonic() - arrival >= 1.0:
         lose("stale")
         return
-    stop()
-    pursuit[0] = pursuit[0].begin()
-    follow_button.state(["disabled"])
-    following.configure(text="Starting follow")
-    navigation.send_goal_async(NavigateToPose.Goal(pose=pose)).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+    pending()
+    navigation.send_goal_async(
+        NavigateToPose.Goal(pose=pose)
+    ).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
         accepted
     )
+
+
+def pending() -> None:
+    """Pause manual input while the navigator accepts the new goal."""
+    stop()
+    pursuit[0] = pursuit[0].goal("pending")
+    follow_button.state(["disabled"])
+    following.configure(text="Starting follow")
 
 
 def accepted(future: Future) -> None:
@@ -255,16 +266,30 @@ def accepted(future: Future) -> None:
     follow_button.state(["!disabled"])
     goal = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
     if goal is None or not goal.accepted:
-        pursuit[0] = pursuit[0].finish()
-        following.configure(text="Nav2 rejected the cube goal")
+        refused()
         return
+    active(goal)
+
+
+def refused() -> None:
+    """Return to idle when the server rejects the goal."""
+    pursuit[0] = pursuit[0].goal("idle")
+    following.configure(text="Nav2 rejected the cube goal")
+
+
+def active(goal: ClientGoalHandle) -> None:
+    """Track the accepted goal until it completes or needs cancellation."""
     goals.append(goal)
-    pursuit[0] = pursuit[0].accept()
+    pursuit[0] = pursuit[0].goal("active")
     follow_button.configure(
         text="Cancel follow" if pursuit[0].requested() else "Follow cube"
     )
     following.configure(text="Following cube")
-    goal.get_result_async().add_done_callback(finished)
+    result: Callable[[], Future] = goal.get_result_async
+    watch: Callable[[Callable[[Future], None]], None] = (
+        result().add_done_callback
+    )
+    watch(finished)
     transition()
 
 
@@ -272,7 +297,7 @@ def cancelled(future: Future) -> None:
     """Allow another cancellation attempt if Nav2 rejects the request."""
     response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
     if goals and (response is None or not response.goals_canceling):
-        pursuit[0] = pursuit[0].accept()
+        pursuit[0] = pursuit[0].goal("active")
         follow_button.state(["!disabled"])
         following.configure(text="Nav2 did not cancel the goal")
 
@@ -280,7 +305,7 @@ def cancelled(future: Future) -> None:
 def finished(future: Future) -> None:
     """Release the completed goal before any fresh observation restarts it."""
     goals.clear()
-    pursuit[0] = pursuit[0].finish()
+    pursuit[0] = pursuit[0].goal("idle")
     follow_button.state(["!disabled"])
     follow_button.configure(
         text="Cancel follow" if pursuit[0].requested() else "Follow cube"
@@ -289,7 +314,8 @@ def finished(future: Future) -> None:
     following.configure(
         text=(
             "Follow canceled"
-            if response is not None and response.status == GoalStatus.STATUS_CANCELED
+            if response is not None
+            and response.status == GoalStatus.STATUS_CANCELED
             else "Follow ended"
         )
     )

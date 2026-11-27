@@ -2,7 +2,7 @@
 
 import queue
 from dataclasses import dataclass
-from typing import final, override
+from typing import Literal, final, override
 
 from geometry_msgs.msg import Twist  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.node import Node
@@ -34,27 +34,23 @@ class Wired(Harness):
         return self._node.create_publisher(LaserScan, "/scan", 10)
 
     @override
-    def picture(self) -> Topic:
+    def picture(
+        self, *, stream: Literal["rgb", "depth"] = "rgb", reliable: bool = False
+    ) -> Topic:
+        path = (
+            "/camera/depth/image_raw"
+            if stream == "depth"
+            else "/camera/image_raw"
+        )
         return self._node.create_publisher(
-            Image, "/camera/image_raw", qos_profile_sensor_data
+            Image, path, 5 if reliable else qos_profile_sensor_data
         )
 
     @override
-    def depth(self, reliable: bool = False) -> Topic:
+    def calibration(self, *, stream: Literal["rgb", "depth"] = "rgb") -> Topic:
+        prefix = "/camera/depth" if stream == "depth" else "/camera"
         return self._node.create_publisher(
-            Image, "/camera/depth/image_raw", 5 if reliable else qos_profile_sensor_data
-        )
-
-    @override
-    def calibration(self) -> Topic:
-        return self._node.create_publisher(
-            CameraInfo, "/camera/camera_info", 10
-        )
-
-    @override
-    def intrinsics(self) -> Topic:
-        return self._node.create_publisher(
-            CameraInfo, "/camera/depth/camera_info", 10
+            CameraInfo, f"{prefix}/camera_info", 10
         )
 
     @override

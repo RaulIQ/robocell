@@ -38,11 +38,9 @@ from robocell_sim.display.implementations.lidar.polar import Polar
 from robocell_sim.display.implementations.lidar.scanned import Scanned
 from robocell_sim.display.implementations.maps.survey import Survey
 from robocell_sim.display.implementations.route.window import Window
+from robocell_sim.hardware.implementations.camera.paired import Paired
 from robocell_sim.hardware.implementations.camera.pinhole import Pinhole
-from robocell_sim.hardware.implementations.camera.rendered import (
-    Paired,
-    Rendered,
-)
+from robocell_sim.hardware.implementations.camera.rendered import Rendered
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
@@ -112,7 +110,9 @@ arguments.add_argument(
 _MIN_RANGE = 0.15
 _MAX_RANGE = 12.0
 arguments.add_argument("--lidar-range-max", type=float, default=_MAX_RANGE)
-arguments.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
+arguments.add_argument(
+    "--scan-source", choices=("lidar", "depth"), default="lidar"
+)
 options = arguments.parse_args(remove_ros_args()[1:])
 if not math.isfinite(options.duration) or options.duration < 0:
     arguments.error("Duration must be finite and nonnegative")
@@ -248,7 +248,9 @@ with (
                 buffer,
                 settings.text("target_frame", "map"),
                 node.create_publisher(
-                    PoseStamped, settings.text("target_topic", "/goal_update"), 1
+                    PoseStamped,
+                    settings.text("target_topic", "/goal_update"),
+                    1,
                 ),
                 node.create_publisher(Marker, "/cube/marker", 1),
             ),
@@ -316,7 +318,8 @@ with (
         attributes[5] = termios.B115200
         termios.tcsetattr(slave, termios.TCSANOW, attributes)
         os.set_blocking(master, False)
-        state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+        state: queue.SimpleQueue[tuple[Device, bytes, float]]
+        state = queue.SimpleQueue()
         state.put(
             (
                 Rplidar(
@@ -339,7 +342,8 @@ with (
             Named(
                 Path(
                     settings.text(
-                        "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
+                        "lidar_port",
+                        str(Path.home() / ".ros" / "robocell-lidar"),
                     )
                 ),
                 os.ttyname(slave),
@@ -375,6 +379,14 @@ with (
         for side, number in zip(("left", "right"), numbers, strict=True)
     )
     service = Polled(devices)
+    images = Filmed(
+        data,
+        Paired(Rendered(renderer, data, "camera_rgb"), sensor, data),
+        harness.picture(),
+        harness.picture(
+            stream="depth", reliable=options.scan_source == "depth"
+        ),
+    )
     step = Serviced(
         Reported(
             Integrated(Physical(model, data), data, "imu_gyro", 0),
@@ -401,20 +413,7 @@ with (
                         1 / 50,
                         Tracked(data, "base_link", bridge.truth()),
                     ),
-                    Periodic(
-                        data,
-                        1 / 30,
-                        Filmed(
-                            data,
-                            Paired(
-                                Rendered(renderer, data, "camera_rgb"),
-                                sensor,
-                                data,
-                            ),
-                            harness.picture(),
-                            harness.depth(reliable=options.scan_source == "depth"),
-                        ),
-                    ),
+                    Periodic(data, 1 / 30, images),
                     Periodic(
                         data,
                         1 / 30,
@@ -432,7 +431,10 @@ with (
                             data,
                             projection,
                             depth,
-                            (harness.intrinsics(), "camera_depth_optical_frame"),
+                            (
+                                harness.calibration(stream="depth"),
+                                "camera_depth_optical_frame",
+                            ),
                         ),
                     ),
                 )

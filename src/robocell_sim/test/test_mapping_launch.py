@@ -120,7 +120,7 @@ def test_mapping_launch_selects_the_camera_producer_for_slam() -> None:
     """The camera converter sends its sector scan to the SLAM adapter."""
     root = ElementTree.parse(
         Path(__file__).parents[1] / "launch/mapping.launch.xml"
-    ).getroot()
+    )
     assert_that(
         [
             node.get("to")
