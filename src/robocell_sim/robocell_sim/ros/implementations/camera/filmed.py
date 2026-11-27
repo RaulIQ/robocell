@@ -13,6 +13,9 @@ from robocell_sim.hardware.interfaces.camera import Camera
 from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
 
+_MIN_DEPTH = 0.450
+_MAX_DEPTH = 65.535
+
 
 @final
 @dataclass(frozen=True)
@@ -40,14 +43,20 @@ class Filmed(Report):
         )
         self._depth.publish(
             Image(
-                header=Header(stamp=stamp, frame_id="camera_depth_optical_frame"),
+                header=Header(
+                    stamp=stamp, frame_id="camera_depth_optical_frame"
+                ),
                 height=depth.shape[0],
                 width=depth.shape[1],
                 encoding="16UC1",
                 step=depth.shape[1] * 2,
                 data=np.rint(
-                    np.where((depth >= 0.450) & (depth <= 65.535), depth, 0)
+                    np.where(
+                        (depth >= _MIN_DEPTH) & (depth <= _MAX_DEPTH), depth, 0
+                    )
                     * 1000
-                ).astype("<u2").tobytes(),
+                )
+                .astype("<u2")
+                .tobytes(),
             )
         )

@@ -8,6 +8,7 @@ from typing import Any
 import mujoco
 from hamcrest import assert_that, close_to, equal_to
 from robocell_sim.ros.implementations.camera.filmed import Filmed
+from robocell_sim.ros.messages import Header, Image
 
 from test.kept import Kept
 from test.painted import Painted
@@ -124,7 +125,9 @@ def test_filmed_stamps_the_picture_with_the_simulated_time() -> None:
     data = mujoco.MjData(model)
     mujoco.mj_step(model, data, nstep=secrets.SystemRandom().randint(2, 900))
     messages: list[Any] = []
-    Filmed(data, Painted((9, 99, 199), (64, 48)), Kept(messages), Kept([])).publish()
+    Filmed(
+        data, Painted((9, 99, 199), (64, 48)), Kept(messages), Kept([])
+    ).publish()
     assert_that(
         messages[-1].header.stamp.sec
         + messages[-1].header.stamp.nanosec * 1e-9,
@@ -134,7 +137,7 @@ def test_filmed_stamps_the_picture_with_the_simulated_time() -> None:
 
 
 def test_filmed_publishes_depth_in_its_own_frame_at_the_rgb_time() -> None:
-    """The depth image carries an unsigned depth in millimeters for every RGB pixel."""
+    """The depth image carries unsigned millimeters in the depth frame."""
     model = mujoco.MjModel.from_xml_string("<mujoco/>")
     data = mujoco.MjData(model)
     data.time = 1.375
@@ -149,8 +152,8 @@ def test_filmed_publishes_depth_in_its_own_frame_at_the_rgb_time() -> None:
     assert_that(
         depths[-1],
         equal_to(
-            type(pictures[-1])(
-                header=type(pictures[-1].header)(
+            Image(
+                header=Header(
                     stamp=pictures[-1].header.stamp,
                     frame_id="camera_depth_optical_frame",
                 ),

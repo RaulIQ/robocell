@@ -2,7 +2,6 @@
 """Run two CANopen wheel emulators against MuJoCo without ROS."""
 
 import threading
-import time
 from argparse import ArgumentParser
 from contextlib import ExitStack
 from pathlib import Path
@@ -11,9 +10,11 @@ import can
 import mujoco
 import mujoco.viewer
 
+from robocell_sim.display.implementations.control.toggled import Toggled
 from robocell_sim.hardware.implementations.motor.actuated import Actuated
 from robocell_sim.hardware.implementations.motor.attached import Attached
 from robocell_sim.hardware.implementations.motor.stepped import Stepped
+from robocell_sim.hardware.implementations.physics.driven import Driven
 
 _HOST = 127
 
@@ -44,14 +45,7 @@ if model.nkey:
 pause = threading.Event()
 
 
-def key(code: int) -> None:
-    """Toggle physics pause with the space bar."""
-    if code == ord(" "):
-        if pause.is_set():
-            pause.clear()
-        else:
-            pause.set()
-
+key = Toggled({ord(" "): pause})
 
 with ExitStack() as stack:
     devices = tuple(
@@ -76,22 +70,17 @@ with ExitStack() as stack:
         """Keep the headless service alive until interrupted or timed out."""
         return True
 
+    def synchronize() -> None:
+        """Run headlessly without a viewer."""
+
+    sync = synchronize
     if options.viewer:
         viewer = stack.enter_context(
             mujoco.viewer.launch_passive(model, data, key_callback=key)
         )
         running = viewer.is_running
+        sync = viewer.sync
     step = Stepped(
         data, devices, Actuated(data, "wheel_left", "wheel_left_joint", pause)
     )
-    beginning = time.monotonic()
-    try:
-        while running() and (
-            options.duration == 0
-            or time.monotonic() - beginning < options.duration
-        ):
-            step.take()
-            if options.viewer:
-                viewer.sync()
-    except KeyboardInterrupt:
-        pass
+    Driven(step, options.duration, running, sync)()

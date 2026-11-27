@@ -6,11 +6,12 @@ from typing import final, override
 import numpy as np
 import numpy.typing as npt
 from robocell_sim.hardware.interfaces.camera import Camera
+from robocell_sim.hardware.interfaces.still import Still
 
 
 @final
 @dataclass(frozen=True)
-class Painted(Camera):
+class Painted(Camera, Still):
     """Camera whose every pixel shows the same color.
 
     The color holds the red, green and blue bytes of each pixel, and the
@@ -22,6 +23,7 @@ class Painted(Camera):
     _size: tuple[int, int]
     _depth: float = 1.0
 
+    @override
     def shot(self) -> npt.NDArray[np.uint8]:
         return np.full((self._size[1], self._size[0], 3), self._color, np.uint8)
 

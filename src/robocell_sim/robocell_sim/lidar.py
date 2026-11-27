@@ -3,17 +3,13 @@
 
 import contextlib
 import logging
-import os
 import time
 from pathlib import Path
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
 
-from robocell_sim.hardware.implementations.uart.terminal import Terminal
-from robocell_sim.robot.implementations.uart.configured import Configured
-from robocell_sim.robot.implementations.uart.connected import Connected
-from robocell_sim.ros.implementations.lidar.operating import Operating
+from robocell_sim.ros.implementations.lidar.session import Session
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.wired import Wired
 
@@ -29,23 +25,13 @@ limits = (
     settings.number("range_max", 12.0),
 )
 timeout = settings.number("connection_timeout", 10.0)
-topic = Wired(node).scan()
+session = Session(node, path, (Wired(node).scan(), frame, limits))
 deadline = time.monotonic() + timeout
 with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
     while node.context.ok():
         try:
             attempt = time.monotonic()
-            with os.fdopen(
-                os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK),
-                "rb+",
-                buffering=0,
-            ) as device:
-                Configured(device.fileno()).publish()
-                Operating(
-                    node,
-                    Connected(Terminal(device.fileno()), device.fileno()),
-                    (topic, frame, limits),
-                ).publish()
+            session.publish()
         except (OSError, TimeoutError, ValueError, BufferError) as failure:
             if time.monotonic() - attempt > timeout:
                 deadline = time.monotonic() + timeout

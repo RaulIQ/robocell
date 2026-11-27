@@ -43,8 +43,8 @@ folder per device or subject:
 | Package    | Role                                       | Implementations                                        |
 | ---------- | ------------------------------------------ | ------------------------------------------------------ |
 | `hardware` | stands in for the real TurtleBot3          | `physics`, `imu`, `can`, `motor`, `wheels`, `lidar`, `camera` |
-| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `motor`, `command`, `odometry`, `lidar` |
-| `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`                     |
+| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `motor`, `command`, `odometry`, `lidar`, `detection`, `following` |
+| `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`, `control`          |
 | `ros`      | carries the simulation to ROS 2            | `wiring`, `clock`, `pose`, `wheels`, `lidar`, `camera` |
 
 For example, the `Imu` interface lives in `hardware/interfaces`, while
@@ -86,24 +86,24 @@ the host. If you have an existing VS Code dev container, use
 **Dev Containers: Rebuild and Reopen in Container** to apply the new
 configuration. Review and trust the project hooks in your host checkout.
 The shared EO gate uses a dedicated Python environment on the host. Set it
-up from the repository root with Python 3.11 or newer:
+up from the repository root. With ROS 2 Jazzy on Ubuntu 24.04, use Python 3.12:
 
 ```console
-python3 -m venv --system-site-packages .venv-eo
+source /opt/ros/jazzy/setup.bash
+python3.12 -m venv --system-site-packages .venv-eo
 .venv-eo/bin/python -m pip install --upgrade pip
 .venv-eo/bin/python -m pip install --group eo
+eo_site=$(.venv-eo/bin/python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')
+printf '%s\n' "$PWD/typings" > "$eo_site/robocell-typings.pth"
 ```
 
-Run the host gate manually from the repository root:
+Install the Python runtime dependencies listed in the
+[Dockerfile](docker/Dockerfile) in the host environment. With ROS still
+sourced, run the style and type checks from the repository root:
 
 ```console
-printf '%s\n' '{"hook_event_name":"Stop"}' | bash .claude/hooks/eo-gate.sh
+.venv-eo/bin/python -m pytest --eo -o python_files= -q --tb=short
 ```
-
-The gate collects only EO checks. For strict type checking, use a host Python
-version compatible with ROS 2 Jazzy, source its setup script, and install
-the Python runtime dependencies listed in [the Dockerfile](docker/Dockerfile)
-into the host environment.
 
 ## Run the simulation
 

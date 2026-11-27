@@ -6,11 +6,11 @@ from typing import final, override
 import mujoco
 from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo  # type: ignore[import-untyped]  # ROS generates message modules without types
-from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.hardware.interfaces.intrinsics import Intrinsics
 from robocell_sim.hardware.interfaces.report import Report
 from robocell_sim.ros.interfaces.topic import Topic
+from robocell_sim.ros.messages import Header
 
 
 @final

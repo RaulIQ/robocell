@@ -1,7 +1,7 @@
 """Harness of the robot in ROS 2."""
 
 import queue
-from typing import Protocol
+from typing import Literal, Protocol
 
 from robocell_sim.ros.interfaces.topic import Topic
 
@@ -21,20 +21,14 @@ class Harness(Protocol):
         """Topic of the ranges the lidar reads around the robot."""
         ...
 
-    def picture(self) -> Topic:
-        """Topic of what the camera sees, sent best effort like any video."""
+    def picture(
+        self, *, stream: Literal["rgb", "depth"] = "rgb", reliable: bool = False
+    ) -> Topic:
+        """Topic of the chosen camera image stream."""
         ...
 
-    def depth(self, reliable: bool = False) -> Topic:
-        """Topic of the depth camera's image in millimeters."""
-        ...
-
-    def calibration(self) -> Topic:
-        """Topic of how the camera projects the world onto its pixels."""
-        ...
-
-    def intrinsics(self) -> Topic:
-        """Topic of how the depth camera projects the world onto its pixels."""
+    def calibration(self, *, stream: Literal["rgb", "depth"] = "rgb") -> Topic:
+        """Topic of the selected stream's camera calibration."""
         ...
 
     def listen(self, inbox: queue.SimpleQueue[tuple[float, float]]) -> None:

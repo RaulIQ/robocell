@@ -7,14 +7,10 @@ import queue
 import time
 from contextlib import ExitStack
 
-import can
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.qos import qos_profile_action_status_default
-from rosgraph_msgs.msg import Clock  # type: ignore[import-untyped]  # ROS generates message modules without types
 from sensor_msgs.msg import JointState  # type: ignore[import-untyped]  # ROS generates message modules without types
-from std_msgs.msg import String  # type: ignore[import-untyped]  # ROS generates message modules without types
-from std_srvs.srv import Trigger  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.robot.implementations.command.arrows import Arrows
 from robocell_sim.robot.implementations.command.filtered import Filtered
@@ -22,11 +18,12 @@ from robocell_sim.robot.implementations.drive.stepped import Stepped
 from robocell_sim.robot.implementations.motor.hosted import Hosted
 from robocell_sim.robot.interfaces.control import Control
 from robocell_sim.robot.interfaces.pilot import Pilot, Session
+from robocell_sim.ros.implementations.clock.received import Clock, Received
 from robocell_sim.ros.implementations.command.steered import Steered
-from robocell_sim.ros.implementations.motor.reported import Reported
+from robocell_sim.ros.implementations.motor.progressed import Progressed, String
+from robocell_sim.ros.implementations.motor.reconnected import Reconnected
+from robocell_sim.ros.implementations.motor.retry import Retry, Trigger
 from robocell_sim.ros.implementations.settings.declared import Declared
-
-_BACKOFF = 0.1
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger("motor_driver")
@@ -64,90 +61,42 @@ pilots: list[Pilot] = []
 retries.put(item=False)
 
 
-def clock(message: Clock) -> None:
-    """Observe the simulator clock independently of drive PDO arrival."""
-    clocks.put(message.clock.sec * 1000000000 + message.clock.nanosec)
-
-
-def retry(
-    _request: Trigger.Request, response: Trigger.Response
-) -> Trigger.Response:
-    """Request a verified enable without granting fault-reset permission."""
-    retries.put(item=False)
-    response.success = True
-    response.message = "CANopen retry requested without fault reset"
-    return response
-
-
-def recover(
-    _request: Trigger.Request, response: Trigger.Response
-) -> Trigger.Response:
-    """Record explicit operator permission for one fault-recovery attempt."""
-    retries.put(item=True)
-    response.success = True
-    response.message = "CANopen recovery requested with fault-reset permission"
-    return response
-
-
-node.create_subscription(Clock, "/clock", clock, 10)
-node.create_service(Trigger, "~/retry", retry)
-node.create_service(Trigger, "~/recover", recover)
+node.create_subscription(Clock, "/clock", Received(clocks), 10)
+node.create_service(Trigger, "~/retry", Retry(retries, _recovery=False))
+node.create_service(Trigger, "~/recover", Retry(retries, _recovery=True))
 topic = node.create_publisher(JointState, "/joint_states", 10)
 announcements = node.create_publisher(
     String,
     "~/state",
     qos_profile_action_status_default,
 )
-status = ""
-stamp = -1
+publication = [("", -1)]
+progressed = Progressed(names, (topic, announcements), log, publication)
 simulation = -1
-attempt = -1.0
-deadline = -1.0
-permission = False
 with (
     contextlib.suppress(KeyboardInterrupt, ExternalShutdownException),
     ExitStack() as resources,
 ):
+    connect = Reconnected(
+        (Hosted(transport, numbers, geometry, state), resources),
+        retries,
+        [],
+        (log, transport[1], numbers),
+    )
     while node.context.ok():
         beginning = time.monotonic()
         rclpy.spin_once(node, timeout_sec=0)
-        if not retries.empty():
-            resources.close()
-            pilots.clear()
-            permission = retries.get_nowait()
-            deadline = beginning + 5.0
-            attempt = -1.0
-            status = "starting"
-            stamp = -1
+        if connect(beginning, pilots):
+            publication[0] = "starting", -1
             announcements.publish(String(data="starting"))
+        connect.connect(beginning, pilots)
         if (
             not pilots
-            and beginning < deadline
-            and (attempt < 0 or beginning - attempt >= _BACKOFF)
+            and connect.expired(beginning)
+            and publication[0][0] == "starting"
         ):
-            attempt = beginning
-            try:
-                pilots.append(
-                    resources.enter_context(
-                        Hosted(transport, numbers, geometry, state).connection(
-                            deadline - 5.0, recovery=permission
-                        )
-                    )
-                )
-                log.info(
-                    "CANopen host on %s is verifying drives %d and %d",
-                    transport[1],
-                    *numbers,
-                )
-            except (can.CanError, OSError) as failure:
-                log.warning(
-                    "CANopen connection on %s failed because %s",
-                    transport[1],
-                    failure,
-                )
-        if not pilots and beginning >= deadline and status == "starting":
-            status = "stopped"
-            announcements.publish(String(data=status))
+            publication[0] = "stopped", publication[0][1]
+            announcements.publish(String(data="stopped"))
             log.error(
                 "CANopen connection exceeded five seconds and requires ~/retry"
             )
@@ -160,16 +109,6 @@ with (
             except ValueError:
                 log.exception("CANopen input rejected a nonfinite command")
         if pilots:
-            condition, measurements = pilots[0].advance(
-                time.monotonic(), simulation
-            )
-            if condition != status:
-                log.info("CANopen host is %s", condition)
-                status = condition
-                announcements.publish(String(data=condition))
-            for sample in measurements:
-                if sample[0] != stamp:
-                    Reported(sample, names, topic).publish()
-                    stamp = sample[0]
+            progressed(pilots[0], time.monotonic(), simulation)
         time.sleep(max(0.0, 0.005 - (time.monotonic() - beginning)))
 node.context.try_shutdown()

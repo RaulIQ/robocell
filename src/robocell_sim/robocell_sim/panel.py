@@ -6,28 +6,34 @@ from __future__ import annotations
 import math
 import queue
 import threading
-import time
 import tkinter as tk
 from contextlib import suppress
-from functools import partial
 from tkinter import ttk
 from typing import TYPE_CHECKING
 
 import rclpy
-from action_msgs.msg import GoalStatus  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
-from geometry_msgs.msg import PoseStamped, Twist, Vector3  # type: ignore[import-untyped]  # ROS generates message modules without types
 from nav2_msgs.action import NavigateToPose  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from rclpy.action.client import ActionClient, ClientGoalHandle
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import try_shutdown
-from std_msgs.msg import String  # type: ignore[import-untyped]  # ROS generates message modules without types
 
-from robocell_sim.pursuit import Pursuit
+from robocell_sim.display.implementations.control.follow_view import Labeled
+from robocell_sim.display.implementations.control.intent import Intent
+from robocell_sim.display.implementations.control.keyboard import Keyboard
+from robocell_sim.display.implementations.control.layout import Layout, controls
+from robocell_sim.display.implementations.control.readings import Readings
 from robocell_sim.robot.implementations.command.held import Held
+from robocell_sim.robot.implementations.following.pursuit import Pursuit
+from robocell_sim.ros.implementations.command.manual import Manual, Twist
+from robocell_sim.ros.implementations.command.navigated import Navigated
+from robocell_sim.ros.implementations.command.requested import Requested
 from robocell_sim.ros.implementations.settings.declared import Declared
+from robocell_sim.ros.interfaces.follow_request import String
+from robocell_sim.ros.messages import PoseStamped
 
 if TYPE_CHECKING:
-    from rclpy.task import Future
+    from robocell_sim.ros.interfaces.topic import Topic
+
 
 _LINEAR = (0.01, 0.26)
 _ANGULAR = (0.1, 1.8)
@@ -58,242 +64,43 @@ navigation = (
     else None
 )
 window = tk.Tk()
-window.title("Robocell control")
-window.resizable(width=False, height=False)
-window.configure(background="#eff3f5")
-style = ttk.Style(window)
-style.theme_use("clam")
-style.configure("TFrame", background="#eff3f5")
-style.configure("TLabel", background="#eff3f5", foreground="#183444")
-style.configure("Title.TLabel", font=("TkDefaultFont", 20, "bold"))
-style.configure("Speed.TLabel", font=("TkDefaultFont", 17, "bold"))
-style.configure("TButton", padding=(12, 8))
-frame = ttk.Frame(window, padding=24)
-frame.grid()
-ttk.Label(frame, text="Robocell", style="Title.TLabel").grid(
-    row=0, column=0, columnspan=2, sticky="w"
-)
-ttk.Label(frame, text="Hold arrows to drive · release to stop").grid(
-    row=1, column=0, columnspan=2, sticky="w", pady=(4, 20)
-)
-linear = ttk.Label(frame, style="Speed.TLabel")
-linear.grid(row=2, column=0, sticky="w", padx=(0, 28))
-angular = ttk.Label(frame, style="Speed.TLabel")
-angular.grid(row=2, column=1, sticky="w")
-ttk.Label(frame, text="Linear · w / x · ±0.01 m/s").grid(
-    row=3, column=0, sticky="w", pady=(4, 16)
-)
-ttk.Label(frame, text="Angular · e / c · ±0.1 rad/s").grid(
-    row=3, column=1, sticky="w", pady=(4, 16)
-)
-status = ttk.Label(frame, text="Click this window to take control")
-status.grid(row=6, column=0, columnspan=2, sticky="w", pady=(16, 0))
+frame, linear, angular, status = Layout(window)()
 selection = tk.StringVar(window, value="Robot")
-selected = [topic]
+selected: list[Topic] = [topic]
 target: list[tuple[PoseStamped, float]] = []
 goals: list[ClientGoalHandle] = []
-pursuit = [Pursuit(False, False, False, False)]
+pursuit = [Pursuit(_intent="stop", _stage="idle", _visible=False)]
 following = ttk.Label(frame)
+actions: list[Navigated] = []
+requests: list[Requested] = []
 focused = threading.Event()
 closed = threading.Event()
 releases: dict[str, str] = {}
 
 
-def intent() -> Held:
-    """Read the current immutable intent without consuming it."""
-    command = commands.get_nowait()
-    commands.put(command)
-    return command
-
-
-def display() -> None:
-    """Show selected settings and currently requested movement."""
-    command = intent()
-    linear.configure(text=f"{command.speeds()[0]:.2f} m/s")
-    angular.configure(text=f"{command.speeds()[1]:.1f} rad/s")
-    if focused.is_set():
-        status.configure(
-            text=(
-                f"Driving · {command.velocity()[0]:+.2f} m/s · "
-                f"{command.velocity()[1]:+.1f} rad/s"
-                if command.velocity() != (0.0, 0.0)
-                else "Ready · hold arrows to drive"
-            )
-        )
+intent = Intent(commands)
+readings = Readings((linear, angular, status), focused)
+manual = Manual(node.context, selected)
 
 
 def publish() -> None:
-    """Publish the current intent immediately on wall time."""
-    command = intent()
-    if node.context.ok():
-        selected[0].publish(
-            Twist(
-                linear=Vector3(x=command.velocity()[0]),
-                angular=Vector3(z=command.velocity()[1]),
-            )
-        )
-    display()
-
-
-def press(event: tk.Event[tk.Misc]) -> str:
-    """Collapse X11 repeat pairs and accept fresh key presses."""
-    key = event.keysym
-    if key in releases:
-        window.after_cancel(releases.pop(key))
-    if focused.is_set():
-        commands.put(commands.get_nowait().press(key))
-        publish()
-    return "break"
-
-
-def release(event: tk.Event[tk.Misc]) -> str:
-    """Delay release until queued X11 repeat presses have been handled."""
-    key = event.keysym
-    if key in releases:
-        window.after_cancel(releases.pop(key))
-    releases[key] = window.after_idle(lambda: forget(key))
-    return "break"
-
-
-def forget(key: str) -> None:
-    """Release a key once it is known to be a genuine release."""
-    releases.pop(key, "")
-    commands.put(commands.get_nowait().release(key))
-    if focused.is_set():
-        publish()
-
-
-def stop() -> None:
-    """Cancel held movement until its keys are released and pressed again."""
-    commands.put(commands.get_nowait().press("Escape"))
-    publish()
+    """Send and display the current command."""
+    manual(intent().velocity())
+    readings(intent())
 
 
 def select() -> None:
     """Stop the previous source before changing the destination."""
-    stop()
-    selected[0] = cube if cube is not None and selection.get() == "Cube" else topic
-
-
-def observe_target(message: PoseStamped) -> None:
-    """Remember fresh goals and resume only an operator-requested pursuit."""
-    target[:] = [(message, time.monotonic())]
-    pursuit[0] = pursuit[0].observe()
-    if not pursuit[0].requested():
-        following.configure(text="Target ready")
-    transition()
-
-
-def observe_status(message: String) -> None:
-    """Cancel the active goal when the detector loses a usable target."""
-    if message.data == "detected":
-        if not pursuit[0].requested():
-            following.configure(text="Target detected")
-        return
-    lose(message.data)
-
-
-def lose(state: str) -> None:
-    """Discard stale positions while preserving the operator's follow intent."""
-    target.clear()
-    pursuit[0] = pursuit[0].lose()
-    following.configure(
-        text=f"Target {state} · waiting"
-        if pursuit[0].requested()
-        else f"Target {state}"
+    keys.stop()
+    selected[0] = (
+        cube if cube is not None and selection.get() == "Cube" else topic
     )
-    transition()
-
-
-def follow() -> None:
-    """Toggle operator intent without reusing a cancelled navigation goal."""
-    pursuit[0] = pursuit[0].toggle()
-    follow_button.configure(
-        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
-    )
-    if pursuit[0].requested():
-        following.configure(text="Waiting for a fresh cube pose")
-    transition()
 
 
 def transition() -> None:
-    """Submit fresh goals or cancel an active goal exactly once."""
-    if pursuit[0].cancels() and goals:
-        goal = goals[0]
-        pursuit[0] = pursuit[0].finish().begin()
-        follow_button.state(["disabled"])
-        following.configure(
-            text="Target lost · waiting"
-            if pursuit[0].requested()
-            else "Canceling follow"
-        )
-        goal.cancel_goal_async().add_done_callback(cancelled)  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
-    elif pursuit[0].starts():
-        start()
-
-
-def start() -> None:
-    """Submit the current cube pose when its source and Nav2 are ready."""
-    if navigation is None or not target or not navigation.server_is_ready():  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
-        following.configure(text="Waiting for Nav2 and the cube pose")
-        return
-    pose, arrival = target[-1]
-    if time.monotonic() - arrival >= 1.0:
-        lose("stale")
-        return
-    stop()
-    pursuit[0] = pursuit[0].begin()
-    follow_button.state(["disabled"])
-    following.configure(text="Starting follow")
-    navigation.send_goal_async(NavigateToPose.Goal(pose=pose)).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
-        accepted
-    )
-
-
-def accepted(future: Future) -> None:
-    """Track acceptance and cancel goals that became unwanted meanwhile."""
-    follow_button.state(["!disabled"])
-    goal = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
-    if goal is None or not goal.accepted:
-        pursuit[0] = pursuit[0].finish()
-        following.configure(text="Nav2 rejected the cube goal")
-        return
-    goals.append(goal)
-    pursuit[0] = pursuit[0].accept()
-    follow_button.configure(
-        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
-    )
-    following.configure(text="Following cube")
-    goal.get_result_async().add_done_callback(finished)
-    transition()
-
-
-def cancelled(future: Future) -> None:
-    """Allow another cancellation attempt if Nav2 rejects the request."""
-    response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
-    if goals and (response is None or not response.goals_canceling):
-        pursuit[0] = pursuit[0].accept()
-        follow_button.state(["!disabled"])
-        following.configure(text="Nav2 did not cancel the goal")
-
-
-def finished(future: Future) -> None:
-    """Release the completed goal before any fresh observation restarts it."""
-    goals.clear()
-    pursuit[0] = pursuit[0].finish()
-    follow_button.state(["!disabled"])
-    follow_button.configure(
-        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
-    )
-    response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
-    following.configure(
-        text=(
-            "Follow canceled"
-            if response is not None and response.status == GoalStatus.STATUS_CANCELED
-            else "Follow ended"
-        )
-    )
-    transition()
+    """Apply the new follow state when the Nav2 client is present."""
+    if actions:
+        actions[0].transition()
 
 
 def focus(_event: tk.Event[tk.Misc]) -> None:
@@ -307,17 +114,11 @@ def observe() -> None:
         return
     if window.focus_displayof() is None:
         focused.clear()
-        stop()
+        keys.stop()
         status.configure(text="Stopped · release keys before taking control")
     else:
         focused.set()
-    display()
-
-
-def adjust(key: str) -> None:
-    """Treat a speed button as one complete press and release."""
-    commands.put(commands.get_nowait().release(key).press(key).release(key))
-    publish()
+    readings(intent())
 
 
 def pulse() -> None:
@@ -326,8 +127,8 @@ def pulse() -> None:
         close()
         return
     rclpy.spin_once(node, timeout_sec=0)
-    if target and time.monotonic() - target[-1][1] >= 1.0:
-        lose("stale")
+    if requests:
+        requests[0].expire()
     if focused.is_set() and intent().velocity() != (0.0, 0.0):
         publish()
     window.after(50, pulse)
@@ -336,39 +137,42 @@ def pulse() -> None:
 def close() -> None:
     """Send zero before closing the window and releasing ROS resources."""
     if not closed.is_set():
-        stop()
+        keys.stop()
         closed.set()
         window.destroy()
 
 
-for column, keys in enumerate((("x", "w"), ("c", "e"))):
-    buttons = ttk.Frame(frame)
-    buttons.grid(row=4, column=column, sticky="w", pady=(0, 16))
-    for offset, key in enumerate(keys):
-        ttk.Button(
-            buttons,
-            text=f"{'-' if offset == 0 else '+'}  {key}",
-            command=partial(adjust, key),
-        ).grid(row=0, column=offset, padx=(0, 6))
-ttk.Button(frame, text="STOP · Esc / Space / k", command=stop).grid(
-    row=5, column=0, columnspan=2, sticky="ew"
-)
+keys = Keyboard(window, commands, (focused, releases), publish)
+controls(frame, keys)
 if cube is not None:
-    node.create_subscription(PoseStamped, "/goal_update", observe_target, 1)
-    node.create_subscription(String, "/target/status", observe_status, 1)
     for column, name in enumerate(("Robot", "Cube")):
         ttk.Radiobutton(
             frame, text=name, value=name, variable=selection, command=select
         ).grid(row=7, column=column, sticky="w", pady=(12, 0))
-    follow_button = ttk.Button(frame, text="Follow cube", command=follow)
+    follow_button = ttk.Button(frame, text="Follow cube")
+    view = Labeled(following, follow_button)
+    requested = Requested(target, pursuit, view, transition)
+    requests.append(requested)
+    follow_button.configure(command=requested.toggle)
+    node.create_subscription(PoseStamped, "/goal_update", requested.observe, 1)
+    node.create_subscription(String, "/target/status", requested.status, 1)
+    if navigation is not None:
+        actions.append(
+            Navigated(
+                navigation,
+                (target, goals, pursuit),
+                view,
+                (keys.stop, requested.lose),
+            )
+        )
     follow_button.grid(row=8, column=0, columnspan=2, sticky="ew", pady=(8, 0))
     following.grid(row=9, column=0, columnspan=2, sticky="w")
-window.bind("<KeyPress>", press)
-window.bind("<KeyRelease>", release)
+window.bind("<KeyPress>", keys.press)
+window.bind("<KeyRelease>", keys.release)
 window.bind("<FocusIn>", focus)
 window.bind("<FocusOut>", focus)
 window.protocol("WM_DELETE_WINDOW", close)
-display()
+readings(intent())
 window.after(50, pulse)
 try:
     with suppress(KeyboardInterrupt, ExternalShutdownException):

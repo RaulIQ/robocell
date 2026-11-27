@@ -57,11 +57,11 @@ class Renderer:
             ```
             
         """
-    def disable_depth_rendering(self):
+    def disable_depth_rendering(self) -> None:
         ...
     def disable_segmentation_rendering(self):
         ...
-    def enable_depth_rendering(self):
+    def enable_depth_rendering(self) -> None:
         ...
     def enable_segmentation_rendering(self):
         ...

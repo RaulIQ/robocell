@@ -10,8 +10,7 @@ from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates
 
 from robocell_sim.robot.implementations.drive.differential import Differential
 from robocell_sim.robot.implementations.odometry.parked import Parked
-from robocell_sim.robot.interfaces.travel import Travel
-from robocell_sim.ros.implementations.odometry.estimated import Estimated
+from robocell_sim.ros.implementations.odometry.updated import Updated
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.geared import Geared
 
@@ -37,12 +36,14 @@ counts: queue.SimpleQueue[tuple[int, int, float, Header]] = queue.SimpleQueue()
 instruments = Geared(node, wheels, resolution, frame)
 instruments.count(counts)
 pose = instruments.pose()
-travel: Travel = Parked(drive, resolution, (0.0, 0.0, 0.0))
+updated = Updated(
+    counts,
+    [Parked(drive, resolution, (0.0, 0.0, 0.0))],
+    child,
+    (pose, variances),
+)
 with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
     while node.context.ok():
         rclpy.spin_once(node, timeout_sec=0.1)
-        while not counts.empty():
-            left, right, moment, header = counts.get()
-            travel = travel.read(left, right, moment)
-            Estimated(travel, variances, (header, child), pose).publish()
+        updated.publish()
 node.context.try_shutdown()

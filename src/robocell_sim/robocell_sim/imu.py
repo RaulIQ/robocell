@@ -8,15 +8,14 @@ import sys
 import can
 import rclpy
 from rclpy.executors import ExternalShutdownException
-from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
 
 from robocell_sim.robot.implementations.can.drained import Drained
 from robocell_sim.robot.implementations.imu.logged import Logged
-from robocell_sim.robot.implementations.imu.received import FILTERS, Received
-from robocell_sim.robot.implementations.imu.scaled import Scaled
+from robocell_sim.robot.implementations.imu.received import FILTERS
 from robocell_sim.robot.implementations.imu.silent import Silent
-from robocell_sim.robot.interfaces.pairing import Pairing
-from robocell_sim.ros.implementations.imu.inertial import Inertial
+from robocell_sim.ros.implementations.imu.received import (
+    Received as ReceivedImu,
+)
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.implementations.wiring.plugged import Plugged
 
@@ -45,21 +44,12 @@ except OSError:
     sys.exit(1)
 inbox = Drained(bus)
 journal = Logged(log)
-pairing: Pairing = Silent(0)
+received = ReceivedImu(
+    inbox, [Silent(0)], (node, frame), (journal, topic, variances)
+)
 with contextlib.suppress(KeyboardInterrupt, ExternalShutdownException):
     while node.context.ok():
         rclpy.spin_once(node, timeout_sec=period)
-        for identifier, payload in inbox.frames():
-            pairing = pairing.read(Received(identifier, payload))
-            pairing.note(journal)
-            if pairing.complete():
-                Inertial(
-                    Scaled(pairing),
-                    Header(
-                        stamp=node.get_clock().now().to_msg(), frame_id=frame
-                    ),
-                    variances,
-                    topic,
-                ).publish()
+        received.publish()
 bus.shutdown()
 node.context.try_shutdown()

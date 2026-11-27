@@ -1,4 +1,4 @@
-"""Tests for displaying the actual object's position rather than an approach goal."""
+"""Tests for the simulated target in odometry and map frames."""
 
 from math import dist
 

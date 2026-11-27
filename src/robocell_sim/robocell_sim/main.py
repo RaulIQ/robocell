@@ -27,22 +27,20 @@ from geometry_msgs.msg import PoseStamped, Twist  # type: ignore[import-untyped]
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import remove_ros_args, try_shutdown
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
-from std_srvs.srv import SetBool  # type: ignore[import-untyped]  # ROS generates message modules without types
 from tf2_ros import Buffer, TransformListener  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.display.implementations.camera.screen import Screen
+from robocell_sim.display.implementations.control.toggled import Toggled
 from robocell_sim.display.implementations.lidar.beams import Beams
 from robocell_sim.display.implementations.lidar.dots import Dots
 from robocell_sim.display.implementations.lidar.polar import Polar
 from robocell_sim.display.implementations.lidar.scanned import Scanned
 from robocell_sim.display.implementations.maps.survey import Survey
 from robocell_sim.display.implementations.route.window import Window
+from robocell_sim.hardware.implementations.camera.paired import Paired
 from robocell_sim.hardware.implementations.camera.pinhole import Pinhole
-from robocell_sim.hardware.implementations.camera.rendered import (
-    Paired,
-    Rendered,
-)
+from robocell_sim.hardware.implementations.camera.rendered import Rendered
 from robocell_sim.hardware.implementations.can.transmitted import Transmitted
 from robocell_sim.hardware.implementations.imu.accumulated import Accumulated
 from robocell_sim.hardware.implementations.imu.emulated import Emulated
@@ -78,6 +76,7 @@ from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
+from robocell_sim.ros.implementations.clock.frozen import Frozen, SetBool
 from robocell_sim.ros.implementations.pose.target import Target
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
@@ -112,7 +111,9 @@ arguments.add_argument(
 _MIN_RANGE = 0.15
 _MAX_RANGE = 12.0
 arguments.add_argument("--lidar-range-max", type=float, default=_MAX_RANGE)
-arguments.add_argument("--scan-source", choices=("lidar", "depth"), default="lidar")
+arguments.add_argument(
+    "--scan-source", choices=("lidar", "depth"), default="lidar"
+)
 options = arguments.parse_args(remove_ros_args()[1:])
 if not math.isfinite(options.duration) or options.duration < 0:
     arguments.error("Duration must be finite and nonnegative")
@@ -127,28 +128,7 @@ pause = threading.Event()
 beams = threading.Event()
 
 
-def key(keycode: int) -> None:
-    """Toggle the pause on space and the lidar lines on 9."""
-    toggle = {ord(" "): pause, ord("9"): beams}.get(keycode)
-    if toggle is None:
-        return
-    if toggle.is_set():
-        toggle.clear()
-    else:
-        toggle.set()
-
-
-def freeze(
-    request: SetBool.Request, response: SetBool.Response
-) -> SetBool.Response:
-    """Toggle physics while the CAN protection continues on wall time."""
-    pause.set() if request.data else pause.clear()
-    response.success = True
-    response.message = (
-        "Simulation paused" if request.data else "Simulation resumed"
-    )
-    return response
-
+key = Toggled({ord(" "): pause, ord("9"): beams})
 
 drive = Limited(Differential(0.033, 0.288), 7.88)
 encoders = (0, 0)
@@ -248,7 +228,9 @@ with (
                 buffer,
                 settings.text("target_frame", "map"),
                 node.create_publisher(
-                    PoseStamped, settings.text("target_topic", "/goal_update"), 1
+                    PoseStamped,
+                    settings.text("target_topic", "/goal_update"),
+                    1,
                 ),
                 node.create_publisher(Marker, "/cube/marker", 1),
             ),
@@ -274,7 +256,7 @@ with (
     Geared(node, ("wheel_left_joint", "wheel_right_joint"), 4096, "odom").count(
         counts
     )
-    node.create_service(SetBool, "~/pause", freeze)
+    node.create_service(SetBool, "~/pause", Frozen(pause))
     seed = settings.whole("seed", -1)
     if seed < 0:
         seed = secrets.randbits(31)
@@ -316,7 +298,8 @@ with (
         attributes[5] = termios.B115200
         termios.tcsetattr(slave, termios.TCSANOW, attributes)
         os.set_blocking(master, False)
-        state: queue.SimpleQueue[tuple[Device, bytes, float]] = queue.SimpleQueue()
+        state: queue.SimpleQueue[tuple[Device, bytes, float]]
+        state = queue.SimpleQueue()
         state.put(
             (
                 Rplidar(
@@ -339,7 +322,8 @@ with (
             Named(
                 Path(
                     settings.text(
-                        "lidar_port", str(Path.home() / ".ros" / "robocell-lidar")
+                        "lidar_port",
+                        str(Path.home() / ".ros" / "robocell-lidar"),
                     )
                 ),
                 os.ttyname(slave),
@@ -375,6 +359,14 @@ with (
         for side, number in zip(("left", "right"), numbers, strict=True)
     )
     service = Polled(devices)
+    images = Filmed(
+        data,
+        Paired(Rendered(renderer, data, "camera_rgb"), sensor, data),
+        harness.picture(),
+        harness.picture(
+            stream="depth", reliable=options.scan_source == "depth"
+        ),
+    )
     step = Serviced(
         Reported(
             Integrated(Physical(model, data), data, "imu_gyro", 0),
@@ -401,20 +393,7 @@ with (
                         1 / 50,
                         Tracked(data, "base_link", bridge.truth()),
                     ),
-                    Periodic(
-                        data,
-                        1 / 30,
-                        Filmed(
-                            data,
-                            Paired(
-                                Rendered(renderer, data, "camera_rgb"),
-                                sensor,
-                                data,
-                            ),
-                            harness.picture(),
-                            harness.depth(reliable=options.scan_source == "depth"),
-                        ),
-                    ),
+                    Periodic(data, 1 / 30, images),
                     Periodic(
                         data,
                         1 / 30,
@@ -432,7 +411,10 @@ with (
                             data,
                             projection,
                             depth,
-                            (harness.intrinsics(), "camera_depth_optical_frame"),
+                            (
+                                harness.calibration(stream="depth"),
+                                "camera_depth_optical_frame",
+                            ),
                         ),
                     ),
                 )
