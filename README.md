@@ -726,7 +726,8 @@ ROBOCELL_MODE=cube ROBOCELL_SCAN_SOURCE=depth docker compose up --no-build
 ```
 
 The orange cube starts to the right of the robot's spawn in the MuJoCo
-workshop. In the control panel, choose **Robot** or **Cube** to route the
+workshop and carries ArUco marker 0 from `DICT_4X4_50` on every vertical
+face. In the control panel, choose **Robot** or **Cube** to route the
 arrow keys. Switching stops the previous selection. Release and press the
 keys again to move the new selection. The initial cube is outside the
 forward camera view. **Follow cube** can start while the path is unknown;
@@ -736,9 +737,28 @@ release the keys. Unknown space remains blocked. Navigation resumes when
 a path to the approach point becomes available. **Cancel follow** ends autonomous motion. **STOP**
 only clears the selected manual controls.
 
-In follow mode the simulator publishes the cube's position in `odom` on
-`/target/pose` at 5 Hz. The approach node publishes the derived navigation
+The ArUco node reads registered RGB-D frames and publishes camera-derived
+positions in `odom` on `/target/pose`. It selects only `marker_id` (0 by
+default), samples median valid depth inside the marker, rejects frames older
+than 0.5 seconds and uses TF at the image timestamp. The simulator's ground
+truth remains available only for diagnostics on `/target/ground_truth` and
+does not feed the detector. The approach node publishes the derived navigation
 goal on `/goal_update`; the cube marker retains the actual object position.
-The panel starts Nav2 with the current approach goal. The cube is a kinematic
-target and can pass through objects, so keep it in reachable space. RViz
-clicks are available in the regular `follow` mode.
+While following the cube, MPPI uses each fresh observation to favor
+trajectories that keep the marker near the center of the RGB camera. It
+favors slowing down and turning toward the target when the angle exceeds
+20 degrees. Nav2 checks the robot's full footprint against obstacles during
+these turns.
+The panel starts Nav2 with the current approach goal and reports whether the
+target is detected, lost, stale, missing valid depth or waiting for TF. Target
+loss cancels the active Nav2 goal and discards its position. If **Cancel
+follow** was not pressed, a fresh observation submits a new goal; manual
+cancellation prevents automatic restarts. The ArUco node logs every state
+transition and publishes the current state on `/target/status`.
+
+RViz includes an **ArUco target** image panel with the selected marker outline
+and ID on `/camera/aruco/image_raw`. A cyan sphere on `/target/marker` shows the
+camera-derived position beside the orange ground-truth cube, without an extra
+RViz plugin. The cube is a kinematic target and can pass through objects, so
+keep it in reachable space. RViz clicks are available in the regular `follow`
+mode.

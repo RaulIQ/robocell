@@ -61,10 +61,13 @@ controller_server:
       critics:
       - ConstraintCritic
       - CostCritic
+      - TargetCritic
       - GoalCritic
       - PathFollowCritic
       - PathAlignCritic
       - PreferForwardCritic
+      TargetCritic:
+        enabled: false
 global_costmap:
   global_costmap:
     ros__parameters:
