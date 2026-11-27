@@ -11,7 +11,8 @@ from rclpy.time import Time
 from rclpy.utilities import try_shutdown
 
 from robocell_sim.approach import approach
-from robocell_sim.freshness import fresh
+from robocell_sim.robot.implementations.detection.recent import Recent
+from robocell_sim.ros.implementations.clock.timed import Timed
 from robocell_sim.ros.messages import (
     Buffer,
     PoseStamped,
@@ -21,6 +22,7 @@ from robocell_sim.ros.messages import (
 
 rclpy.init()
 node = rclpy.create_node("approached")
+recent = Recent(Timed(node))
 node_logger: Callable[[], RcutilsLogger] = node.get_logger
 warn: Callable[[str], None] = node_logger().error
 destroy: Callable[[], None] = node.destroy_node
@@ -44,8 +46,7 @@ def usable(observation: PoseStamped) -> bool:
     if observation.header.frame_id != "odom":
         warn("Target observation requires the odom frame")
         return False
-    stamp = Time.from_msg(observation.header.stamp).nanoseconds / 1e9
-    return fresh(stamp, node.get_clock().now().nanoseconds / 1e9)
+    return recent(Time.from_msg(observation.header.stamp).nanoseconds)
 
 
 def destination(

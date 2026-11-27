@@ -17,11 +17,14 @@ from std_msgs.msg import ColorRGBA, String  # type: ignore[import-untyped]  # RO
 from tf2_geometry_msgs import do_transform_pose_stamped  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
-from robocell_sim.detection import Detected
-from robocell_sim.freshness import fresh
-from robocell_sim.missing_depth import MissingDepthError
-from robocell_sim.observation import Observation
-from robocell_sim.projection import Projected
+from robocell_sim.robot.implementations.detection.detection import Detected
+from robocell_sim.robot.implementations.detection.missing_depth import (
+    MissingDepthError,
+)
+from robocell_sim.robot.implementations.detection.observation import Observation
+from robocell_sim.robot.implementations.detection.projection import Projected
+from robocell_sim.robot.implementations.detection.recent import Recent
+from robocell_sim.ros.implementations.clock.timed import Timed
 from robocell_sim.ros.implementations.pose.observed import Observed
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.messages import (
@@ -41,6 +44,7 @@ _TIMEOUT = 500_000_000
 
 rclpy.init()
 node = rclpy.create_node("aruco")
+recent = Recent(Timed(node))
 node_logger: Callable[[], RcutilsLogger] = node.get_logger
 logger = node_logger()
 info: Callable[[str], None] = logger.info
@@ -106,16 +110,10 @@ def reject(image: Image, reason: str) -> None:
 
 def observe(image: Image, depth: Image, calibration: CameraInfo) -> None:
     """Detect the configured marker only in a fresh synchronized frame."""
-    if current(image):
+    if recent(Time.from_msg(image.header.stamp).nanoseconds):
         measure(image, depth, calibration)
     else:
         reject(image, "stale")
-
-
-def current(image: Image) -> bool:
-    """Check the image timestamp against the simulation clock."""
-    stamp = Time.from_msg(image.header.stamp).nanoseconds / 1e9
-    return fresh(stamp, node.get_clock().now().nanoseconds / 1e9)
 
 
 def measure(image: Image, depth: Image, calibration: CameraInfo) -> None:

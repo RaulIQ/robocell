@@ -4,8 +4,8 @@ import cv2
 import numpy as np
 import pytest
 from hamcrest import assert_that, equal_to
-from robocell_sim.detection import Detected
-from robocell_sim.projection import Projected
+from robocell_sim.robot.implementations.detection.detection import Detected
+from robocell_sim.robot.implementations.detection.projection import Projected
 
 
 def test_detection_selects_the_configured_marker_for_projection() -> None:

@@ -3,8 +3,10 @@
 import numpy as np
 import pytest
 from hamcrest import assert_that, equal_to
-from robocell_sim.missing_depth import MissingDepthError
-from robocell_sim.projection import Projected
+from robocell_sim.robot.implementations.detection.missing_depth import (
+    MissingDepthError,
+)
+from robocell_sim.robot.implementations.detection.projection import Projected
 
 
 def test_projection_uses_the_marker_center_and_median_depth() -> None:

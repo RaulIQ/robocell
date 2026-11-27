@@ -9,7 +9,7 @@ from cv_bridge import CvBridge
 from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo, Image  # type: ignore[import-untyped]  # ROS generates message modules without types
 
-from robocell_sim.observation import Observation
+from robocell_sim.robot.implementations.detection.observation import Observation
 from robocell_sim.robot.interfaces.detection import DetectionSource
 
 

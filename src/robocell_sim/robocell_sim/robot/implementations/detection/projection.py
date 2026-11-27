@@ -7,7 +7,9 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 
-from robocell_sim.missing_depth import MissingDepthError
+from robocell_sim.robot.implementations.detection.missing_depth import (
+    MissingDepthError,
+)
 from robocell_sim.robot.interfaces.projection import Projection
 
 

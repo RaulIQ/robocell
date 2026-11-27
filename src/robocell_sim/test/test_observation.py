@@ -1,7 +1,7 @@
 """Tests for the common target observation contract."""
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.observation import Observation
+from robocell_sim.robot.implementations.detection.observation import Observation
 
 
 def test_observation_carries_position_frame_timestamp_and_validity() -> None:

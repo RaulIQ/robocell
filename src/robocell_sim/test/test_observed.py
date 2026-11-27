@@ -5,8 +5,8 @@ import numpy as np
 from cv_bridge import CvBridge
 from hamcrest import assert_that, equal_to
 from rclpy.time import Time
-from robocell_sim.detection import Detected
-from robocell_sim.projection import Projected
+from robocell_sim.robot.implementations.detection.detection import Detected
+from robocell_sim.robot.implementations.detection.projection import Projected
 from robocell_sim.ros.implementations.pose.observed import Observed
 from robocell_sim.ros.messages import CameraInfo, Header
 
