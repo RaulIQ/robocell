@@ -206,6 +206,19 @@ def test_follow_view_keeps_the_scene_fixed_while_the_robot_follows() -> None:
     )
 
 
+def test_follow_installs_depth_preview_dependencies() -> None:
+    """The development image provides the nodes used by the depth preview."""
+    dockerfile = (Path(__file__).parents[3] / "docker/Dockerfile").read_text()
+    assert_that(
+        [
+            f"ros-jazzy-{package}" in dockerfile
+            for package in ("image-proc", "depth-image-proc")
+        ],
+        equal_to([True, True]),
+        "the follow image did not install depth preview dependencies",
+    )
+
+
 def test_follow_decimates_the_display_cloud_without_changing_navigation_depth() -> None:
     """The cloud uses a smaller calibrated image while navigation keeps raw depth."""
     launch = ElementTree.parse(

@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-slam-toolbox ros-jazzy-nav2-map-server \
       ros-jazzy-navigation2 ros-jazzy-nav2-rviz-plugins ros-jazzy-twist-mux \
       ros-jazzy-tf2-geometry-msgs ros-jazzy-depthimage-to-laserscan \
+      ros-jazzy-image-proc ros-jazzy-depth-image-proc \
       ros-jazzy-ament-cmake ros-jazzy-laser-geometry g++ cmake \
       python3-pip python3-venv python3-opencv python3-numpy python3-colcon-common-extensions python3-tk \
       can-utils socat iproute2 gh git \
