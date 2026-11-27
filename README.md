@@ -43,8 +43,8 @@ folder per device or subject:
 | Package    | Role                                       | Implementations                                        |
 | ---------- | ------------------------------------------ | ------------------------------------------------------ |
 | `hardware` | stands in for the real TurtleBot3          | `physics`, `imu`, `can`, `motor`, `wheels`, `lidar`, `camera` |
-| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `motor`, `command`, `odometry`, `lidar`, `detection` |
-| `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`                     |
+| `robot`    | would run on a real TurtleBot3 under ROS 2 | `drive`, `motor`, `command`, `odometry`, `lidar`, `detection`, `following` |
+| `display`  | stands in for RViz and a web console       | `route`, `lidar`, `maps`, `camera`, `control`          |
 | `ros`      | carries the simulation to ROS 2            | `wiring`, `clock`, `pose`, `wheels`, `lidar`, `camera` |
 
 For example, the `Imu` interface lives in `hardware/interfaces`, while

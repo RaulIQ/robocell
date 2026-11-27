@@ -4,43 +4,35 @@
 from collections.abc import Callable
 
 import cv2
-import numpy as np
-import numpy.typing as npt
 import rclpy
 from cv_bridge import CvBridge
 from message_filters import ApproximateTimeSynchronizer, Subscriber  # type: ignore[import-untyped]  # ROS generates message modules without types
 from rclpy.impl.rcutils_logger import RcutilsLogger
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
-from rclpy.time import Time
 from rclpy.utilities import try_shutdown
-from std_msgs.msg import ColorRGBA, String  # type: ignore[import-untyped]  # ROS generates message modules without types
-from tf2_geometry_msgs import do_transform_pose_stamped  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
-from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.robot.implementations.detection.detection import Detected
-from robocell_sim.robot.implementations.detection.missing_depth import (
-    MissingDepthError,
-)
-from robocell_sim.robot.implementations.detection.observation import Observation
 from robocell_sim.robot.implementations.detection.projection import Projected
 from robocell_sim.robot.implementations.detection.recent import Recent
+from robocell_sim.ros.implementations.camera.surveyed import Surveyed
 from robocell_sim.ros.implementations.clock.timed import Timed
+from robocell_sim.ros.implementations.pose.located import Located
 from robocell_sim.ros.implementations.pose.observed import Observed
+from robocell_sim.ros.implementations.pose.sighted import (
+    Marker,
+    Sighted,
+    String,
+)
 from robocell_sim.ros.implementations.settings.declared import Declared
 from robocell_sim.ros.messages import (
     Buffer,
     CameraInfo,
-    ExtrapolationException,
     Image,
-    Point,
     PoseStamped,
-    TransformException,
     TransformListener,
-    Vector3,
 )
 
 _MARKERS = 50
-_TIMEOUT = 500_000_000
 
 rclpy.init()
 node = rclpy.create_node("aruco")
@@ -73,136 +65,18 @@ status = node.create_publisher(
 )
 buffer = Buffer(node=node)
 listener = TransformListener(buffer, node)
-state = ["waiting"]
-contact = [0]
-
-
-def report(current: str) -> None:
-    """Publish and log each target-state transition once."""
-    if state[0] == current:
-        return
-    state[0] = current
-    status.publish(String(data=current))
-    info(f"Target {identifier} {current}")
-    if current != "detected":
-        points.publish(Marker(ns="camera_target", action=Marker.DELETE))
-
-
-def unavailable(error: TransformException) -> None:
-    """Report a real TF failure with its diagnostic detail."""
-    if state[0] != "tf_unavailable":
-        warning(f"Target {identifier} TF unavailable: {error}")
-    report("tf_unavailable")
-
-
-def expire() -> None:
-    """Mark a target stale when valid transformed observations stop arriving."""
-    elapsed = node.get_clock().now().nanoseconds - contact[0]
-    if state[0] in {"detected", "tf_unavailable"} and elapsed > _TIMEOUT:
-        report("stale")
-
-
-def reject(image: Image, reason: str) -> None:
-    """Publish the original image and report why it gave no usable target."""
-    report(reason)
-    annotated.publish(image)
-
-
-def observe(image: Image, depth: Image, calibration: CameraInfo) -> None:
-    """Detect the configured marker only in a fresh synchronized frame."""
-    if recent(Time.from_msg(image.header.stamp).nanoseconds):
-        measure(image, depth, calibration)
-    else:
-        reject(image, "stale")
-
-
-def measure(image: Image, depth: Image, calibration: CameraInfo) -> None:
-    """Read the marker and publish a preview even when the reading fails."""
-    try:
-        observation, preview = observed(image, depth, calibration)
-    except MissingDepthError:
-        reject(image, "invalid_depth")
-    except ValueError:
-        reject(image, "lost")
-    else:
-        track(image, observation, preview)
-
-
-def track(
-    image: Image, observation: Observation, pixels: npt.NDArray[np.uint8]
-) -> None:
-    """Publish the annotated frame and transform the marker at image time."""
-    (x, y, z), source, _, valid = observation.reading()
-    if not valid:
-        reject(image, "lost")
-        return
-    preview = bridge.cv2_to_imgmsg(pixels, "rgb8")
-    preview.header = image.header
-    annotated.publish(preview)
-    transformed(pose(image, source, (x, y, z)))
-
-
-def pose(
-    image: Image, source: str, position: tuple[float, float, float]
-) -> PoseStamped:
-    """Build the marker pose in the original camera frame."""
-    goal = PoseStamped()
-    goal.header.stamp = image.header.stamp
-    goal.header.frame_id = source
-    goal.pose.position = Point(x=position[0], y=position[1], z=position[2])
-    goal.pose.orientation.w = 1.0
-    return goal
-
-
-def transformed(goal: PoseStamped) -> None:
-    """Transform the observed position and publish it when TF is available."""
-    try:
-        transform = buffer.lookup_transform(
-            frame, goal.header.frame_id, Time.from_msg(goal.header.stamp)
-        )
-    except ExtrapolationException as error:
-        extrapolated(
-            error, goal.header.frame_id, Time.from_msg(goal.header.stamp)
-        )
-    except TransformException as error:
-        unavailable(error)
-    else:
-        publish(do_transform_pose_stamped(goal, transform))
-
-
-def extrapolated(
-    error: ExtrapolationException, source: str, stamp: Time
-) -> None:
-    """Allow a frame to wait for TF without reporting a transform outage."""
-    if not awaiting(source, stamp):
-        unavailable(error)
-
-
-def awaiting(source: str, stamp: Time) -> bool:
-    """Check whether the image is newer than the latest available transform."""
-    try:
-        latest = buffer.lookup_transform(frame, source, Time())
-    except TransformException:
-        return False
-    return Time.from_msg(latest.header.stamp) < stamp
-
-
-def publish(target: PoseStamped) -> None:
-    """Publish the target pose, diagnostic marker and detection state."""
-    output.publish(target)
-    contact[0] = node.get_clock().now().nanoseconds
-    points.publish(
-        Marker(
-            header=target.header,
-            ns="camera_target",
-            type=Marker.SPHERE,
-            pose=target.pose,
-            scale=Vector3(x=0.12, y=0.12, z=0.12),
-            color=ColorRGBA(r=0.0, g=1.0, b=1.0, a=1.0),
-        )
-    )
-    report("detected")
-
+target = Sighted(
+    Timed(node),
+    (status, points, output),
+    (identifier, info, warning),
+    [("waiting", 0)],
+)
+survey = Surveyed(
+    recent,
+    observed,
+    (bridge, annotated),
+    (Located(buffer, frame, target), target.report),
+)
 
 images = Subscriber(
     node, Image, "/camera/image_raw", qos_profile=qos_profile_sensor_data
@@ -219,9 +93,9 @@ calibrations = Subscriber(
 synchronizer = ApproximateTimeSynchronizer(
     [images, depths, calibrations], 5, 0.02
 )
-synchronizer.registerCallback(observe)
+synchronizer.registerCallback(survey)
 status.publish(String(data="waiting"))
-node.create_timer(0.1, expire)
+node.create_timer(0.1, target.expire)
 try:
     rclpy.spin(node)
 except KeyboardInterrupt:

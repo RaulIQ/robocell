@@ -27,11 +27,11 @@ from geometry_msgs.msg import PoseStamped, Twist  # type: ignore[import-untyped]
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import remove_ros_args, try_shutdown
 from std_msgs.msg import Header  # type: ignore[import-untyped]  # ROS generates message modules without types
-from std_srvs.srv import SetBool  # type: ignore[import-untyped]  # ROS generates message modules without types
 from tf2_ros import Buffer, TransformListener  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
 from robocell_sim.display.implementations.camera.screen import Screen
+from robocell_sim.display.implementations.control.toggled import Toggled
 from robocell_sim.display.implementations.lidar.beams import Beams
 from robocell_sim.display.implementations.lidar.dots import Dots
 from robocell_sim.display.implementations.lidar.polar import Polar
@@ -76,6 +76,7 @@ from robocell_sim.robot.interfaces.slip import Slip
 from robocell_sim.ros.implementations.camera.calibrated import Calibrated
 from robocell_sim.ros.implementations.camera.filmed import Filmed
 from robocell_sim.ros.implementations.clock.clocked import Clocked
+from robocell_sim.ros.implementations.clock.frozen import Frozen, SetBool
 from robocell_sim.ros.implementations.pose.target import Target
 from robocell_sim.ros.implementations.pose.tracked import Tracked
 from robocell_sim.ros.implementations.settings.declared import Declared
@@ -127,28 +128,7 @@ pause = threading.Event()
 beams = threading.Event()
 
 
-def key(keycode: int) -> None:
-    """Toggle the pause on space and the lidar lines on 9."""
-    toggle = {ord(" "): pause, ord("9"): beams}.get(keycode)
-    if toggle is None:
-        return
-    if toggle.is_set():
-        toggle.clear()
-    else:
-        toggle.set()
-
-
-def freeze(
-    request: SetBool.Request, response: SetBool.Response
-) -> SetBool.Response:
-    """Toggle physics while the CAN protection continues on wall time."""
-    pause.set() if request.data else pause.clear()
-    response.success = True
-    response.message = (
-        "Simulation paused" if request.data else "Simulation resumed"
-    )
-    return response
-
+key = Toggled({ord(" "): pause, ord("9"): beams})
 
 drive = Limited(Differential(0.033, 0.288), 7.88)
 encoders = (0, 0)
@@ -276,7 +256,7 @@ with (
     Geared(node, ("wheel_left_joint", "wheel_right_joint"), 4096, "odom").count(
         counts
     )
-    node.create_service(SetBool, "~/pause", freeze)
+    node.create_service(SetBool, "~/pause", Frozen(pause))
     seed = settings.whole("seed", -1)
     if seed < 0:
         seed = secrets.randbits(31)

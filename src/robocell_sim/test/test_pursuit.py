@@ -1,7 +1,7 @@
 """Tests for safe following transitions around target loss and cancellation."""
 
 from hamcrest import assert_that, equal_to
-from robocell_sim.pursuit import Pursuit
+from robocell_sim.robot.implementations.following.pursuit import Pursuit
 
 
 def test_pursuit_resumes_only_with_a_fresh_observation_after_target_loss() -> (
