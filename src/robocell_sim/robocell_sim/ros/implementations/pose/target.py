@@ -23,11 +23,11 @@ _TIMEOUT = 0.25
 @final
 @dataclass(frozen=True)
 class Target(Goal):
-    """Move the cube from fresh commands and publish its pose in the map."""
+    """Move the cube from fresh commands and publish its pose in the selected frame."""
 
     _cube: Prop
     _origin: tuple[float, float, float]
-    _output: tuple[Buffer, Publisher, Publisher]
+    _output: tuple[Buffer, str, Publisher, Publisher]
     _intent: deque[tuple[float, float, float]]
 
     @override
@@ -53,15 +53,15 @@ class Target(Goal):
 
     @override
     def publish(self, moment: float) -> None:
-        """Combine the spawn transform with the latest SLAM correction."""
-        buffer, topic, display = self._output
-        try:
-            transform = buffer.lookup_transform("map", "odom", Time())
-        except TransformException:
-            return
-        goal = do_transform_pose_stamped(
-            pose(self._cube.pose(), self._origin), transform
-        )
+        """Publish the test target without requiring SLAM in odometry mode."""
+        buffer, frame, topic, display = self._output
+        goal = pose(self._cube.pose(), self._origin)
+        if frame != "odom":
+            try:
+                transform = buffer.lookup_transform(frame, "odom", Time())
+            except TransformException:
+                return
+            goal = do_transform_pose_stamped(goal, transform)
         goal.header.stamp = Time(nanoseconds=round(moment * 1e9)).to_msg()
         topic.publish(goal)
         display.publish(marker(goal))

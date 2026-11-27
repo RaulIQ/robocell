@@ -96,7 +96,8 @@ def test_workshop_launch_passes_window_flags_to_the_simulator() -> None:
                     "--headless=$(var headless) --duration=$(var duration) "
                     "--route=$(var route) --camera=$(var camera) "
                     "--radar=$(var radar) --survey=$(var survey) "
-                    "--lidar-range-max=$(var lidar_range_max)"
+                    "--lidar-range-max=$(var lidar_range_max) "
+                    "--scan-source=$(var scan_source)"
                 )
             ]
         ),
@@ -233,6 +234,8 @@ def test_workshop_launch_passes_the_noise_to_the_simulator() -> None:
                     "channel": "$(var can_channel)",
                     "left_node": "$(var left_node)",
                     "right_node": "$(var right_node)",
+                    "target_topic": "$(var target_topic)",
+                    "target_frame": "$(var target_frame)",
                     "fake_target": "$(var fake_target)",
                     "lidar_port": "$(var lidar_port)",
                     "gyro_bias": "$(var gyro_bias)",

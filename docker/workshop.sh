@@ -9,8 +9,16 @@ case "$mode" in
         exit 2
         ;;
 esac
+source_scan=${ROBOCELL_SCAN_SOURCE:-lidar}
+case "$source_scan" in
+    lidar|depth) ;;
+    *)
+        printf 'Invalid ROBOCELL_SCAN_SOURCE "%s", expected lidar or depth\n' "$source_scan" >&2
+        exit 2
+        ;;
+esac
 cd /ws
 source /opt/ros/jazzy/setup.bash
 python -m colcon build --symlink-install --packages-up-to robocell_sim
 source install/setup.bash
-exec ros2 launch robocell_sim "$mode.launch.xml" "$@"
+exec ros2 launch robocell_sim "$mode.launch.xml" "scan_source:=$source_scan" "$@"

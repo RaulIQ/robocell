@@ -49,7 +49,7 @@ def test_physics_schedules_lidar_servicing_every_step() -> None:
         (Path(__file__).parents[1] / "robocell_sim/main.py").read_text(),
         matches_regexp(
             r"Joined\(\s*\(\s*Periodic\(\s*data,\s*"
-            r"model\.opt\.timestep,\s*Serving\("
+            r"model\.opt\.timestep,\s*serial,"
         ),
         "physics reports did not schedule the lidar service every step",
     )

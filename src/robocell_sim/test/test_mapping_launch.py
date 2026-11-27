@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import yaml
 from defusedxml import ElementTree
 from hamcrest import assert_that, equal_to
 
@@ -85,6 +86,7 @@ def test_mapping_launch_rectifies_driver_scans_on_simulated_time() -> None:
             {
                 parameter.get("name"): parameter.get("value")
                 for parameter in node.iter("param")
+                if parameter.get("name") == "use_sim_time"
             }
             for node in ElementTree.parse(
                 Path(__file__).parents[1] / "launch/mapping.launch.xml"
@@ -111,4 +113,45 @@ def test_mapping_launch_accepts_a_recorded_slam_configuration() -> None:
         ],
         equal_to(["$(var slam_params_file)"]),
         "mapping did not accept the recorded SLAM configuration",
+    )
+
+
+def test_mapping_launch_selects_the_camera_producer_for_slam() -> None:
+    """The camera converter sends its sector scan to the SLAM adapter."""
+    root = ElementTree.parse(
+        Path(__file__).parents[1] / "launch/mapping.launch.xml"
+    ).getroot()
+    assert_that(
+        [
+            node.get("to")
+            for node in root.findall(
+                "./node[@pkg='depthimage_to_laserscan']/remap[@from='scan']"
+            )
+        ],
+        equal_to(["/scan/depth"]),
+        "the depth camera converter did not publish a sector scan",
+    )
+
+
+def test_mapping_launch_keeps_depth_scans_on_the_filtered_odometry() -> None:
+    """Depth mode rejects ambiguous local matches from its narrow sector."""
+    selection = next(
+        argument
+        for argument in ElementTree.parse(
+            Path(__file__).parents[1] / "launch/mapping.launch.xml"
+        ).iter("arg")
+        if argument.get("name") == "slam_params_file"
+    ).get("default", "")
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/slam_depth.yaml").read_text()
+    )["slam_toolbox"]["ros__parameters"]
+    assert_that(
+        (
+            "slam_depth.yaml" in selection,
+            "scan_source" in selection,
+            config["use_scan_matching"],
+            config["do_loop_closing"],
+        ),
+        equal_to((True, True, False, False)),
+        "depth SLAM did not keep mapping on filtered odometry alone",
     )

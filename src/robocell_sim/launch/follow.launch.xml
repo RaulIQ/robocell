@@ -1,13 +1,20 @@
 <launch>
+  <arg name="following_distance" default="1.0" description="Distance in meters between the approach point and target"/>
+  <arg name="scan_source" default="depth" description="Source of Nav2 obstacle scans: lidar or depth"/>
+  <let name="nav_scan" value="$(eval &quot;'/scan/navigation' if '$(var scan_source)' == 'depth' else '/scan'&quot;)"/>
   <arg name="fake_target" default="false" description="Enable the movable follow cube"/>
   <arg name="rviz" default="true" description="Open the follow view"/>
   <arg name="headless" default="false" description="Run without the MuJoCo viewer"/>
   <arg name="teleop" default="true" description="Open the manual control panel"/>
   <arg name="can_channel" default="vcan0" description="Shared SocketCAN channel"/>
   <arg name="lidar_port" default="$(env HOME)/.ros/robocell-lidar" description="Shared UART endpoint"/>
-  <arg name="follow_tree" default="$(find-pkg-share nav2_bt_navigator)/behavior_trees/follow_point.xml" description="Behavior tree for following a changing goal"/>
+  <arg name="follow_tree" default="$(find-pkg-share robocell_sim)/config/follow.xml" description="Behavior tree for following a changing goal"/>
   <arg name="nav_params" default="$(find-pkg-share robocell_sim)/config/follow.yaml" description="Nav2 and velocity routing parameters"/>
-  <include file="$(find-pkg-share robocell_sim)/launch/mapping.launch.xml">
+  <include file="$(find-pkg-share robocell_sim)/launch/workshop.launch.xml">
+    <arg name="fixed_odom" value="false"/>
+    <arg name="target_topic" value="/target/pose"/>
+    <arg name="target_frame" value="odom"/>
+    <arg name="scan_source" value="$(var scan_source)"/>
     <arg name="fake_target" value="$(var fake_target)"/>
     <arg name="rviz" value="$(var rviz)"/>
     <arg name="headless" value="$(var headless)"/>
@@ -17,12 +24,55 @@
     <arg name="rviz_config" value="$(find-pkg-share robocell_sim)/rviz/follow.rviz"/>
     <arg name="panel_topic" value="/cmd_vel_manual"/>
   </include>
+  <node pkg="robocell_scan" exec="slam_scan" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="output" value="/scan/navigation"/>
+    <param name="input" value="$(eval &quot;'/scan/depth' if '$(var scan_source)' == 'depth' else '/scan'&quot;)"/>
+    <param name="preserve_sector" value="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)"/>
+    <param name="capacity" value="$(eval &quot;32 if '$(var scan_source)' == 'depth' else 8&quot;)"/>
+    <param name="transform_timeout" value="$(eval &quot;1.5 if '$(var scan_source)' == 'depth' else 0.5&quot;)"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="depthimage_to_laserscan" exec="depthimage_to_laserscan_node" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="output_frame" value="camera_depth_frame"/>
+    <param name="range_min" value="0.45"/>
+    <param name="range_max" value="4.25"/>
+    <param name="scan_height" value="33"/>
+    <param name="scan_time" value="0.034"/>
+    <remap from="depth" to="/camera/depth/image_raw"/>
+    <remap from="depth_camera_info" to="/camera/depth/camera_info"/>
+    <remap from="scan" to="/scan/depth"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="image_proc" exec="crop_decimate_node" name="depth_preview" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="decimation_x" value="4"/>
+    <param name="decimation_y" value="4"/>
+    <param name="queue_size" value="1"/>
+    <remap from="in/image_raw" to="/camera/depth/image_raw"/>
+    <remap from="out/image_raw" to="/camera/depth/preview/image_raw"/>
+  </node>
+  <node if="$(eval &quot;'$(var scan_source)' == 'depth'&quot;)" pkg="depth_image_proc" exec="point_cloud_xyz_node" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="queue_size" value="1"/>
+    <remap from="image_rect" to="/camera/depth/preview/image_raw"/>
+    <remap from="camera_info" to="/camera/depth/preview/camera_info"/>
+    <remap from="points" to="/camera/depth/points"/>
+  </node>
+  <node pkg="robocell_sim" exec="approached.py" output="screen">
+    <param name="use_sim_time" value="true"/>
+    <param name="distance" value="$(var following_distance)"/>
+  </node>
   <node pkg="nav2_planner" exec="planner_server" name="planner_server" output="screen">
     <param from="$(var nav_params)"/>
+    <remap from="/scan" to="$(var nav_scan)"/>
   </node>
   <node pkg="nav2_controller" exec="controller_server" name="controller_server" output="screen">
     <param from="$(var nav_params)"/>
+    <remap from="/scan" to="$(var nav_scan)"/>
     <remap from="cmd_vel" to="/cmd_vel_nav"/>
+  </node>
+  <node pkg="nav2_behaviors" exec="behavior_server" name="behavior_server" output="screen">
+    <param from="$(var nav_params)"/>
   </node>
   <node pkg="nav2_bt_navigator" exec="bt_navigator" name="bt_navigator" output="screen">
     <param from="$(var nav_params)"/>

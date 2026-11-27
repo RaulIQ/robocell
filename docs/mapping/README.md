@@ -82,6 +82,13 @@ python docs/mapping/record.py log/mapping-136/verification --domain 91
 python docs/mapping/analyze.py log/mapping-136/verification
 ```
 
+Append `--scan-source depth` to both commands to record and evaluate the D415
+pipeline. The analyzer then measures scan age on `/scan/slam` and occupancy
+against solid geometry in the camera's scan band, including the low pallet.
+Depth mapping relies on filtered odometry without scan matching or loop
+closure, so its validation requires pose and occupancy accuracy instead of
+loop evidence.
+
 `--channel` selects the CAN channel. The script refuses an existing output
 directory or traffic on that channel. It starts the headless mapping stack
 with RViz and keyboard control disabled, seed 422 and drive IDs 17 and 29.
