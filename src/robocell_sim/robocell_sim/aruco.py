@@ -19,6 +19,7 @@ from tf2_ros import (  # type: ignore[import-untyped]  # Jazzy ships this module
 )
 from visualization_msgs.msg import Marker  # type: ignore[import-untyped]  # Jazzy ships this module without typing information
 
+from robocell_sim.freshness import fresh
 from robocell_sim.projection import MissingDepth
 from robocell_sim.ros.implementations.pose.observed import Observed
 from robocell_sim.ros.implementations.settings.declared import Declared
@@ -78,7 +79,7 @@ def expire() -> None:
 def observe(image: Image, depth: Image, calibration: CameraInfo) -> None:
     """Publish only fresh observations with a transform at the image time."""
     stamp = Time.from_msg(image.header.stamp)
-    if not (0 <= (node.get_clock().now() - stamp).nanoseconds <= 500_000_000):
+    if not fresh(stamp.nanoseconds / 1e9, node.get_clock().now().nanoseconds / 1e9):
         report("stale")
         annotated.publish(image)
         return

@@ -10,6 +10,7 @@ from rclpy.time import Time
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from robocell_sim.approach import approach
+from robocell_sim.freshness import fresh
 
 rclpy.init()
 node = rclpy.create_node("approached")
@@ -36,10 +37,9 @@ def publish() -> None:
     if observation.header.frame_id != "odom":
         node.get_logger().error("Target observation requires the odom frame")
         return
-    if not (
-        0
-        <= (node.get_clock().now() - Time.from_msg(observation.header.stamp)).nanoseconds
-        <= 500_000_000
+    if not fresh(
+        Time.from_msg(observation.header.stamp).nanoseconds / 1e9,
+        node.get_clock().now().nanoseconds / 1e9,
     ):
         return
     try:
