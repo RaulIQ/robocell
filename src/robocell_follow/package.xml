@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>robocell_follow</name>
+  <version>0.0.0</version>
+  <description>MPPI trajectory scoring for camera target following</description>
+  <maintainer email="raulalimbekov@gmail.com">RaulIQ</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav2_mppi_controller</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

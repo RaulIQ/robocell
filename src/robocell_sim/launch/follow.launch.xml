@@ -81,6 +81,8 @@
   </node>
   <node pkg="nav2_controller" exec="controller_server" name="controller_server" output="screen">
     <param from="$(var nav_params)"/>
+    <param name="FollowPath.CostCritic.consider_footprint" value="$(var fake_target)"/>
+    <param name="FollowPath.TargetCritic.enabled" value="$(var fake_target)"/>
     <remap from="/scan" to="$(var nav_scan)"/>
     <remap from="cmd_vel" to="/cmd_vel_nav"/>
   </node>

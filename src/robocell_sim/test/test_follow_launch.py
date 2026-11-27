@@ -177,6 +177,34 @@ def test_follow_uses_mppi_for_differential_drive() -> None:
     )
 
 
+def test_cube_enables_target_scoring_inside_mppi() -> None:
+    """Only cube mode enables image-derived scoring alongside collision checks."""
+    root = Path(__file__).parents[1]
+    config = yaml.safe_load((root / "config/follow.yaml").read_text())
+    launch = ElementTree.parse(root / "launch/follow.launch.xml")
+    critics = config["controller_server"]["ros__parameters"]["FollowPath"]["critics"]
+    assert_that(
+        (
+            [critic for critic in critics if critic in ("CostCritic", "TargetCritic")],
+            [
+                param.get("value")
+                for param in launch.findall(
+                    "./node[@name='controller_server']/param"
+                    "[@name='FollowPath.TargetCritic.enabled']"
+                )
+            ],
+            launch.find(
+                "./node[@name='controller_server']/param"
+                "[@name='FollowPath.CostCritic.consider_footprint']"
+            ).get("value"),
+        ),
+        equal_to(
+            (["CostCritic", "TargetCritic"], ["$(var fake_target)"], "$(var fake_target)")
+        ),
+        "the cube did not enable target scoring alongside collision checks",
+    )
+
+
 def test_follow_view_shows_navigation_costs_and_paths() -> None:
     """The navigation view shows current costs instead of a SLAM map."""
     config = yaml.safe_load(

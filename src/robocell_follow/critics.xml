@@ -1,0 +1,5 @@
+<library path="robocell_follow">
+  <class type="mppi::critics::TargetCritic" base_class_type="mppi::critics::CriticFunction">
+    <description>Prefers trajectories that keep the observed target near the camera axis</description>
+  </class>
+</library>

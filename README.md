@@ -744,6 +744,11 @@ than 0.5 seconds and uses TF at the image timestamp. The simulator's ground
 truth remains available only for diagnostics on `/target/ground_truth` and
 does not feed the detector. The approach node publishes the derived navigation
 goal on `/goal_update`; the cube marker retains the actual object position.
+While following the cube, MPPI uses each fresh observation to favor
+trajectories that keep the marker near the center of the RGB camera. It
+favors slowing down and turning toward the target when the angle exceeds
+20 degrees. Nav2 checks the robot's full footprint against obstacles during
+these turns.
 The panel starts Nav2 with the current approach goal and reports whether the
 target is detected, lost, stale, missing valid depth or waiting for TF. Target
 loss cancels the active Nav2 goal and discards its position. If **Cancel
