@@ -16,6 +16,12 @@
     </default>
   </default>
 
+  <asset>
+    <texture type="2d" name="aruco_0" file="aruco_0.png"/>
+    <material name="aruco_0" texture="aruco_0" texuniform="false"/>
+    <mesh name="aruco_quad" vertex="-0.04 -0.04 0.0001 0.04 -0.04 0.0001 0.04 0.04 0.0001 -0.04 0.04 0.0001 -0.04 -0.04 -0.0001 0.04 -0.04 -0.0001 0.04 0.04 -0.0001 -0.04 0.04 -0.0001" texcoord="1 0 0 0 0 1 1 1 1 0 0 0 0 1 1 1" face="0 1 2 0 2 3 4 6 5 4 7 6 0 4 5 0 5 1 1 5 6 1 6 2 2 6 7 2 7 3 3 7 4 3 4 0"/>
+  </asset>
+
   <worldbody>
     <geom class="wall" name="wall_north" size="3.05 0.05 0.25" pos="0 3 0.25"/>
     <geom class="wall" name="wall_south" size="3.05 0.05 0.25" pos="0 -3 0.25"/>
@@ -30,6 +36,10 @@
     <geom class="column" name="column_middle" pos="-0.2 -0.4 1.0"/>
     <body name="follow_cube" mocap="true" pos="-0.5 -2.5 -1" quat="0.7071068 0 0 0.7071068">
       <geom type="box" size="0.05 0.05 0.05" rgba="1 0.35 0.05 1" contype="0" conaffinity="0"/>
+      <geom name="follow_marker" type="mesh" mesh="aruco_quad" pos="0.0501 0 0" quat="0.7071068 0 0.7071068 0" material="aruco_0" contype="0" conaffinity="0"/>
+      <geom name="follow_marker_back" type="mesh" mesh="aruco_quad" pos="-0.0501 0 0" quat="0.7071068 0 -0.7071068 0" material="aruco_0" contype="0" conaffinity="0"/>
+      <geom name="follow_marker_left" type="mesh" mesh="aruco_quad" pos="0 0.0501 0" quat="0.7071068 -0.7071068 0 0" material="aruco_0" contype="0" conaffinity="0"/>
+      <geom name="follow_marker_right" type="mesh" mesh="aruco_quad" pos="0 -0.0501 0" quat="0.7071068 0.7071068 0 0" material="aruco_0" contype="0" conaffinity="0"/>
     </body>
     <geom name="dock" type="box" size="0.1 0.15 0.08" pos="-2.85 -2.5 0.08" rgba="0.9 0.75 0.1 1"/>
     <geom name="pallet" type="box" size="0.6 0.4 0.05" pos="-2.3 -1.6 0.05" rgba="0.65 0.5 0.3 1"/>

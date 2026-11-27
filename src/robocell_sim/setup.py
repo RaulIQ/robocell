@@ -44,6 +44,7 @@ setup(
         "robocell_sim/main.py",
         "robocell_sim/panel.py",
         "robocell_sim/approached.py",
+        "robocell_sim/aruco.py",
         "robocell_sim/motors.py",
         "robocell_sim/motor_driver.py",
         "robocell_sim/imu.py",

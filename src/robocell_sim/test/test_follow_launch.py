@@ -34,9 +34,7 @@ def test_follow_sends_both_command_sources_through_the_mux() -> None:
             mux["topics"]["manual"]["priority"]
             > mux["topics"]["navigation"]["priority"],
             mux["use_stamped"],
-            config["controller_server"]["ros__parameters"][
-                "enable_stamped_cmd_vel"
-            ],
+            config["controller_server"]["ros__parameters"]["enable_stamped_cmd_vel"],
         ),
         equal_to(
             (
@@ -55,9 +53,9 @@ def test_follow_sends_both_command_sources_through_the_mux() -> None:
 def test_follow_drops_previous_goal_updates_when_restarted() -> None:
     """A fresh behavior tree starts with an empty GoalUpdater."""
     assert_that(
-        yaml.safe_load(
-            (Path(__file__).parents[1] / "config/follow.yaml").read_text()
-        )["bt_navigator"]["ros__parameters"].get("always_reload_bt_xml"),
+        yaml.safe_load((Path(__file__).parents[1] / "config/follow.yaml").read_text())[
+            "bt_navigator"
+        ]["ros__parameters"].get("always_reload_bt_xml"),
         equal_to(obj=True),
         "following did not reset its behavior tree for a new goal",
     )
@@ -107,8 +105,7 @@ def test_follow_launch_connects_both_costmaps_to_the_selected_scan() -> None:
     ).getroot()
     assert_that(
         [
-            root.find(f"./node[@name='{name}']/remap[@from='/scan']")
-            is not None
+            root.find(f"./node[@name='{name}']/remap[@from='/scan']") is not None
             for name in ("planner_server", "controller_server")
         ],
         equal_to([True, True]),
@@ -145,12 +142,18 @@ def test_follow_starts_without_a_mapping_process() -> None:
 
 def test_follow_uses_rolling_windows_in_odometry() -> None:
     """Neither navigation costmap needs a static map."""
-    config = yaml.safe_load((Path(__file__).parents[1] / "config/follow.yaml").read_text())
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/follow.yaml").read_text()
+    )
     assert_that(
-        [(config[name][name]["ros__parameters"]["global_frame"],
-          config[name][name]["ros__parameters"].get("rolling_window"),
-          config[name][name]["ros__parameters"]["plugins"])
-         for name in ("global_costmap", "local_costmap")],
+        [
+            (
+                config[name][name]["ros__parameters"]["global_frame"],
+                config[name][name]["ros__parameters"].get("rolling_window"),
+                config[name][name]["ros__parameters"]["plugins"],
+            )
+            for name in ("global_costmap", "local_costmap")
+        ],
         equal_to([("odom", True, ["obstacle_layer", "inflation_layer"])] * 2),
         "following did not use rolling costmaps independent of a static map",
     )
@@ -158,10 +161,16 @@ def test_follow_uses_rolling_windows_in_odometry() -> None:
 
 def test_follow_uses_mppi_for_differential_drive() -> None:
     """The controller samples trajectories for a differential drive."""
-    config = yaml.safe_load((Path(__file__).parents[1] / "config/follow.yaml").read_text())
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "config/follow.yaml").read_text()
+    )
     assert_that(
-        (config["controller_server"]["ros__parameters"]["FollowPath"]["plugin"],
-         config["controller_server"]["ros__parameters"]["FollowPath"].get("motion_model")),
+        (
+            config["controller_server"]["ros__parameters"]["FollowPath"]["plugin"],
+            config["controller_server"]["ros__parameters"]["FollowPath"].get(
+                "motion_model"
+            ),
+        ),
         equal_to(("nav2_mppi_controller::MPPIController", "DiffDrive")),
         "following did not use differential-drive MPPI",
     )
@@ -169,11 +178,18 @@ def test_follow_uses_mppi_for_differential_drive() -> None:
 
 def test_follow_view_shows_navigation_costs_and_paths() -> None:
     """The navigation view shows current costs instead of a SLAM map."""
-    config = yaml.safe_load((Path(__file__).parents[1] / "rviz/follow.rviz").read_text())
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
     assert_that(
-        (config["Visualization Manager"]["Global Options"]["Fixed Frame"],
-         [display["Topic"]["Value"] for display in config["Visualization Manager"]["Displays"]
-          if display["Class"] == "rviz_default_plugins/Map"]),
+        (
+            config["Visualization Manager"]["Global Options"]["Fixed Frame"],
+            [
+                display["Topic"]["Value"]
+                for display in config["Visualization Manager"]["Displays"]
+                if display["Class"] == "rviz_default_plugins/Map"
+            ],
+        ),
         equal_to(("odom", ["/global_costmap/costmap", "/local_costmap/costmap"])),
         "the navigation view did not display rolling costs in odometry",
     )
@@ -185,10 +201,14 @@ def test_follow_displays_a_live_depth_cloud_without_mapping() -> None:
     launch = ElementTree.parse(root / "launch/follow.launch.xml")
     config = yaml.safe_load((root / "rviz/follow.rviz").read_text())
     assert_that(
-        (launch.find("./node[@exec='point_cloud_xyz_node']") is not None,
-         [(display["Topic"]["Value"], display["Decay Time"])
-          for display in config["Visualization Manager"]["Displays"]
-          if display["Class"] == "rviz_default_plugins/PointCloud2"]),
+        (
+            launch.find("./node[@exec='point_cloud_xyz_node']") is not None,
+            [
+                (display["Topic"]["Value"], display["Decay Time"])
+                for display in config["Visualization Manager"]["Displays"]
+                if display["Class"] == "rviz_default_plugins/PointCloud2"
+            ],
+        ),
         equal_to((True, [("/camera/depth/points", 0)])),
         "the follow view did not show a live depth cloud without mapping",
     )
@@ -221,20 +241,59 @@ def test_follow_installs_depth_preview_dependencies() -> None:
 
 def test_follow_decimates_the_display_cloud_without_changing_navigation_depth() -> None:
     """The cloud uses a smaller calibrated image while navigation keeps raw depth."""
-    launch = ElementTree.parse(
-        Path(__file__).parents[1] / "launch/follow.launch.xml"
-    )
+    launch = ElementTree.parse(Path(__file__).parents[1] / "launch/follow.launch.xml")
     assert_that(
         (
-            [param.get("value") for param in launch.findall(
-                "./node[@exec='crop_decimate_node']/param[@name='decimation_x']"
-            )],
-            [param.get("value") for param in launch.findall(
-                "./node[@exec='crop_decimate_node']/param[@name='decimation_y']"
-            )],
-            launch.find("./node[@exec='point_cloud_xyz_node']/remap[@from='image_rect']").get("to"),
-            launch.find("./node[@exec='depthimage_to_laserscan_node']/remap[@from='depth']").get("to"),
+            [
+                param.get("value")
+                for param in launch.findall(
+                    "./node[@exec='crop_decimate_node']/param[@name='decimation_x']"
+                )
+            ],
+            [
+                param.get("value")
+                for param in launch.findall(
+                    "./node[@exec='crop_decimate_node']/param[@name='decimation_y']"
+                )
+            ],
+            launch.find(
+                "./node[@exec='point_cloud_xyz_node']/remap[@from='image_rect']"
+            ).get("to"),
+            launch.find(
+                "./node[@exec='depthimage_to_laserscan_node']/remap[@from='depth']"
+            ).get("to"),
         ),
-        equal_to((["4"], ["4"], "/camera/depth/preview/image_raw", "/camera/depth/image_raw")),
+        equal_to(
+            (["4"], ["4"], "/camera/depth/preview/image_raw", "/camera/depth/image_raw")
+        ),
         "the cloud did not reduce display traffic independently of navigation",
+    )
+
+
+def test_follow_observes_aruco_instead_of_ground_truth() -> None:
+    """The cube launch registers depth and supplies only visual target poses."""
+    root = Path(__file__).parents[1]
+    launch = ElementTree.parse(root / "launch/follow.launch.xml")
+    assert_that(
+        (
+            launch.find("./include/arg[@name='target_topic']").get("value"),
+            [
+                remap.get("to")
+                for remap in launch.findall("./node[@exec='register_node']/remap")
+                if remap.get("from") in ("depth/image_rect", "rgb/camera_info")
+            ],
+            launch.find("./node[@exec='aruco.py']/param[@name='marker_id']").get(
+                "value"
+            ),
+            "robocell_sim/aruco.py" in (root / "setup.py").read_text(),
+        ),
+        equal_to(
+            (
+                "/target/ground_truth",
+                ["/camera/depth/image_raw", "/camera/camera_info"],
+                "$(var marker_id)",
+                True,
+            )
+        ),
+        "the follow launch did not replace ground truth with ArUco observations",
     )
