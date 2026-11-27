@@ -1,8 +1,15 @@
 """Metric target positions reconstructed from registered RGB-D images."""
 
+from typing import final
+
 import cv2
 import numpy as np
 import numpy.typing as npt
+
+
+@final
+class MissingDepth(ValueError):
+    """A visible marker has no usable metric depth."""
 
 
 def project(
@@ -17,7 +24,7 @@ def project(
     samples = depth[interior != 0]
     valid = samples[samples != 0]
     if valid.size == 0:
-        raise ValueError("Marker requires valid depth")
+        raise MissingDepth("Marker requires valid depth")
     center = np.mean(corners, axis=0)
     distance = float(np.median(valid)) / 1000.0
     return (

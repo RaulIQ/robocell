@@ -20,7 +20,9 @@ from nav2_msgs.action import NavigateToPose  # type: ignore[import-untyped]  # J
 from rclpy.action.client import ActionClient, ClientGoalHandle
 from rclpy.executors import ExternalShutdownException
 from rclpy.utilities import try_shutdown
+from std_msgs.msg import String  # type: ignore[import-untyped]  # ROS generates message modules without types
 
+from robocell_sim.pursuit import Pursuit
 from robocell_sim.robot.implementations.command.held import Held
 from robocell_sim.ros.implementations.settings.declared import Declared
 
@@ -90,6 +92,7 @@ selection = tk.StringVar(window, value="Robot")
 selected = [topic]
 target: list[tuple[PoseStamped, float]] = []
 goals: list[ClientGoalHandle] = []
+pursuit = [Pursuit(False, False, False, False)]
 following = ttk.Label(frame)
 focused = threading.Event()
 closed = threading.Event()
@@ -169,22 +172,63 @@ def stop() -> None:
 def select() -> None:
     """Stop the previous source before changing the destination."""
     stop()
-    selected[0] = (
-        cube if cube is not None and selection.get() == "Cube" else topic
-    )
+    selected[0] = cube if cube is not None and selection.get() == "Cube" else topic
 
 
 def observe_target(message: PoseStamped) -> None:
-    """Remember the last cube pose for starting a follow goal."""
+    """Remember fresh goals and resume only an operator-requested pursuit."""
     target[:] = [(message, time.monotonic())]
+    pursuit[0] = pursuit[0].observe()
+    if not pursuit[0].requested():
+        following.configure(text="Target ready")
+    transition()
+
+
+def observe_status(message: String) -> None:
+    """Cancel the active goal when the detector loses a usable target."""
+    if message.data == "detected":
+        if not pursuit[0].requested():
+            following.configure(text="Target detected")
+        return
+    lose(message.data)
+
+
+def lose(state: str) -> None:
+    """Discard stale positions while preserving the operator's follow intent."""
+    target.clear()
+    pursuit[0] = pursuit[0].lose()
+    following.configure(
+        text=f"Target {state} · waiting"
+        if pursuit[0].requested()
+        else f"Target {state}"
+    )
+    transition()
 
 
 def follow() -> None:
-    """Start following the cube or cancel the active follow goal."""
-    if goals:
+    """Toggle operator intent without reusing a cancelled navigation goal."""
+    pursuit[0] = pursuit[0].toggle()
+    follow_button.configure(
+        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
+    )
+    if pursuit[0].requested():
+        following.configure(text="Waiting for a fresh cube pose")
+    transition()
+
+
+def transition() -> None:
+    """Submit fresh goals or cancel an active goal exactly once."""
+    if pursuit[0].cancels() and goals:
+        goal = goals[0]
+        pursuit[0] = pursuit[0].finish().begin()
         follow_button.state(["disabled"])
-        goals[0].cancel_goal_async().add_done_callback(cancelled)  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
-    else:
+        following.configure(
+            text="Target lost · waiting"
+            if pursuit[0].requested()
+            else "Canceling follow"
+        )
+        goal.cancel_goal_async().add_done_callback(cancelled)  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+    elif pursuit[0].starts():
         start()
 
 
@@ -195,53 +239,61 @@ def start() -> None:
         return
     pose, arrival = target[-1]
     if time.monotonic() - arrival >= 1.0:
-        following.configure(text="Waiting for a fresh cube pose")
+        lose("stale")
         return
     stop()
+    pursuit[0] = pursuit[0].begin()
     follow_button.state(["disabled"])
     following.configure(text="Starting follow")
-    navigation.send_goal_async(
-        NavigateToPose.Goal(pose=pose)
-    ).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
+    navigation.send_goal_async(NavigateToPose.Goal(pose=pose)).add_done_callback(  # type: ignore[no-untyped-call]  # Jazzy action client lacks annotations
         accepted
     )
 
 
 def accepted(future: Future) -> None:
-    """Track the goal handle so the operator can cancel it."""
+    """Track acceptance and cancel goals that became unwanted meanwhile."""
     follow_button.state(["!disabled"])
     goal = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
     if goal is None or not goal.accepted:
+        pursuit[0] = pursuit[0].finish()
         following.configure(text="Nav2 rejected the cube goal")
         return
     goals.append(goal)
-    follow_button.configure(text="Cancel follow")
+    pursuit[0] = pursuit[0].accept()
+    follow_button.configure(
+        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
+    )
     following.configure(text="Following cube")
     goal.get_result_async().add_done_callback(finished)
+    transition()
 
 
 def cancelled(future: Future) -> None:
     """Allow another cancellation attempt if Nav2 rejects the request."""
     response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
     if goals and (response is None or not response.goals_canceling):
+        pursuit[0] = pursuit[0].accept()
         follow_button.state(["!disabled"])
         following.configure(text="Nav2 did not cancel the goal")
 
 
 def finished(future: Future) -> None:
-    """Show when Nav2 finishes the follow action."""
+    """Release the completed goal before any fresh observation restarts it."""
     goals.clear()
+    pursuit[0] = pursuit[0].finish()
     follow_button.state(["!disabled"])
-    follow_button.configure(text="Follow cube")
+    follow_button.configure(
+        text="Cancel follow" if pursuit[0].requested() else "Follow cube"
+    )
     response = future.result()  # type: ignore[no-untyped-call]  # Jazzy future lacks annotations
     following.configure(
         text=(
             "Follow canceled"
-            if response is not None
-            and response.status == GoalStatus.STATUS_CANCELED
+            if response is not None and response.status == GoalStatus.STATUS_CANCELED
             else "Follow ended"
         )
     )
+    transition()
 
 
 def focus(_event: tk.Event[tk.Misc]) -> None:
@@ -274,6 +326,8 @@ def pulse() -> None:
         close()
         return
     rclpy.spin_once(node, timeout_sec=0)
+    if target and time.monotonic() - target[-1][1] >= 1.0:
+        lose("stale")
     if focused.is_set() and intent().velocity() != (0.0, 0.0):
         publish()
     window.after(50, pulse)
@@ -301,6 +355,7 @@ ttk.Button(frame, text="STOP · Esc / Space / k", command=stop).grid(
 )
 if cube is not None:
     node.create_subscription(PoseStamped, "/goal_update", observe_target, 1)
+    node.create_subscription(String, "/target/status", observe_status, 1)
     for column, name in enumerate(("Robot", "Cube")):
         ttk.Radiobutton(
             frame, text=name, value=name, variable=selection, command=select

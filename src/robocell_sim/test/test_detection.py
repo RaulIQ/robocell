@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pytest
 from hamcrest import assert_that, equal_to
-from robocell_sim.detection import detect
+from robocell_sim.detection import detect, detected
 
 
 def test_detection_selects_the_configured_marker_for_projection() -> None:
@@ -60,4 +60,31 @@ def test_detection_rejects_an_image_without_the_configured_marker() -> None:
         str(error.value),
         equal_to("Configured marker was not detected"),
         "the detector did not reject an unconfigured marker",
+    )
+
+
+def test_detection_annotates_only_the_selected_marker() -> None:
+    """The preview outlines the followed ID without changing other markers."""
+    dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    gray = np.full((150, 240), 255, dtype=np.uint8)
+    gray[20:85, 20:85] = cv2.aruco.generateImageMarker(dictionary, 3, 65)
+    gray[55:120, 150:215] = cv2.aruco.generateImageMarker(dictionary, 7, 65)
+    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+    result = detected(
+        image,
+        np.full(gray.shape, 2300, dtype=np.uint16),
+        np.array([[180.0, 0.0, 120.0], [0.0, 175.0, 75.0], [0.0, 0.0, 1.0]]),
+        cv2.aruco.DICT_4X4_50,
+        7,
+        "camera_rgb_optical_frame",
+        91.75,
+    )
+    assert_that(
+        (
+            bool(np.any(result.image()[55:120, 150:215] != image[55:120, 150:215])),
+            bool(np.any(result.image()[20:85, 20:85] != image[20:85, 20:85])),
+            result.observation().position()[2],
+        ),
+        equal_to((True, False, 2.3)),
+        "the preview did not annotate only the configured marker",
     )

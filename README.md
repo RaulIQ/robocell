@@ -744,6 +744,16 @@ than 0.5 seconds and uses TF at the image timestamp. The simulator's ground
 truth remains available only for diagnostics on `/target/ground_truth` and
 does not feed the detector. The approach node publishes the derived navigation
 goal on `/goal_update`; the cube marker retains the actual object position.
-The panel starts Nav2 with the current approach goal. The cube is a kinematic
-target and can pass through objects, so keep it in reachable space. RViz
-clicks are available in the regular `follow` mode.
+The panel starts Nav2 with the current approach goal and reports whether the
+target is detected, lost, stale, missing valid depth or waiting for TF. Target
+loss cancels the active Nav2 goal and discards its position. If **Cancel
+follow** was not pressed, a fresh observation submits a new goal; manual
+cancellation prevents automatic restarts. The ArUco node logs every state
+transition and publishes the current state on `/target/status`.
+
+RViz includes an **ArUco target** image panel with the selected marker outline
+and ID on `/camera/aruco/image_raw`. A cyan sphere on `/target/marker` shows the
+camera-derived position beside the orange ground-truth cube, without an extra
+RViz plugin. The cube is a kinematic target and can pass through objects, so
+keep it in reachable space. RViz clicks are available in the regular `follow`
+mode.

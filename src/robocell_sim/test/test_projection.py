@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from hamcrest import assert_that, equal_to
-from robocell_sim.projection import project
+from robocell_sim.projection import MissingDepth, project
 
 
 def test_projection_uses_the_marker_center_and_median_depth() -> None:
@@ -23,7 +23,7 @@ def test_projection_uses_the_marker_center_and_median_depth() -> None:
 
 def test_projection_rejects_a_marker_without_valid_depth() -> None:
     """A detected outline alone cannot provide a three-dimensional position."""
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(MissingDepth) as error:
         project(
             np.array([[12.0, 9.0], [22.0, 9.0], [22.0, 19.0], [12.0, 19.0]]),
             np.zeros((31, 37), dtype=np.uint16),

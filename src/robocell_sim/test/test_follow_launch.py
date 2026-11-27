@@ -92,6 +92,7 @@ def test_follow_view_displays_the_cube_marker() -> None:
             (display["Enabled"], display["Topic"]["Value"])
             for display in config["Visualization Manager"]["Displays"]
             if display["Class"] == "rviz_default_plugins/Marker"
+            and display["Name"] == "Follow cube"
         ],
         equal_to([(True, "/cube/marker")]),
         "RViz did not display the simulated cube marker",
@@ -296,4 +297,37 @@ def test_follow_observes_aruco_instead_of_ground_truth() -> None:
             )
         ),
         "the follow launch did not replace ground truth with ArUco observations",
+    )
+
+
+def test_follow_displays_camera_detection_beside_ground_truth() -> None:
+    """RViz shows the annotated image and separates camera and true markers."""
+    config = yaml.safe_load(
+        (Path(__file__).parents[1] / "rviz/follow.rviz").read_text()
+    )
+    displays = config["Visualization Manager"]["Displays"]
+    assert_that(
+        (
+            [
+                display["Topic"]["Value"]
+                for display in displays
+                if display["Class"] == "rviz_default_plugins/Image"
+            ],
+            [
+                display["Topic"]["Value"]
+                for display in displays
+                if display["Class"] == "rviz_default_plugins/Marker"
+            ],
+        ),
+        equal_to(
+            (
+                [
+                    "/camera/image_raw",
+                    "/camera/depth/image_raw",
+                    "/camera/aruco/image_raw",
+                ],
+                ["/cube/marker", "/target/marker"],
+            )
+        ),
+        "RViz did not display the camera detection beside ground truth",
     )
